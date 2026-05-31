@@ -1,0 +1,106 @@
+[user]
+	name  = Myah Mitchell
+	email = code@mitchell.dev
+
+[core]
+	editor      = nvim
+	pager       = less -R
+	excludesFile = ~/.gitignore_global
+	autocrlf    = input
+	whitespace  = fix,trailing-space,space-before-tab
+
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = true
+
+[push]
+	default          = current
+	autoSetupRemote  = true
+
+[rebase]
+	autoStash    = true
+	autoSquash   = true
+	updateRefs   = true
+
+[merge]
+	conflictstyle = zdiff3
+
+[diff]
+	# difftastic for structural diffs (set via GIT_EXTERNAL_DIFF in env.nu)
+	# also usable explicitly: git -c diff.external=difft diff
+	algorithm   = histogram
+	colorMoved  = default
+	colorMovedWS = ignore-all-space
+
+[status]
+	showUntrackedFiles = all
+
+[log]
+	date = iso
+
+[color]
+	ui         = always
+	diff       = always
+	status     = always
+	branch     = always
+	interactive = always
+	grep       = always
+
+[color "diff"]
+	meta       = "#89b4fa"
+	frag       = "#cba6f7" bold
+	old        = "#f38ba8"
+	new        = "#a6e3a1"
+	whitespace = "#f38ba8" reverse
+
+[color "status"]
+	added      = "#a6e3a1"
+	changed    = "#f9e2af"
+	untracked  = "#89b4fa"
+	deleted    = "#f38ba8"
+
+[alias]
+	# Structural diff via difftastic
+	dft   = -c diff.external=difft diff
+	dfts  = -c diff.external=difft diff --staged
+	dfth  = -c diff.external=difft show
+	dftl  = -c diff.external=difft log -p --ext-diff
+
+	# Common shortcuts
+	st    = status -sb
+	co    = checkout
+	sw    = switch
+	br    = branch -vv
+	bra   = branch -vva
+	lg    = log --oneline --graph --decorate --all
+	lp    = log -p
+	ll    = log --oneline --decorate -20
+	undo  = reset --soft HEAD~1
+	uncommit = reset --soft HEAD~1
+	unstage  = restore --staged
+	wip   = "!git add -A && git commit -m 'WIP [skip ci]'"
+	cleanup = "!git branch --merged | grep -v '\\*\\|main\\|master\\|develop' | xargs -n 1 git branch -d"
+	aliases = "!git config --get-regexp '^alias\\.' | sort"
+
+[credential]
+	helper = /usr/lib/git-core/git-credential-libsecret
+
+[interactive]
+	diffFilter = cat  # use cat since we're not using delta
+
+[http]
+	sslVerify = true
+
+[safe]
+	directory = *
+
+[rerere]
+	enabled = true
+
+[branch]
+	sort = -committerdate
+
+[tag]
+	sort = -version:refname

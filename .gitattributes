@@ -1,0 +1,18 @@
+# Ensure install.sh is executable when checked out on Linux/macOS
+install.sh eol=lf
+install.sh diff=shell
+
+# Force LF line endings for all shell scripts and config files
+*.sh       eol=lf
+*.nu       eol=lf
+*.toml     eol=lf
+*.kdl      eol=lf
+*.yaml     eol=lf
+*.yml      eol=lf
+*.lua      eol=lf
+*.toml     eol=lf
+*.conf     eol=lf
+config     eol=lf
+ripgreprc  eol=lf
+.gitconfig eol=lf
+.gitignore_global eol=lf

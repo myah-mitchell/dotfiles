@@ -1,0 +1,3 @@
+# Files managed by `ya pkg` — not linked from dotfiles
+.config/yazi/flavors/*
+.config/yazi/plugins/*

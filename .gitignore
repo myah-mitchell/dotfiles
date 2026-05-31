@@ -1,0 +1,40 @@
+# Binary downloads (populated by install.sh, not committed)
+bin/.local/bin/*
+!bin/.local/bin/.gitkeep
+bin/.local/share/*
+!bin/.local/share/.gitkeep
+
+# Cargo metadata (written by cargo install --root bin/.local)
+bin/.local/.crates.toml
+bin/.local/.crates2.json
+
+# Version tracking for installed binaries
+bin/.versions
+
+# Downloaded theme files
+nushell/.config/nushell/themes/catppuccin_mocha.nu
+
+# SSH keys and sockets (never commit)
+ssh/.ssh/id_*
+ssh/.ssh/*.pub
+ssh/.ssh/known_hosts
+ssh/.ssh/sockets/
+
+# Editor swap/undo files
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Local overrides (not tracked)
+*.local
+
+# Secret env vars (tokens, API keys — never commit)
+nushell/.config/nushell/secrets.nu
+
+# Yazi packages installed by `ya pkg` — managed at runtime, not committed
+yazi/.config/yazi/flavors/
+yazi/.config/yazi/plugins/
+

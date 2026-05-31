@@ -1,0 +1,91 @@
+# lazygit config — Catppuccin Mocha, vi keybindings
+# https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md
+
+gui:
+  theme:
+    activeBorderColor:
+      - '#89b4fa' # blue
+      - bold
+    inactiveBorderColor:
+      - '#313244' # surface0
+    searchingActiveBorderColor:
+      - '#f9e2af' # yellow
+      - bold
+    optionsTextColor:
+      - '#cba6f7' # mauve
+    selectedLineBgColor:
+      - '#313244' # surface0
+    selectedRangeBgColor:
+      - '#313244'
+    cherryPickedCommitBgColor:
+      - '#45475a' # surface1
+    cherryPickedCommitFgColor:
+      - '#89b4fa' # blue
+    unstagedChangesColor:
+      - '#f38ba8' # red
+    defaultFgColor:
+      - '#cdd6f4' # text
+  nerdFontsVersion: "3"
+  border: "rounded"
+  mouseEvents: true
+  showIcons: true
+  showRandomTip: false
+  commandLogSize: 8
+git:
+  pagers:
+    - colorArg: always
+      pager: "difft --color always"
+      externalDiffCommand: "difft"
+  commit:
+    signOff: false
+  merging:
+    manualCommit: false
+  log:
+    order: "topo-order"
+    showGraph: "when-maximised"
+    showWholeGraph: false
+  branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
+keybinding:
+  universal:
+    prevItem: k
+    nextItem: j
+    prevItemAlt: "<up>"
+    nextItemAlt: "<down>"
+    prevBlock: h
+    nextBlock: l
+    prevBlockAlt: "<left>"
+    nextBlockAlt: "<right>"
+    scrollUpMain: "<pgup>"
+    scrollDownMain: "<pgdown>"
+    scrollUpMain-alt1: "u"
+    scrollDownMain-alt1: "d"
+    openRecentRepos: "<c-r>"
+    optionMenu: "x"
+    optionMenuAlt1: "?"
+    select: "<space>"
+    goInto: "<enter>"
+    confirm: "<enter>"
+    confirmInEditor: "<a-enter>"
+    remove: "D"
+    new: "n"
+    edit: "e"
+    openFile: "o"
+    scrollLeft: "H"
+    scrollRight: "L"
+    prevPage: "<c-b>"
+    nextPage: "<c-f>"
+    gotoTop: "g"
+    gotoBottom: "G"
+    toggleRangeSelect: "v"
+    rangeSelectDown: "J"
+    rangeSelectUp: "K"
+    copyToClipboard: "<c-o>"
+    openDiffTool: "<c-t>"
+    filteringMenu: "<c-s>"
+    diffingMenu: "W"
+    diffingMenu-alt: "<c-e>"
+    undo: "z"
+    redo: "<c-z>"
+    quit: "q"
+    quitWithoutChangingDirectory: "Q"
+    return: "<esc>"

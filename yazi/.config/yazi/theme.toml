@@ -1,0 +1,6 @@
+# yazi theme — use catppuccin-mocha flavor
+# Flavor is installed by install.sh: ya pack -a yazi-rs/flavors:catppuccin-mocha
+
+[flavor]
+dark  = "catppuccin-mocha"
+light = "catppuccin-mocha"

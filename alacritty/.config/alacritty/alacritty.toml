@@ -1,0 +1,100 @@
+# alacritty.toml — Alacritty terminal configuration
+# https://alacritty.org/config-alacritty.html
+
+[general]
+import = ["~/.config/alacritty/themes/catppuccin-mocha.toml"]
+
+# ── Font ─────────────────────────────────────────────────────────────────────
+[font]
+size = 10.0
+
+[font.normal]
+family = "JetBrainsMonoNL Nerd Font Mono"
+style  = "Light"
+
+[font.bold]
+family = "JetBrainsMonoNL Nerd Font Mono"
+style  = "SemiBold"
+
+[font.italic]
+family = "JetBrainsMonoNL Nerd Font Mono"
+style  = "Light Italic"
+
+[font.bold_italic]
+family = "JetBrainsMonoNL Nerd Font Mono"
+style  = "SemiBold Italic"
+
+[font.offset]
+x = 0
+y = 1
+
+[font.glyph_offset]
+x = 0
+y = 0
+
+# ── Terminal / Shell ──────────────────────────────────────────────────────────
+[terminal]
+# Launch WSL2 — bash starts, .bashrc execs into Nushell automatically
+shell = { program = "C:\\Windows\\System32\\wsl.exe", args = ["--cd", "~"] }
+osc52 = "CopyPaste"  # allow OSC52 clipboard reads and writes (for nvim clipboard)
+
+# ── Window ───────────────────────────────────────────────────────────────────
+[window]
+decorations       = "Full"
+opacity           = 1.0
+blur              = false
+startup_mode      = "Maximized"
+dynamic_title     = true
+dynamic_padding   = false
+
+[window.padding]
+x = 8
+y = 8
+
+[window.dimensions]
+columns = 0
+lines   = 0
+
+# ── Scrolling ────────────────────────────────────────────────────────────────
+[scrolling]
+history    = 10000
+multiplier = 3
+
+# ── Selection / Clipboard ─────────────────────────────────────────────────────
+[selection]
+save_to_clipboard = true  # mouse selections auto-copy to Windows clipboard
+
+# ── Mouse ─────────────────────────────────────────────────────────────────────
+[mouse]
+hide_when_typing = true
+
+[[mouse.bindings]]
+mouse   = "Right"
+action  = "Paste"
+
+# ── Keyboard ─────────────────────────────────────────────────────────────────
+[keyboard]
+bindings = [
+  # Ctrl+Shift+C — explicit copy
+  { key = "C", mods = "Control|Shift", action = "Copy" },
+  # Ctrl+Shift+V — explicit paste
+  { key = "V", mods = "Control|Shift", action = "Paste" },
+  # Ctrl+Shift+F — search
+  { key = "F", mods = "Control|Shift", action = "SearchForward" },
+  # Ctrl+Shift++ — increase font
+  { key = "Plus",  mods = "Control|Shift", action = "IncreaseFontSize" },
+  # Ctrl+Shift+- — decrease font
+  { key = "Minus", mods = "Control|Shift", action = "DecreaseFontSize" },
+  # Ctrl+Shift+0 — reset font
+  { key = "Key0",  mods = "Control|Shift", action = "ResetFontSize" },
+]
+
+# ── Hints (clickable URLs) ────────────────────────────────────────────────────
+[[hints.enabled]]
+command         = { program = "cmd.exe", args = ["/c", "start", ""] }
+hyperlinks      = true
+post_processing = false
+persist         = false
+mouse           = { enabled = true, mods = "Shift" }
+binding         = { key = "U", mods = "Control|Shift" }
+regex           = "(ipfs:|ipns:|magnet:|mailto:|gemini://|gopher://|https://|http://|news:|file:|git://|ssh:|ftp://)[^\\x00-\\x1f\\x7f-\\x9f<>\"\\s{-}\\^⟨⟩`]+"

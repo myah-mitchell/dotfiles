@@ -1,0 +1,30 @@
+# ripgrep config — ~/.config/ripgrep/ripgreprc
+# RIPGREP_CONFIG_PATH is set in nushell/env.nu
+
+# Case: ignore unless pattern has uppercase
+--smart-case
+
+# Search hidden files, but never .git internals
+--hidden
+--glob=!.git/
+
+# Follow symlinks
+--follow
+
+# Always show line numbers
+--line-number
+
+# Truncate very long lines (prevents terminal wrapping chaos)
+--max-columns=150
+--max-columns-preview
+
+# Sort output for reproducibility
+--sort=path
+
+# Colors — catppuccin mocha inspired
+--colors=line:fg:0x7f,0x84,0x9c
+--colors=line:style:bold
+--colors=match:fg:0xf3,0x8b,0xa8
+--colors=match:style:bold
+--colors=path:fg:0x89,0xb4,0xfa
+--colors=path:style:bold

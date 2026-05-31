@@ -1,0 +1,25 @@
+# tealdeer config — ~/.config/tealdeer/config.toml
+
+[display]
+compact           = false
+use_pager         = true   # pipe through bat automatically
+
+[updates]
+auto_update               = true
+auto_update_interval_hours = 720  # weekly
+
+[style.command_name]
+foreground = "blue"
+bold       = true
+
+[style.example_text]
+foreground = "green"
+
+[style.example_code]
+foreground = "yellow"
+bold       = true
+
+[style.example_variable]
+foreground = "magenta"
+bold       = true
+italic     = true

@@ -1,0 +1,22 @@
+# bat config — ~/.config/bat/config
+
+# Catppuccin Mocha (theme file installed by install.sh)
+--theme="Catppuccin Mocha"
+
+# Show line numbers, git change markers, header with filename
+--style="numbers,changes,header-filename,grid"
+
+# Use italic text where supported
+--italic-text=always
+
+# Auto-page only when output exceeds terminal height
+--paging=auto
+
+# Map syntax for file types bat doesn't know natively
+--map-syntax="*.nu:Bourne Again Shell (bash)"
+--map-syntax=".env*:DotENV"
+--map-syntax="*.kdl:TOML"
+--map-syntax="Dockerfile*:Dockerfile"
+
+# Wrap long lines
+--wrap=never
