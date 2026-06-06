@@ -278,11 +278,22 @@ cargo_install() {
   log "Installing ${dest} ${latest} via cargo (compiling from source)..."
   local -a flags=(--root "$DOTFILES/bin/.local")
   [[ "$FORCE_UPDATE" == true ]] && flags+=(--force)
-  if "$cargo_bin" install "$crate" "${flags[@]}" 2>&1; then
+  # Try --locked first: if the crate published a Cargo.lock it pins transitive
+  # deps (e.g. interprocess 1.x) that may otherwise resolve to a breaking version.
+  local install_ok=false
+  if "$cargo_bin" install "$crate" --locked "${flags[@]}" 2>&1; then
+    install_ok=true
+  else
+    log "Retrying ${dest} without --locked..."
+    if "$cargo_bin" install "$crate" "${flags[@]}" 2>&1; then
+      install_ok=true
+    fi
+  fi
+  if [[ "$install_ok" == true ]]; then
     set_installed_version "$dest" "$latest"
     ok "${dest} installed at ${latest}"
   else
-    warn "cargo install ${crate} failed — skipping"
+    warn "cargo install ${crate} failed — skipping (plugin may not be compatible with your nu version)"
   fi
 }
 
@@ -512,6 +523,30 @@ if [[ "$LINK_ONLY" == false ]]; then
   )
   for t in "${CLI_TOOLS[@]}"; do install_tool "$t"; done
 
+  log "=== Nushell plugins ==="
+
+  # Cargo-only plugins — always try if cargo is present
+  NUSHELL_PLUGINS_CARGO=(
+    "nu_plugin_skim|nu_plugin_skim"
+    "nu_plugin_dns|nu_plugin_dns"
+    #"nu_plugin_file|nu_plugin_file"
+    #"nu_plugin_highlight|nu_plugin_highlight"
+    #"nu_plugin_compress|nu_plugin_compress"
+    #"nu_plugin_x509|nu_plugin_x509"d
+    #"nu_plugin_clipboard|nu_plugin_clipboard"
+  )
+  PLUGIN_CARGO_BIN="$HOME/.cargo/bin/cargo"
+  if [[ -x "$PLUGIN_CARGO_BIN" ]]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
+    for entry in "${NUSHELL_PLUGINS_CARGO[@]}"; do
+      IFS='|' read -r pdest pcrate <<< "$entry"
+      cargo_install "$pcrate" "$pdest"
+    done
+  else
+    warn "cargo not found — skipping all Nushell plugins (they require cargo)"
+    warn "Install Rust via https://rustup.rs then re-run install.sh"
+  fi
+
   # yazi (includes ya companion binary) — two binaries from the same archive
   if [[ "$USE_CARGO" == true ]]; then
     cargo_install "yazi-fm" "yazi"
@@ -652,6 +687,29 @@ link_package() {
 for pkg in "${PACKAGES[@]}"; do
   link_package "$pkg"
 done
+
+# ── Nushell plugin registration ───────────────────────────────────────────────
+log "=== Registering Nushell plugins ==="
+NU_BIN="${LOCAL_BIN}/nu"
+[[ -f "$NU_BIN" ]] || NU_BIN="$(command -v nu 2>/dev/null)" || true
+if [[ -n "${NU_BIN:-}" && -x "${NU_BIN}" ]]; then
+  NUSHELL_PLUGIN_BINS=(
+    nu_plugin_skim nu_plugin_dns 
+    #nu_plugin_file nu_plugin_highlight nu_plugin_compress nu_plugin_x509 nu_plugin_clipboard
+  )
+  for plugin in "${NUSHELL_PLUGIN_BINS[@]}"; do
+    plugin_path="${LOCAL_BIN}/${plugin}"
+    if [[ -f "$plugin_path" ]]; then
+      if "${NU_BIN}" -c "plugin add $plugin_path" 2>/dev/null; then
+        ok "Registered ${plugin}"
+      else
+        warn "Failed to register ${plugin} — run: nu -c 'plugin add ${plugin_path}'"
+      fi
+    fi
+  done
+else
+  warn "nu not found — skipping plugin registration. Re-run install.sh after nu is on PATH."
+fi
 
 # ── Neovim: headless plugin install ──────────────────────────────────────────
 if [[ -f "$LOCAL_BIN/nvim" ]] || command -v nvim &>/dev/null; then
