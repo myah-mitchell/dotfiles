@@ -271,13 +271,17 @@ cargo_install() {
   fi
   local installed
   installed=$(get_installed_version "$dest")
+  if [[ -z "$installed" ]]; then
+    installed=$("$cargo_bin" install --list --root "$DOTFILES/bin/.local" 2>/dev/null \
+      | grep -oP "^${crate} v\K[0-9][^:]+")
+    [[ -n "$installed" ]] && set_installed_version "$dest" "$installed"
+  fi
   if [[ "$installed" == "$latest" && "$FORCE_UPDATE" == false ]]; then
     ok "${dest} already at ${latest}"
     return
   fi
   log "Installing ${dest} ${latest} via cargo (compiling from source)..."
-  local -a flags=(--root "$DOTFILES/bin/.local")
-  [[ "$FORCE_UPDATE" == true ]] && flags+=(--force)
+  local -a flags=(--root "$DOTFILES/bin/.local" --force)
   # Try --locked first: if the crate published a Cargo.lock it pins transitive
   # deps (e.g. interprocess 1.x) that may otherwise resolve to a breaking version.
   local install_ok=false
@@ -548,10 +552,8 @@ if [[ "$LINK_ONLY" == false ]]; then
   fi
 
   # yazi (includes ya companion binary) — two binaries from the same archive
-  if [[ "$USE_CARGO" == true ]]; then
-    cargo_install "yazi-fm" "yazi"
-    cargo_install "yazi-cli" "ya"
-  elif [[ "$OS" == "linux" && "$ARCH" == "x86_64" ]]; then
+  # Always use binary releases: crates.io requires a yazi-build workaround that's unreliable
+  if [[ "$OS" == "linux" && "$ARCH" == "x86_64" ]]; then
     download_release "sxyazi/yazi" "yazi-x86_64-unknown-linux-musl.zip" "yazi" "yazi"
     log "Extracting ya companion binary..."
     tmpdir=$(mktemp -d)
