@@ -192,6 +192,9 @@ source ~/.local/share/atuin/init.nu
 # starship — prompt
 source ~/.cache/starship/init.nu
 
+# carapace — argument completions
+source ~/.cache/carapace/init.nu
+
 # ── Zellij auto-start ─────────────────────────────────────────────────────────
 # Only start Zellij if we're not already inside it and it's an interactive session
 def --env zellij_autostart [] {

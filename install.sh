@@ -116,12 +116,13 @@ fi
 
 # ── Directory setup ───────────────────────────────────────────────────────────
 mkdir -p "$BIN_DIR" "$SHARE_DIR" "$LOCAL_BIN" "$LOCAL_SHARE" \
-         "$HOME/.ssh/sockets" "$HOME/.cache/starship" \
+         "$HOME/.ssh/sockets" "$HOME/.cache/starship" "$HOME/.cache/carapace" \
          "$HOME/.local/share/atuin" "$HOME/.config/nushell"
 chmod 700 "$HOME/.ssh"
 touch "$VERSIONS_FILE"
-# Nushell sources this at parse time — file must always exist even if empty
+# Nushell sources these at parse time — files must always exist even if empty
 touch "$HOME/.config/nushell/secrets.nu"
+touch "$HOME/.cache/carapace/init.nu"
 
 # ── Version tracking ──────────────────────────────────────────────────────────
 get_installed_version() { grep "^$1=" "$VERSIONS_FILE" 2>/dev/null | cut -d= -f2 || echo ""; }
@@ -503,6 +504,11 @@ if [[ "$LINK_ONLY" == false ]]; then
     "btm|bottom|ClementTsang/bottom|linux|x86_64|bottom_x86_64-unknown-linux-musl.tar.gz|btm"
     "btm|bottom|ClementTsang/bottom|linux|aarch64|bottom_aarch64-unknown-linux-musl.tar.gz|btm"
     "btm|bottom|ClementTsang/bottom|darwin|*|bottom_*-apple-darwin.tar.gz|btm"
+
+    "carapace|-|carapace-sh/carapace-bin|linux|x86_64|carapace-bin_*_linux_amd64.tar.gz|carapace"
+    "carapace|-|carapace-sh/carapace-bin|linux|aarch64|carapace-bin_*_linux_arm64.tar.gz|carapace"
+    "carapace|-|carapace-sh/carapace-bin|darwin|x86_64|carapace-bin_*_darwin_amd64.tar.gz|carapace"
+    "carapace|-|carapace-sh/carapace-bin|darwin|aarch64|carapace-bin_*_darwin_arm64.tar.gz|carapace"
   )
   for t in "${CLI_TOOLS[@]}"; do install_tool "$t"; done
 
@@ -680,6 +686,12 @@ if [[ ! -f "$HOME/.local/share/zoxide/init.nu" ]] && { command -v zoxide &>/dev/
   ZOXIDE="${LOCAL_BIN}/zoxide"; [[ -f "$ZOXIDE" ]] || ZOXIDE="zoxide"
   mkdir -p "$HOME/.local/share/zoxide"
   "$ZOXIDE" init nushell > "$HOME/.local/share/zoxide/init.nu" 2>/dev/null && ok "zoxide init generated"
+fi
+
+# Use ! -s (not non-empty) since the file is pre-touched empty in directory setup
+if [[ ! -s "$HOME/.cache/carapace/init.nu" ]] && { command -v carapace &>/dev/null || [[ -f "$LOCAL_BIN/carapace" ]]; }; then
+  CARAPACE="${LOCAL_BIN}/carapace"; [[ -f "$CARAPACE" ]] || CARAPACE="carapace"
+  "$CARAPACE" _carapace nushell > "$HOME/.cache/carapace/init.nu" 2>/dev/null && ok "carapace init generated"
 fi
 
 # ── Yazi: install catppuccin-mocha flavor ─────────────────────────────────────
