@@ -4,6 +4,9 @@
 alias bat  = bat --style header,grid
 alias cat  = bat --style header,grid
 
+#zoxide (cd)
+alias cd   = z
+
 # fd (find)
 alias find = fd
 
