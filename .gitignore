@@ -8,9 +8,6 @@ bin/.local/share/*
 bin/.local/.crates.toml
 bin/.local/.crates2.json
 
-# Version tracking for installed binaries
-bin/.versions
-
 # Downloaded theme files
 nushell/.config/nushell/themes/catppuccin_mocha.nu
 

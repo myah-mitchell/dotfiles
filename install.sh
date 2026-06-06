@@ -37,8 +37,8 @@ done
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DIR="$DOTFILES/bin/.local/bin"
 SHARE_DIR="$DOTFILES/bin/.local/share"
-VERSIONS_FILE="$DOTFILES/bin/.versions"
 LOCAL_BIN="$HOME/.local/bin"
+VERSIONS_FILE="$LOCAL_BIN/.versions"
 LOCAL_SHARE="$HOME/.local/share"
 
 # ── Platform detection ────────────────────────────────────────────────────────
@@ -142,11 +142,22 @@ set_installed_version() {
 download_release() {
   local repo="$1" glob="$2" dest="$3" bin_in_archive="${4:-$3}"
   local key="${dest}"
+  local installed
+  installed=$(get_installed_version "$key")
 
   log "Checking ${dest}..."
 
+  # Skip the API call entirely when already installed and not forcing update.
+  # With 25+ tools and 60 unauthenticated requests/hour, making an API call for
+  # every tool on every run burns the rate limit and causes tools past ~tool 10
+  # to never record their version in .versions (they get "Could not fetch" and
+  # return early, leaving installed="" on the next run → re-download loop).
+  if [[ -n "$installed" && "$FORCE_UPDATE" == false ]]; then
+    ok "${dest} already at ${installed}"
+    return
+  fi
+
   # Single API call — parse both tag_name and asset URLs from one response.
-  # Two calls per tool would burn the 60 req/hour unauthenticated limit.
   local api_response
   api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
     "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases/latest") || true
@@ -157,9 +168,6 @@ download_release() {
     warn "Could not fetch latest version for ${repo} — skipping."
     return
   fi
-
-  local installed
-  installed=$(get_installed_version "$key")
 
   if [[ "$installed" == "$latest" && "$FORCE_UPDATE" == false ]]; then
     ok "${dest} already at ${latest}"
