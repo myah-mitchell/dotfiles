@@ -108,7 +108,7 @@ def nr [tool: string, ...args: string] {
 Requires Windows Developer Mode. `install.sh` prints a manual fallback if symlink creation fails.
 
 **Clipboard:** Three layers keep everything in sync with the Windows clipboard:
-- Zellij: `copy_command "clip.exe"` + `copy_on_select true` — selections auto-copy
+- Zellij: `copy_on_select true` + `copy_clipboard "system"` — uses OSC52 via Alacritty (no `copy_command`; `clip.exe` by name is unreliable because Zellij doesn't inherit the shell PATH)
 - Alacritty: `save_to_clipboard = true` — mouse selections auto-copy
 - Neovim: `vim.opt.clipboard = "unnamedplus"` + `vim.g.clipboard` using `clip.exe` for copy, PowerShell for paste (defined in `autocmds.lua`)
 

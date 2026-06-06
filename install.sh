@@ -843,6 +843,19 @@ chmod 700 "$HOME/.ssh"
 if [[ "$IS_WSL" == true && "$NO_WINDOWS" == false ]]; then
   log "=== Windows setup (WSL2 detected) ==="
 
+  # Check WSL interop before attempting any powershell.exe calls
+  WSL_INTEROP_OK=false
+  if [[ "$(head -1 /proc/sys/fs/binfmt_misc/WSLInterop 2>/dev/null)" == "enabled" ]]; then
+    WSL_INTEROP_OK=true
+  elif command -v powershell.exe &>/dev/null && powershell.exe -NonInteractive -c "exit 0" &>/dev/null; then
+    WSL_INTEROP_OK=true
+  fi
+
+  if [[ "$WSL_INTEROP_OK" == false ]]; then
+    warn "WSL interop is disabled — skipping Windows setup (Alacritty, fonts)."
+    warn "To enable: add 'enabled=true' under [interop] in /etc/wsl.conf, then run 'wsl --shutdown' and reopen."
+  else
+
   # Detect WSL distro name
   DISTRO_NAME=$(powershell.exe -NonInteractive -c "wsl.exe --list --running --quiet" 2>/dev/null \
     | tr -d '\r\0' | grep -v '^$' | head -1) || true
@@ -866,6 +879,7 @@ if [[ "$IS_WSL" == true && "$NO_WINDOWS" == false ]]; then
     | tr -d '\r\0' | grep -v "^$" \
     || warn "PowerShell step had warnings (non-fatal)"
 
+  fi  # end WSL_INTEROP_OK
 fi  # end IS_WSL
 
 # ── Done ──────────────────────────────────────────────────────────────────────
