@@ -774,6 +774,63 @@ if command -v ya &>/dev/null || [[ -f "$LOCAL_BIN/ya" ]]; then
     ok "yazi catppuccin-mocha flavor installed"
   else
     warn "yazi flavor install failed — run 'ya pkg add yazi-rs/flavors:catppuccin-mocha' manually"
+# ── Fonts (Linux / macOS only — WSL defers to windows-setup.ps1) ─────────────
+if [[ "$IS_WSL" == false ]]; then
+  log "=== JetBrainsMono Nerd Font ==="
+  FONT_KEY="jetbrainsmono-nf"
+  installed_font_ver=$(get_installed_version "$FONT_KEY")
+
+  font_api_response=""
+  font_latest=""
+  if [[ -z "$installed_font_ver" || "$FORCE_UPDATE" == true ]]; then
+    font_api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest") || true
+    font_latest=$(echo "$font_api_response" | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
+  fi
+
+  if [[ -n "$installed_font_ver" && "$FORCE_UPDATE" == false ]]; then
+    ok "JetBrainsMono Nerd Font already at ${installed_font_ver}"
+  elif [[ -z "$font_latest" ]]; then
+    warn "Could not fetch JetBrainsMono Nerd Font version — skipping."
+  elif [[ "$installed_font_ver" == "$font_latest" && "$FORCE_UPDATE" == false ]]; then
+    ok "JetBrainsMono Nerd Font already at ${font_latest}"
+  else
+    log "Downloading JetBrainsMono Nerd Font ${font_latest}..."
+    font_zip_url=$(echo "$font_api_response" \
+      | grep '"browser_download_url"' \
+      | grep 'JetBrainsMono\.zip' \
+      | cut -d'"' -f4 | head -1) || true
+
+    if [[ -z "$font_zip_url" ]]; then
+      warn "Could not find JetBrainsMono.zip asset — skipping font install."
+    else
+      font_tmp=$(mktemp -d)
+      trap "rm -rf '$font_tmp'" RETURN
+
+      if curl -fL --connect-timeout 30 --max-time 600 --retry 2 "$font_zip_url" -o "$font_tmp/JetBrainsMono.zip"; then
+        unzip -q "$font_tmp/JetBrainsMono.zip" -d "$font_tmp/fonts"
+
+        if [[ "$OS" == "darwin" ]]; then
+          FONT_DEST="$HOME/Library/Fonts"
+        else
+          FONT_DEST="$HOME/.local/share/fonts"
+        fi
+        mkdir -p "$FONT_DEST"
+
+        # Install NF, NFM, NFP — exclude NL variants (JetBrainsMonoNL*)
+        font_count=0
+        while IFS= read -r -d '' ttf; do
+          cp "$ttf" "$FONT_DEST/"
+          (( font_count++ )) || true
+        done < <(find "$font_tmp/fonts" -name "JetBrainsMonoNerdFont*.ttf" -print0)
+
+        [[ "$OS" == "linux" ]] && fc-cache -f "$FONT_DEST" 2>/dev/null || true
+        set_installed_version "$FONT_KEY" "$font_latest"
+        ok "JetBrainsMono Nerd Font installed (${font_count} files) at ${font_latest}"
+      else
+        warn "Font download failed — skipping."
+      fi
+    fi
   fi
 fi
 

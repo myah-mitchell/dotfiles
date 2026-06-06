@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Windows-side setup for dotfiles: installs Alacritty, JetBrainsMonoNL Nerd Font,
+    Windows-side setup for dotfiles: installs Alacritty, JetBrainsMono Nerd Font (NF/NFM/NFP),
     and creates the Alacritty config symlink pointing into the WSL2 dotfiles repo.
     Called from install.sh on WSL2.
 
@@ -34,13 +34,13 @@ if ($alacrittyCmd) {
     ok 'Alacritty installed'
 }
 
-# --- JetBrainsMonoNL Nerd Font -------------------------------------------
-log 'Checking JetBrainsMonoNL Nerd Font...'
+# --- JetBrainsMono Nerd Font (NF / NFM / NFP — no NL variants) ----------
+log 'Checking JetBrainsMono Nerd Font...'
 $fontDir = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
-# Check by file presence -- faster and more reliable than registry lookup
-$existing = Get-ChildItem $fontDir -Filter '*JetBrainsMonoNL*' -ErrorAction SilentlyContinue
+# Check by file presence; NF files start with JetBrainsMonoNerdFont (not JetBrainsMonoNL)
+$existing = Get-ChildItem $fontDir -Filter 'JetBrainsMonoNerdFont*.ttf' -ErrorAction SilentlyContinue
 if ($existing) {
-    ok "JetBrainsMonoNL Nerd Font already installed ($($existing.Count) files)"
+    ok "JetBrainsMono Nerd Font already installed ($($existing.Count) files)"
 } else {
     log 'Downloading JetBrainsMono Nerd Font (~200 MB)...'
     $zipPath     = "$env:TEMP\JetBrainsMono.zip"
@@ -51,14 +51,14 @@ if ($existing) {
     $regPath = 'HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
     New-Item -ItemType Directory -Force $fontDir | Out-Null
     $count = 0
-    # NLNerdFontMono-Light*.ttf covers Light and LightItalic; skip the Propo variant
-    Get-ChildItem $extractPath -Filter '*NLNerdFontMono-Light*.ttf' | ForEach-Object {
+    # Install NF, NFM, NFP — JetBrainsMonoNerdFont* naturally excludes NL variants
+    Get-ChildItem $extractPath -Filter 'JetBrainsMonoNerdFont*.ttf' | ForEach-Object {
         $dest = "$fontDir\$($_.Name)"
         Copy-Item $_.FullName $dest -Force
         New-ItemProperty -Path $regPath -Name "$($_.BaseName) (TrueType)" -Value $dest -Force | Out-Null
         $count++
     }
-    ok "JetBrainsMonoNL Nerd Font installed ($count files)"
+    ok "JetBrainsMono Nerd Font installed ($count files)"
 }
 
 # --- Alacritty config ----------------------------------------------------
