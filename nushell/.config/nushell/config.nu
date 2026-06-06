@@ -179,6 +179,13 @@ $env.config = {
 
   # ── Environment Variables ───────────────────────────────────────────────────
 
+  # ── Plugin Settings ─────────────────────────────────────────────────────────
+  plugins: {
+    highlight: {
+      custom_themes: ~/.config/nushell/themes
+      theme: catppuccin_mocha
+    }
+  }
 }
 
 # ── Tool integrations ─────────────────────────────────────────────────────────

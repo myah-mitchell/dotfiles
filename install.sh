@@ -609,6 +609,14 @@ if [[ "$LINK_ONLY" == false ]]; then
       && ok "Nushell theme downloaded" \
       || warn "Nushell theme download failed — source manually from catppuccin/nushell"
   fi
+  if [[ ! -f "$NUSHELL_THEME_DIR/catppuccin_mocha.tmTheme" ]]; then
+    log "Downloading Nushell Plugin Highlight Catppuccin Mocha theme..."
+    curl -sfL --connect-timeout 15 \
+      "https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme" \
+      -o "$NUSHELL_THEME_DIR/catppuccin_mocha.tmTheme" \
+      && ok "Nushell Highlight theme downloaded" \
+      || warn "Nushell Highlight theme download failed — source manually from catppuccin/bat"
+  fi
 
 fi  # end --link / skip downloads
 
