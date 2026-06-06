@@ -533,8 +533,8 @@ if [[ "$LINK_ONLY" == false ]]; then
   NUSHELL_PLUGINS_CARGO=(
     "nu_plugin_skim|nu_plugin_skim"
     "nu_plugin_dns|nu_plugin_dns"
+    "nu_plugin_highlight|nu_plugin_highlight"
     #"nu_plugin_file|nu_plugin_file"
-    #"nu_plugin_highlight|nu_plugin_highlight"
     #"nu_plugin_compress|nu_plugin_compress"
     #"nu_plugin_x509|nu_plugin_x509"d
     #"nu_plugin_clipboard|nu_plugin_clipboard"
@@ -695,17 +695,16 @@ log "=== Registering Nushell plugins ==="
 NU_BIN="${LOCAL_BIN}/nu"
 [[ -f "$NU_BIN" ]] || NU_BIN="$(command -v nu 2>/dev/null)" || true
 if [[ -n "${NU_BIN:-}" && -x "${NU_BIN}" ]]; then
-  NUSHELL_PLUGIN_BINS=(
-    nu_plugin_skim nu_plugin_dns 
-    #nu_plugin_file nu_plugin_highlight nu_plugin_compress nu_plugin_x509 nu_plugin_clipboard
-  )
-  for plugin in "${NUSHELL_PLUGIN_BINS[@]}"; do
+  for entry in "${NUSHELL_PLUGINS_CARGO[@]}"; do
+    IFS='|' read -r plugin _ <<< "$entry"
     plugin_path="${LOCAL_BIN}/${plugin}"
+    plugin_short="${plugin#nu_plugin_}"
     if [[ -f "$plugin_path" ]]; then
-      if "${NU_BIN}" -c "plugin add $plugin_path" 2>/dev/null; then
+      if "${NU_BIN}" -c "plugin add $plugin_path" 2>/dev/null && \
+         "${NU_BIN}" -c "plugin use ${plugin_short}" 2>/dev/null; then
         ok "Registered ${plugin}"
       else
-        warn "Failed to register ${plugin} — run: nu -c 'plugin add ${plugin_path}'"
+        warn "Failed to register ${plugin} — run: nu -c 'plugin add ${plugin_path}; plugin use ${plugin_short}'"
       fi
     fi
   done
