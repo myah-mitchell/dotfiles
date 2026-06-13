@@ -48,8 +48,8 @@ dynamic_title     = true
 dynamic_padding   = false
 
 [window.padding]
-x = 8
-y = 8
+x = 4
+y = 4
 
 [window.dimensions]
 columns = 0
@@ -57,7 +57,7 @@ lines   = 0
 
 # ── Scrolling ────────────────────────────────────────────────────────────────
 [scrolling]
-history    = 10000
+history    = 100000
 multiplier = 3
 
 # ── Selection / Clipboard ─────────────────────────────────────────────────────

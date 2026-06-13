@@ -4,3 +4,6 @@
 [flavor]
 dark  = "catppuccin-mocha"
 light = "catppuccin-mocha"
+
+[indicator]
+padding = { open = "▐", close = "▌" }

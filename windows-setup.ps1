@@ -65,9 +65,21 @@ if ($existing) {
 log 'Checking Alacritty config...'
 $link = "$env:APPDATA\alacritty\alacritty.toml"
 New-Item -ItemType Directory -Force "$env:APPDATA\alacritty" | Out-Null
+$needsInstall = $true
 if (Test-Path $link) {
-    ok 'Alacritty config already in place'
-} else {
+    $item = Get-Item $link -Force
+    if ($item.LinkType -eq 'SymbolicLink' -and $item.Target -eq $AlacrittyTarget) {
+        ok 'Alacritty config symlink already up to date'
+        $needsInstall = $false
+    } elseif ($item.LinkType -eq 'SymbolicLink') {
+        warn "Alacritty config symlink points to wrong target - updating"
+        Remove-Item $link -Force
+    } else {
+        log 'Alacritty config is a plain file - updating from source'
+    }
+}
+
+if ($needsInstall) {
     try {
         New-Item -ItemType SymbolicLink -Path $link -Target $AlacrittyTarget -ErrorAction Stop | Out-Null
         ok 'Alacritty config symlink created'

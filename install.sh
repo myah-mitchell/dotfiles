@@ -524,6 +524,14 @@ if [[ "$LINK_ONLY" == false ]]; then
     "carapace|-|carapace-sh/carapace-bin|linux|aarch64|carapace-bin_*_linux_arm64.tar.gz|carapace"
     "carapace|-|carapace-sh/carapace-bin|darwin|x86_64|carapace-bin_*_darwin_amd64.tar.gz|carapace"
     "carapace|-|carapace-sh/carapace-bin|darwin|aarch64|carapace-bin_*_darwin_arm64.tar.gz|carapace"
+
+    "glow|-|charmbracelet/glow|linux|x86_64|glow_*_linux_x86_64.tar.gz|glow"
+    "glow|-|charmbracelet/glow|linux|aarch64|glow_*_linux_arm64.tar.gz|glow"
+    "glow|-|charmbracelet/glow|darwin|*|glow_*_darwin_*.tar.gz|glow"
+    
+    "7zz|7zz|ip7z/7zip|linux|x86_64|7z*-linux-x64.tar.xz|7zz"
+    "7zz|7zz|ip7z/7zip|linux|aarch64|7z*-linux-arm.tar.xz|7zz"
+    "7zz|7zz|ip7z/7zip|darwin|*|7z*-mac.tar.xz|7zz"
   )
   for t in "${CLI_TOOLS[@]}"; do install_tool "$t"; done
 
@@ -761,19 +769,33 @@ if [[ ! -s "$HOME/.cache/carapace/init.nu" ]] && { command -v carapace &>/dev/nu
   "$CARAPACE" _carapace nushell > "$HOME/.cache/carapace/init.nu" 2>/dev/null && ok "carapace init generated"
 fi
 
-# ── Yazi: install catppuccin-mocha flavor ─────────────────────────────────────
+# ── Yazi: packages (flavors + plugins) ────────────────────────────────────────
+YAZI_PACKAGES=(
+  yazi-rs/flavors:catppuccin-mocha
+  yazi-rs/plugins:full-border
+  yazi-rs/plugins:git
+  yazi-rs/plugins:piper
+  imsi32/yatline
+  imsi32/yatline-catppuccin
+  imsi32/yatline-githead
+  ndtoan96/ouch
+  Rolv-Apneseth/starship
+)
 if command -v ya &>/dev/null || [[ -f "$LOCAL_BIN/ya" ]]; then
   YA="${LOCAL_BIN}/ya"
   [[ -f "$YA" ]] || YA="ya"
-  log "Installing yazi catppuccin-mocha flavor..."
-  # ya pkg add exits 1 if already in package.toml; treat that as success and
-  # always run install to ensure the flavor files are actually deployed.
-  ya_out=$("$YA" pkg add yazi-rs/flavors:catppuccin-mocha 2>&1) || \
-    echo "$ya_out" | grep -q "already exists"
+  log "Adding yazi packages..."
+  for pkg in "${YAZI_PACKAGES[@]}"; do
+    "$YA" pkg add "$pkg" 2>/dev/null || true
+    ok "yazi: queued ${pkg}"
+  done
   if "$YA" pkg install 2>/dev/null; then
-    ok "yazi catppuccin-mocha flavor installed"
+    ok "yazi packages installed"
   else
-    warn "yazi flavor install failed — run 'ya pkg add yazi-rs/flavors:catppuccin-mocha' manually"
+    warn "yazi pkg install failed — run 'ya pkg install' manually"
+  fi
+fi
+
 # ── Fonts (Linux / macOS only — WSL defers to windows-setup.ps1) ─────────────
 if [[ "$IS_WSL" == false ]]; then
   log "=== JetBrainsMono Nerd Font ==="

@@ -56,3 +56,19 @@ prepend_keymap = [
   { on = "2",       run = "tab_switch 1", desc = "Tab 2" },
   { on = "3",       run = "tab_switch 2", desc = "Tab 3" },
 ]
+
+# Compress files with ouch
+[[mgr.prepend_keymap]]
+on = ["C"]
+run = "plugin ouch"
+desc = "Compress with ouch"
+
+# Copy yanked files to the system clipboard
+[[mgr.prepend_keymap]]
+on  = "y"
+run = [ "yank", 'plugin clipboard -- --action=copy' ]
+
+# Paste files from the system clipboard into the current directory
+[[mgr.prepend_keymap]]
+on  = "<C-p>"
+run = [ 'plugin clipboard -- --action=paste' ]
