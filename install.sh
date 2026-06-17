@@ -463,6 +463,11 @@ if [[ "$LINK_ONLY" == false ]]; then
     "lazygit|-|jesseduffield/lazygit|linux|aarch64|lazygit_*_Linux_arm64.tar.gz|-"
     "lazygit|-|jesseduffield/lazygit|darwin|*|lazygit_*_Darwin_*.tar.gz|-"
 
+    "serpl|yassinebridi/serpl|linux|x86_64|serpl-*-linux-x86_64.tar.gz"
+    "serpl|yassinebridi/serpl|linux|aarch64|serpl-*-linux-arm64.tar.gz"
+    "serpl|yassinebridi/serpl|darwin|x86_64|serpl-*-macos-x86_64.tar.gz"
+    "serpl|yassinebridi/serpl|darwin|aarch64|serpl-*-macos-arm64.tar.gz"
+
     "gping|gping|orf/gping|linux|x86_64|gping-Linux-musl-x86_64.tar.gz|-"
     "gping|gping|orf/gping|linux|aarch64|gping-Linux-musl-arm64.tar.gz|-"
     "gping|gping|orf/gping|darwin|x86_64|gping-macOS-x86_64.tar.gz|-"
@@ -532,6 +537,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "7zz|7zz|ip7z/7zip|linux|x86_64|7z*-linux-x64.tar.xz|7zz"
     "7zz|7zz|ip7z/7zip|linux|aarch64|7z*-linux-arm.tar.xz|7zz"
     "7zz|7zz|ip7z/7zip|darwin|*|7z*-mac.tar.xz|7zz"
+
   )
   for t in "${CLI_TOOLS[@]}"; do install_tool "$t"; done
 

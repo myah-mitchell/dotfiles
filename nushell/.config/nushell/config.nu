@@ -123,7 +123,7 @@ $env.config = {
       mode:     [emacs, vi_normal, vi_insert]
       event:    {
         send: ExecuteHostCommand
-        cmd:  "commandline edit --insert (fzf --prompt 'File> ' | str trim)"
+        cmd:  "commandline edit --insert (fzf --popup --prompt 'File> ' | str trim)"
       }
     }
   ]

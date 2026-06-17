@@ -2,17 +2,34 @@
 // https://zellij.dev/documentation/
 
 // ── Global options ────────────────────────────────────────────────────────────
-theme "catppuccin-mocha"
+theme "catppuccin_m0rsla"
 default_layout "default"
 default_shell "nu"
 default_mode "normal"
 
 pane_frames        true
 mouse_mode         true
-scroll_buffer_size 50000
+scroll_buffer_size 100000
 copy_on_select     true
 copy_clipboard     "system"  // uses OSC52 via Alacritty (osc52 = "CopyPaste" in alacritty.toml)
 simplified_ui      false
+
+session_serialization true
+pane_viewport_serialization true
+scrollback_lines_to_serialize 0
+serialization_interval 60
+show_startup_tips false
+show_release_notes false
+osc8_hyperlinks true
+session_name "default"
+attach_to_session true
+
+ui {
+    pane_frames {
+        rounded_corners true
+        hide_session_name true
+    }
+}
 
 // ── Plugins ───────────────────────────────────────────────────────────────────
 // zellij-autolock: auto-switches to built-in locked mode when nvim/hx are focused,
@@ -37,7 +54,7 @@ load_plugins {
 //   Zellij's built-in "locked" mode is used by zellij-autolock when nvim/hx are
 //               focused — ALL keys pass through including Ctrl+hjkl
 
-keybinds clear-defaults=true {
+keybinds clear-defaults=false {
 
     // ── normal mode: main operating mode ───────────────────────────────────
     normal {
