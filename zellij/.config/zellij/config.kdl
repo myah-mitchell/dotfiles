@@ -2,6 +2,7 @@
 // https://zellij.dev/documentation/
 
 // ── Global options ────────────────────────────────────────────────────────────
+// Test Theme by running: zellij plugin -f -- https://github.com/imsnif/theme-tester/releases/latest/download/theme-tester.wasm
 theme "catppuccin_m0rsla"
 default_layout "default"
 default_shell "nu"

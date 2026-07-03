@@ -84,7 +84,7 @@ done
 # Ubuntu 22.04 ships git 2.34; zdiff3 merge style requires 2.35+.
 # The git-core PPA provides the latest stable git on Ubuntu/Debian.
 if [[ "$OS" == "linux" ]] && command -v apt-get &>/dev/null; then
-  git_ver=$(git --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1)
+  git_ver=$(git --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1) || true
   git_major=${git_ver%%.*}
   git_minor=${git_ver##*.}
   if (( git_major < 2 || (git_major == 2 && git_minor < 35) )); then
@@ -273,7 +273,7 @@ cargo_install() {
   installed=$(get_installed_version "$dest")
   if [[ -z "$installed" ]]; then
     installed=$("$cargo_bin" install --list --root "$DOTFILES/bin/.local" 2>/dev/null \
-      | grep -oP "^${crate} v\K[0-9][^:]+")
+      | grep -oP "^${crate} v\K[0-9][^:]+") || true
     [[ -n "$installed" ]] && set_installed_version "$dest" "$installed"
   fi
   if [[ "$installed" == "$latest" && "$FORCE_UPDATE" == false ]]; then
@@ -550,7 +550,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "nu_plugin_highlight|nu_plugin_highlight"
     #"nu_plugin_file|nu_plugin_file"
     #"nu_plugin_compress|nu_plugin_compress"
-    #"nu_plugin_x509|nu_plugin_x509"d
+    #"nu_plugin_x509|nu_plugin_x509"
     #"nu_plugin_clipboard|nu_plugin_clipboard"
   )
   PLUGIN_CARGO_BIN="$HOME/.cargo/bin/cargo"
@@ -571,13 +571,21 @@ if [[ "$LINK_ONLY" == false ]]; then
     download_release "sxyazi/yazi" "yazi-x86_64-unknown-linux-musl.zip" "yazi" "yazi"
     log "Extracting ya companion binary..."
     tmpdir=$(mktemp -d)
-    latest_yazi=$(curl -sf "https://api.github.com/repos/sxyazi/yazi/releases/latest" \
-      | grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
-    curl -sfL "https://github.com/sxyazi/yazi/releases/download/${latest_yazi}/yazi-x86_64-unknown-linux-musl.zip" \
-      -o "$tmpdir/yazi.zip"
-    unzip -q "$tmpdir/yazi.zip" -d "$tmpdir"
-    ya_bin=$(find "$tmpdir" -name "ya" | head -1)
-    [[ -f "$ya_bin" ]] && install -m 755 "$ya_bin" "$BIN_DIR/ya"
+    latest_yazi=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/sxyazi/yazi/releases/latest" \
+      | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
+    if [[ -z "$latest_yazi" ]]; then
+      warn "Could not fetch latest version for sxyazi/yazi — skipping ya companion binary."
+    elif ! curl -sfL --connect-timeout 30 --max-time 600 --retry 2 \
+      "https://github.com/sxyazi/yazi/releases/download/${latest_yazi}/yazi-x86_64-unknown-linux-musl.zip" \
+      -o "$tmpdir/yazi.zip"; then
+      warn "Download failed for ya companion binary — skipping."
+    elif ! unzip -q "$tmpdir/yazi.zip" -d "$tmpdir"; then
+      warn "Could not extract ya companion binary archive — skipping."
+    else
+      ya_bin=$(find "$tmpdir" -name "ya" | head -1)
+      [[ -f "$ya_bin" ]] && install -m 755 "$ya_bin" "$BIN_DIR/ya"
+    fi
     rm -rf "$tmpdir"
   elif [[ "$OS" == "linux" && "$ARCH" == "aarch64" ]]; then
     download_release "sxyazi/yazi" "yazi-aarch64-unknown-linux-musl.zip" "yazi" "yazi"
@@ -888,7 +896,7 @@ if [[ "$IS_WSL" == true && "$NO_WINDOWS" == false ]]; then
   DISTRO_NAME=$(powershell.exe -NonInteractive -c "wsl.exe --list --running --quiet" 2>/dev/null \
     | tr -d '\r\0' | grep -v '^$' | head -1) || true
   [[ -z "$DISTRO_NAME" ]] && \
-    DISTRO_NAME=$(grep "^NAME=" /etc/os-release 2>/dev/null | cut -d'"' -f2 | tr ' ' '-')
+    DISTRO_NAME=$(grep "^NAME=" /etc/os-release 2>/dev/null | cut -d'"' -f2 | tr ' ' '-') || true
 
   # Build Windows path to the alacritty.toml source file in dotfiles
   WIN_CONFIG_TARGET=""
