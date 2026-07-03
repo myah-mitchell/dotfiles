@@ -35,3 +35,5 @@ nushell/.config/nushell/secrets.nu
 yazi/.config/yazi/flavors/
 yazi/.config/yazi/plugins/
 
+# NVim files
+nvim/.config/nvim/lazy-lock.json
