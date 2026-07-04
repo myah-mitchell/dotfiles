@@ -538,6 +538,10 @@ if [[ "$LINK_ONLY" == false ]]; then
     "7zz|7zz|ip7z/7zip|linux|aarch64|7z*-linux-arm.tar.xz|7zz"
     "7zz|7zz|ip7z/7zip|darwin|*|7z*-mac.tar.xz|7zz"
 
+    "jq|-|jqlang/jq|linux|x86_64|jq-linux-amd64|jq"
+    "jq|-|jqlang/jq|linux|aarch64|jq-linux-arm64|jq"
+    "jq|-|jqlang/jq|darwin|x86_64|jq-macos-amd64|jq"
+    "jq|-|jqlang/jq|darwin|aarch64|jq-macos-arm64|jq"
   )
   for t in "${CLI_TOOLS[@]}"; do install_tool "$t"; done
 
