@@ -8,15 +8,15 @@ layout {
         pane size=1 borderless=true {
             plugin location="zjstatus" {
                 format_left   "{tabs}"
-                format_right  "{command_weather} {command_sysinfo} {datetime}"
+                format_right  "#[fg=#6c7086,italics]{command_user}@{command_host}:{session}"
             }
         }
         children
         pane size=1 borderless=true {
             plugin location="zjstatus" {
-                format_left   "{mode} {notifications}"
-                format_center "#[fg=#6c7086,italics]{command_user}@{command_host}:{session}"
-                format_right  "{pipe_zjstatus_hints}"
+                format_left   "{mode} {pipe_zjstatus_hints}"
+                format_center "{notifications}"
+                format_right  "{command_weather} {command_sysinfo} {datetime}"
             }
         }
     }
