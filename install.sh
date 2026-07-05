@@ -814,6 +814,150 @@ if command -v ya &>/dev/null || [[ -f "$LOCAL_BIN/ya" ]]; then
   fi
 fi
 
+# ── Zellij: plugins (downloaded once to a local file, no network needed after) ─
+# zellij/.config/zellij/config.kdl loads these via file:~/.local/share/zellij/
+# plugins/<name> — Zellij's own plugin dir, not ~/.local/bin (these are never
+# invoked directly, so they don't belong on PATH). Using a local file instead
+# of https:// matters because this layout runs on every new shell via
+# zellij_autostart, so a live fetch (or a dead pinned tag) would block every
+# new terminal, not just one session. Versions here must match config.kdl;
+# update both together when bumping one.
+ZELLIJ_PLUGIN_DIR="${SHARE_DIR}/zellij/plugins"
+mkdir -p "$ZELLIJ_PLUGIN_DIR"
+ZELLIJ_PLUGINS=(
+  "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.2.2"
+  "zjstatus.wasm|dj95/zjstatus|v0.23.0"
+  "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
+)
+log "=== Zellij plugins ==="
+for entry in "${ZELLIJ_PLUGINS[@]}"; do
+  IFS='|' read -r dest repo tag <<< "$entry"
+  installed=$(get_installed_version "$dest")
+  if [[ "$installed" == "$tag" && "$FORCE_UPDATE" == false ]]; then
+    ok "${dest} already at ${tag}"
+    continue
+  fi
+  log "Downloading ${dest} ${tag}..."
+  if curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
+       "https://github.com/${repo}/releases/download/${tag}/${dest}" \
+       -o "${ZELLIJ_PLUGIN_DIR}/${dest}"; then
+    set_installed_version "$dest" "$tag"
+    ok "${dest} installed at ${tag}"
+  else
+    warn "Download failed for ${dest} — zjstatus/autolock won't load until this succeeds (re-run install.sh)"
+  fi
+done
+
+# ── Zellij: pre-approve plugin permissions ────────────────────────────────────
+# Each plugin's request_permission() call requires one-time user approval via a
+# y/n prompt rendered inside its own pane. zjstatus and autolock both live in
+# size=1 borderless panes that aren't the pane focused on startup, so that
+# prompt is easy to never see — the plugin then sits inert forever, looking
+# "broken" with no visible error. Seeding the grant here avoids that entirely.
+# Permissions below match each plugin's own request_permission() call (checked
+# against source at time of writing — re-check if bumping versions above).
+# Append-only: never overwrites grants for other plugins the user has approved.
+#
+# Keyed by the *deployed* ~/.local/share path, not $ZELLIJ_PLUGIN_DIR (the repo
+# source dir) — Zellij's permission cache key is exactly what config.kdl's
+# file: location shell-expands to (no symlink resolution), which is always
+# the stowed ~/.local/share/zellij/plugins/<name> path.
+ZELLIJ_PLUGIN_PERMISSIONS=(
+  "zellij-autolock.wasm|ReadApplicationState ChangeApplicationState"
+  "zjstatus.wasm|ReadApplicationState ChangeApplicationState RunCommands"
+  "zjstatus-hints.wasm|ReadApplicationState MessageAndLaunchOtherPlugins"
+  "zellij-newtab-plus.wasm|RunCommands Reconfigure ReadApplicationState ChangeApplicationState"
+)
+ZELLIJ_PERMISSIONS_FILE="$HOME/.cache/zellij/permissions.kdl"
+mkdir -p "$(dirname "$ZELLIJ_PERMISSIONS_FILE")"
+touch "$ZELLIJ_PERMISSIONS_FILE"
+for entry in "${ZELLIJ_PLUGIN_PERMISSIONS[@]}"; do
+  IFS='|' read -r dest perms <<< "$entry"
+  plugin_path="${HOME}/.local/share/zellij/plugins/${dest}"
+  if grep -qF "\"${plugin_path}\"" "$ZELLIJ_PERMISSIONS_FILE"; then
+    continue
+  fi
+  {
+    echo "\"${plugin_path}\" {"
+    for perm in $perms; do
+      echo "    ${perm}"
+    done
+    echo "}"
+  } >> "$ZELLIJ_PERMISSIONS_FILE"
+  ok "Pre-approved zellij permissions for ${dest}"
+done
+
+# zjstatus-hints has no usable release: v0.1.4 (its only release) predates
+# ~11 months of upstream fixes on `main`, so this builds from source instead
+# of downloading a release asset. Requires cargo (see the --cargo Rust
+# toolchain step above) + the wasm32-wasip1 target. Tracked by commit SHA
+# rather than a version tag since it always follows main.
+build_zjstatus_hints() {
+  # TEMPORARY OVERRIDE: building from AdamsGH's fork/branch (customizable
+  # hints) instead of upstream b0o/zjstatus-hints@main. Revert to
+  # repo="b0o/zjstatus-hints" branch="main" once the fork's changes land
+  # upstream or this is no longer needed.
+  #local repo="AdamsGH/zjstatus-hints" branch="feat/customizable-hints" dest="zjstatus-hints.wasm"
+  local repo="ultranity/zjstatus-hints" branch="feat/zellij-0.44.2-and-customizable-hints" dest="zjstatus-hints.wasm"
+  local cargo_bin="$HOME/.cargo/bin/cargo"
+  if [[ ! -x "$cargo_bin" ]]; then
+    warn "${dest}: cargo not available — skipping (run install.sh --cargo first, or install Rust via rustup.rs)"
+    return
+  fi
+
+  local latest_sha
+  latest_sha=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/commits/${branch}" \
+    | grep -oP '"sha":\s*"\K[^"]+' | head -1) || true
+  if [[ -z "$latest_sha" ]]; then
+    warn "Could not check ${repo}@${branch} — skipping ${dest}"
+    return
+  fi
+
+  local installed
+  installed=$(get_installed_version "$dest")
+  if [[ "$installed" == "$latest_sha" && "$FORCE_UPDATE" == false ]]; then
+    ok "${dest} already built from ${latest_sha:0:7}"
+    return
+  fi
+
+  log "Building ${dest} from ${repo}@${branch}@${latest_sha:0:7}..."
+  "$HOME/.cargo/bin/rustup" target add wasm32-wasip1 &>/dev/null || true
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  trap "rm -rf '$tmpdir'" RETURN
+
+  if ! curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
+       "https://github.com/${repo}/archive/${latest_sha}.tar.gz" -o "${tmpdir}/src.tar.gz"; then
+    warn "Download failed for ${repo} source — skipping ${dest}"
+    return
+  fi
+  tar -xzf "${tmpdir}/src.tar.gz" -C "$tmpdir"
+  local srcdir
+  srcdir=$(find "$tmpdir" -maxdepth 1 -type d -name "zjstatus-hints-*" | head -1)
+  if [[ -z "$srcdir" ]]; then
+    warn "Could not find extracted source for ${dest} — skipping"
+    return
+  fi
+
+  if ! (cd "$srcdir" && "$cargo_bin" build --release --target=wasm32-wasip1 --quiet); then
+    warn "cargo build failed for ${dest} — skipping"
+    return
+  fi
+
+  install -m 644 "${srcdir}/target/wasm32-wasip1/release/zjstatus-hints.wasm" "${ZELLIJ_PLUGIN_DIR}/${dest}"
+  set_installed_version "$dest" "$latest_sha"
+  ok "${dest} built from ${latest_sha:0:7}"
+}
+build_zjstatus_hints
+
+# link_package("bin") already ran above (before this Zellij plugins section
+# existed), so any plugin just downloaded/built here has no ~/.local/share
+# symlink yet — Zellij fails to load it silently until the next install.sh
+# run. Re-link now so a fresh plugin works on the very first run.
+link_package bin
+
 # ── Fonts (Linux / macOS only — WSL defers to windows-setup.ps1) ─────────────
 if [[ "$IS_WSL" == false ]]; then
   log "=== JetBrainsMono Nerd Font ==="
