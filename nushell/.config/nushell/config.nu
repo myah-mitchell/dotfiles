@@ -14,7 +14,7 @@ $env.config = {
     max_size: 1_000_000 # Session has to be reloaded for this to take effect
     sync_on_enter: true # Enable to share history between multiple sessions, else you have to close the session to write history to file
     file_format: "sqlite" # "sqlite" or "plaintext" (sqlite required by atuin)
-    isolation: false    # Controls history isolation between shell sessions
+    isolation: true    # Controls history isolation between shell sessions
   }
 
   # ── Miscellaneous Settings ───────────────────────────────────────────────────
