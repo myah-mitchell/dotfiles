@@ -51,4 +51,4 @@ alias glog = git log --oneline --graph --decorate --all
 
 # ── Random ───────────────────────────────────────────────────────────────────
 
-alias l     = ls -alt
+alias l     = ls -at

@@ -5,6 +5,7 @@ format = """
 $os\
 $time\
 [](fg:prev_bg bg:color_maroon)\
+$sudo\
 $username\
 $hostname\
 [](fg:prev_bg bg:color_yellow)\
@@ -47,6 +48,12 @@ format = '[$time ]($style)'
 
 # Red Pill
 
+[sudo]
+symbol = "󱎚"
+disabled = false
+style = "bg:prev_bg fg:color_crust"
+format = "[$symbolSUDO ]($style)"
+
 [username]
 show_always = true
 style_user = "bg:prev_bg fg:color_crust"
@@ -63,12 +70,12 @@ format = "[@$hostname ($ssh_symbol )]($style)"
 # Yellow Pill
 
 [directory]
-read_only = "󰌾"
+read_only = "󰌾"
 truncate_to_repo = false
 truncation_length = 10
 truncation_symbol = "…/"
 style = "bg:prev_bg fg:color_crust"
-format = "[($read_only )]($style)[$path ]($style)"
+format = "[($read_only)]($style)[$path ]($style)"
 
 # Green Pill
 
