@@ -37,3 +37,6 @@ yazi/.config/yazi/plugins/
 
 # NVim files
 nvim/.config/nvim/lazy-lock.json
+
+# Other
+/.[zc]?[za]?[zd][ze]/
