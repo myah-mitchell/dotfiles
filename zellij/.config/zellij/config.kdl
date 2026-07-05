@@ -12,7 +12,8 @@ pane_frames        true
 mouse_mode         true
 scroll_buffer_size 100000
 copy_on_select     true
-copy_clipboard     "system"  // uses OSC52 via Alacritty (osc52 = "CopyPaste" in alacritty.toml)
+copy_command       "/home/m0rsla/.config/zellij/scripts/clip-clean.py"  // strips Nerd Font icons before writing to the system clipboard (see script docstring); overrides copy_clipboard below
+copy_clipboard     "system"  // unused while copy_command is set; kept as the fallback if copy_command is ever removed
 simplified_ui      false
 
 session_serialization true

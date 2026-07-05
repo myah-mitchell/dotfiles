@@ -1,252 +1,198 @@
-# starship.toml — Catppuccin Mocha themed prompt
-# https://starship.rs/config/
-
-palette = "catppuccin_mocha"
+"$schema" = 'https://starship.rs/config-schema.json'
 
 format = """
-[](surface0)\
+[](color_surface0)\
 $os\
+$time\
+[](fg:prev_bg bg:color_maroon)\
 $username\
-[](bg:blue fg:surface0)\
+$hostname\
+[](fg:prev_bg bg:color_yellow)\
 $directory\
-[](fg:blue bg:peach)\
+[](fg:prev_bg bg:color_teal)\
 $git_branch\
+$git_commit\
 $git_status\
-$git_metrics\
-[](fg:peach bg:green)\
+[](fg:prev_bg bg:color_blue)\
 $rust\
-$golang\
 $nodejs\
+$php\
 $python\
-$java\
-$lua\
-$package\
-docker_context\
-conda\
-php\
-bun\
-c\
-kotlin\
-kaskell\
-[](fg:green bg:surface1)\
-$cmd_duration\
-[](fg:surface1 bg:surface0)\
+[](fg:prev_bg bg:color_mauve)\
+$docker_context\
 $jobs\
-[](fg:surface0)\
-$line_break\
-$character"""
+[](fg:prev_bg bg:color_surface0)\
+$cmd_duration\
+[](fg:prev_bg)\
+$line_break$character"""
 
-right_format = """\
-$status\
-$time"""
 
+# Options
+palette = 'catppuccin_mocha'
+continuation_prompt = '--> '
+add_newline = true
+
+# Modules (in used order)
+# Gray Pill
 [os]
 disabled = false
-style    = "bg:surface0 fg:text"
-
-[os.symbols]
-Windows   = "󰍲 "
-Ubuntu    = "󰕈 "
-SUSE      = " "
-Raspbian  = "󰐿 "
-Mint      = "󰣭 "
-Macos     = "󰀵 "
-Manjaro   = " "
-Linux     = "󰌽 "
-Gentoo    = "󰣨 "
-Fedora    = "󰣛 "
-Alpine    = " "
-Amazon    = " "
-Android   = " "
-AOSC      = " "
-Arch      = "󰣇 "
-Artix     = "󰣇 "
-CentOS    = " "
-Debian    = "󰣚 "
-NixOS     = "󱄅 "
-Redhat    = "󱄛 "
-Unknown   = "  "
-
-[username]
-show_always  = false
-style_user   = "bg:surface0 fg:subtext1"
-style_root   = "bg:surface0 fg:red bold"
-format       = "[$user ]($style)"
-
-[directory]
-style              = "fg:base bg:blue bold"
-format             = "[ $path ]($style)"
-truncation_length  = 4
-truncate_to_repo   = true
-read_only          = "  "
-read_only_style    = "fg:base bg:blue"
-home_symbol        = "~"
-repo_root_style    = "fg:base bg:blue bold"
-
-[directory.substitutions]
-"Documents" = "󰈙 "
-"Downloads" = " "
-"Music"     = "󰝚 "
-"Pictures"  = " "
-"Developer" = "󰲋 "
-
-[git_branch]
-symbol        = " "
-style         = "bg:peach fg:base bold"
-format        = "[ $symbol$branch ]($style)"
-truncation_length = 20
-
-[git_status]
-style         = "bg:peach fg:base"
-format        = "[$all_status$ahead_behind ]($style)"
-conflicted    = "!${count} "
-ahead         = "⇡${count} "
-behind        = "⇣${count} "
-diverged      = "⇕⇡${ahead_count}⇣${behind_count} "
-untracked     = "?${count} "
-stashed       = "$ "
-modified      = "~${count} "
-staged        = "+${count} "
-renamed       = "»${count} "
-deleted       = "✘${count} "
-
-[git_metrics]
-added_style   = "bold bg:peach fg:green"
-deleted_style = "bold bg:peach fg:red"
-format        = "([+$added]($added_style) )([-$deleted]($deleted_style) )"
-disabled      = false
-
-[rust]
-symbol        = " "
-style         = "bg:green fg:base"
-format        = "[ $symbol($version) ]($style)"
-
-[golang]
-symbol        = " "
-style         = "bg:green fg:base"
-format        = "[ $symbol($version) ]($style)"
-
-[nodejs]
-symbol        = " "
-style         = "bg:green fg:base"
-format        = "[ $symbol($version) ]($style)"
-
-[python]
-symbol        = " "
-style         = "bg:green fg:base"
-format        = "[ $symbol($version) ]($style)"
-pyenv_version_name = false
-
-[java]
-symbol        = " "
-style         = "bg:green fg:base"
-format        = "[ $symbol($version) ]($style)"
-
-[lua]
-symbol        = "  "
-style         = "bg:green fg:base"
-format        = "[ $symbol($version) ]($style)"
-
-[package]
-symbol        = "󰏗 "
-style         = "bg:green fg:base"
-format        = "[ $symbol$version ]($style)"
-
-[docker_context]
-symbol        = " "
-style         = "bg:green fg:base"
-format        = '[ $symbol($context) ]($style)'
-
-[conda]
-symbol        = " "
-style         = "bg:green fg:base"
-format        = '[ $symbol$environment ]($style)'
-ignore_base   = false
-
-[php]
-symbol        = " "
-style         = "bg:green"
-format        = '[ $symbol($verion) ]($style)'
-
-[bun]
-symbol        = " "
-style         = "bg:green"
-format        = '[ $symbol($verion) ]($style)'
-
-[c]
-symbol        = " "
-style         = "bg:green"
-format        = '[ $symbol($verion) ]($style)'
-
-[kotlin]
-symbol        = " "
-style         = "bg:green"
-format        = '[ $symbol($verion) ]($style)'
-
-[haskell]
-symbol        = " "
-style         = "bg:green"
-format        = '[ $symbol($verion) ]($style)'
-
-[cmd_duration]
-min_time      = 2_000
-style         = "bg:surface1 fg:subtext1"
-format        = "[ 󱎫 $duration ]($style)"
-
-[jobs]
-style         = "bg:surface0 fg:yellow"
-format        = "[ $symbol$number ]($style)"
-symbol        = " "
-number_threshold = 1
-
-[status]
-style         = "fg:red"
-format        = "[$symbol $status ]($style)"
-symbol        = "✖"
-success_symbol = ""
-not_found_symbol = "󰍉"
-sigint_symbol = ""
-disabled      = false
+style = "bg:prev_bg fg:color_crust"
+format = "[$symbol]($style)"
 
 [time]
-disabled      = false
-time_format   = "%H:%M"
-style         = "fg:overlay0"
-format        = "[$time ]($style)"
+disabled = false
+time_format = "%F %R:%6f"
+style = "bg:prev_bg fg:color_text "
+format = '[$time ]($style)'
+
+# Red Pill
+
+[username]
+show_always = true
+style_user = "bg:prev_bg fg:color_crust"
+style_root = "bg:prev_bg fg:prev_fg"
+format = '[$user]($style)'
+
+[hostname]
+ssh_symbol = ""
+ssh_only = false
+trim_at = '.l'
+style = "bg:prev_bg fg:prev_fg "
+format = "[@$hostname ($ssh_symbol )]($style)"
+
+# Yellow Pill
+
+[directory]
+read_only = "󰌾"
+truncate_to_repo = false
+truncation_length = 10
+truncation_symbol = "…/"
+style = "bg:prev_bg fg:color_crust"
+format = "[($read_only )]($style)[$path ]($style)"
+
+# Green Pill
+
+[git_branch]
+symbol = ""
+style = "bg:prev_bg fg:color_crust "
+format = "[$symbol$branch ]($style)"
+
+[git_commit]
+tag_symbol = "🏷"
+commit_hash_length = 7
+style = "bg:prev_bg fg:prev_fg"
+format = "[$hash$tag ]($style)"	
+
+[git_status]
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[($all_status$ahead_behind )]($style)'
+
+# Blue Pill
+
+[rust]
+symbol = ""
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[$symbol( $version) ]($style)'
+
+[nodejs]
+symbol = ""
+style = "fbg:prev_bg g:color_crust"
+format = '[$symbol( $version) ](fg:color_crust bg:prev_bg)' # bug, must set explicitly
+
+[php]
+symbol = ""
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[$symbol( $version) ]($style)'
+
+[python]
+symbol = ""
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[$symbol( $version)( $virtualenv) ]($style)' 
+
+# Purple Pill
+
+[docker_context]
+symbol = ""
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[$symbol( $context) ]($style)'
+
+[jobs]
+symbol = "󰆅"
+symbol_threshold = 2
+number_threshold = 2
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = "[$symbol($number )]($style)"
+
+# Gray Pill
+
+[cmd_duration]
+min_time = 1_000
+show_milliseconds = true
+style = "bg:prev_bg fg:prev_fg"
+format = "[$duration ]($style)"
+
+# New Line
 
 [character]
-success_symbol  = "[❯](bold green)"
-error_symbol    = "[❯](bold red)"
-vimcmd_symbol   = "[❮](bold lavender)"
-vimcmd_replace_one_symbol = "[❮](bold mauve)"
-vimcmd_replace_symbol     = "[❮](bold mauve)"
-vimcmd_visual_symbol      = "[❮](bold yellow)"
+disabled = false
+success_symbol = '[](bold fg:color_green)'
+error_symbol = '[](bold fg:color_red)'
 
-# ── Catppuccin Mocha palette ──────────────────────────────────────────────────
+# Theme
+
 [palettes.catppuccin_mocha]
-rosewater = "#f5e0dc"
-flamingo  = "#f2cdcd"
-pink      = "#f5c2e7"
-mauve     = "#cba6f7"
-red       = "#f38ba8"
-maroon    = "#eba0ac"
-peach     = "#fab387"
-yellow    = "#f9e2af"
-green     = "#a6e3a1"
-teal      = "#94e2d5"
-sky       = "#89dceb"
-sapphire  = "#74c7ec"
-blue      = "#89b4fa"
-lavender  = "#b4befe"
-text      = "#cdd6f4"
-subtext1  = "#bac2de"
-subtext0  = "#a6adc8"
-overlay2  = "#9399b2"
-overlay1  = "#7f849c"
-overlay0  = "#6c7086"
-surface2  = "#585b70"
-surface1  = "#45475a"
-surface0  = "#313244"
-base      = "#1e1e2e"
-mantle    = "#181825"
-crust     = "#11111b"
+color_rosewater = "#f5e0dc"
+color_flamingo = "#f2cdcd"
+color_pink = "#f5c2e7"
+color_mauve = "#cba6f7"
+color_red = "#f38ba8"
+color_maroon = "#eba0ac"
+color_peach = "#fab387"
+color_yellow = "#f9e2af"
+color_green = "#a6e3a1"
+color_teal = "#94e2d5"
+color_sky = "#89dceb"
+color_sapphire = "#74c7ec"
+color_blue = "#89b4fa"
+color_lavender = "#b4befe"
+color_text = "#cdd6f4" 
+color_subtext1 = "#bac2de"
+color_subtext0 = "#a6adc8"
+color_overlay2 = "#9399b2"
+color_overlay1 = "#7f849c"
+color_overlay0 = "#6c7086"
+color_surface2 = "#585b70"
+color_surface1 = "#45475a" 
+color_surface0 = "#313244"
+color_base = "#1e1e2e"
+color_mantle = "#181825"
+color_crust = "#11111b"
+
+# OS Symbols
+
+[os.symbols]
+Alpine = "[](fg:color_teal bg:prev_fg)"
+Amazon = "[](fg:color_peach bg:prev_fg)"
+Android = "[](fg:color_green bg:prev_fg)"
+Arch = "[󰣇](fg:color_blue bg:prev_fg)"
+Artix = "[󰣇](fg:color_blue bg:prev_fg)"
+CachyOS = "[󰣇](fg:color_blue bg:prev_fg)"
+CentOS = "[](fg:color_blue bg:prev_fg)"
+Debian = "[󰣚](fg:color_red bg:prev_fg)"
+Elementary = "[](fg:color_text bg:prev_fg)"
+EndeavourOS = "[](fg:color_purple bg:prev_fg)"
+Fedora = "[󰣛](fg:color_red bg:prev_fg)"
+FreeBSD = "[](fg:color_red bg:prev_fg)"
+Gentoo = "[󰣨](fg:color_text bg:prev_fg)"
+Kali = "[](fg:color_text bg:prev_fg)"
+Linux = "[󰌽](fg:color_text bg:prev_fg)"
+Macos = "[󰀵](fg:color_text bg:prev_fg)"
+Manjaro = "[](fg:color_green bg:prev_fg)"
+Mint = "[󰣭](fg:color_green bg:prev_fg)"
+Pop = "[](fg:color_teal bg:prev_fg)"
+Raspbian = "[󰐿](fg:color_red bg:prev_fg)"
+RedHatEnterprise = "[󱄛](fg:color_red bg:prev_fg)"
+Redhat = "[󱄛](fg:color_red bg:prev_fg)"
+SUSE = "[](fg:color_green bg:prev_fg)"
+Ubuntu = "[](fg:color_peach bg:prev_fg)"
+Windows = "[](fg:color_blue bg:prev_fg)"

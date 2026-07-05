@@ -61,7 +61,9 @@ vim.api.nvim_create_autocmd("FileType", {
 if vim.fn.has("wsl") == 1 then
   vim.g.clipboard = {
     name  = "WslClipboard",
-    copy  = { ["+"] = "clip.exe", ["*"] = "clip.exe" },
+    -- routes through clip-clean.py (see zellij/scripts) instead of clip.exe directly,
+    -- so yanked Nerd Font icons don't turn into tofu boxes when pasted elsewhere
+    copy  = { ["+"] = "/home/m0rsla/.config/zellij/scripts/clip-clean.py", ["*"] = "/home/m0rsla/.config/zellij/scripts/clip-clean.py" },
     paste = {
       ["+"] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
       ["*"] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
