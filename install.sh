@@ -675,6 +675,31 @@ if [[ "$DO_REMOVE" == true ]]; then
   exit 0
 fi
 
+# ── Prune stale symlinks ───────────────────────────────────────────────────────
+# Config files get renamed or removed from the repo over time. Their old
+# symlinks in $HOME are left dangling — link_package only creates/updates
+# symlinks for files that currently exist, it never notices ones that no
+# longer have a source. Sweep $HOME for any symlink pointing into $DOTFILES
+# whose target no longer exists and remove it before (re)linking.
+prune_stale_symlinks() {
+  log "Checking for stale dotfiles symlinks..."
+  local pruned=0
+  while IFS= read -r -d '' link; do
+    local target
+    target=$(readlink "$link")
+    [[ "$target" == "$DOTFILES"/* ]] || continue
+    rm "$link"
+    ok "Removed stale symlink: $link -> $target"
+    (( pruned++ )) || true
+  done < <(find "$HOME" \
+    \( -path "$HOME/.cache" -o -path "$HOME/.cargo" -o -path "$HOME/.rustup" \
+       -o -path "$HOME/.npm" -o -path "$HOME/.local/share/nvim" \
+       -o -path "$DOTFILES" \) -prune -o \
+    -xtype l -print0 2>/dev/null)
+  [[ "$pruned" -eq 0 ]] && ok "No stale symlinks found" || ok "Pruned ${pruned} stale symlink(s)"
+}
+prune_stale_symlinks
+
 # ── Deploy configs ────────────────────────────────────────────────────────────
 [[ "$USE_COPY" == true ]] && log "=== Copying configs ===" || log "=== Linking configs ==="
 
