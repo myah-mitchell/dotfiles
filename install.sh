@@ -749,6 +749,24 @@ for pkg in "${PACKAGES[@]}"; do
   link_package "$pkg"
 done
 
+# ── Patch user-specific absolute paths ────────────────────────────────────────
+# zjstatus's command_*_command paths and Neovim's g.clipboard exec path must be
+# real absolute paths — zjstatus runs its WASM plugin commands directly with no
+# shell (no ~ or $HOME expansion), and Neovim's clipboard exec is likewise not
+# shell-expanded. Since these configs are symlinked (not copied) they carry
+# whichever machine's username last wrote them, so on every run rewrite any
+# baked-in /home/<user>/ prefix under the dotfiles-managed script dirs to match
+# whoever is running install.sh now.
+log "=== Patching user-specific paths ==="
+patch_user_path() {
+  local file="$1"
+  [[ -f "$file" ]] || return
+  sed -i -E "s#/home/[^/[:space:]\"]+/\.config/zellij/scripts/#${HOME//&/\\&}/.config/zellij/scripts/#g" "$file"
+}
+patch_user_path "$DOTFILES/zellij/.config/zellij/config.kdl"
+patch_user_path "$DOTFILES/nvim/.config/nvim/lua/config/autocmds.lua"
+ok "Patched user-specific paths"
+
 # ── Nushell plugin registration ───────────────────────────────────────────────
 log "=== Registering Nushell plugins ==="
 NU_BIN="${LOCAL_BIN}/nu"
@@ -1065,9 +1083,16 @@ if [[ "$IS_WSL" == true && "$NO_WINDOWS" == false ]]; then
     warn "To enable: add 'enabled=true' under [interop] in /etc/wsl.conf, then run 'wsl --shutdown' and reopen."
   else
 
-  # Detect WSL distro name
-  DISTRO_NAME=$(powershell.exe -NonInteractive -c "wsl.exe --list --running --quiet" 2>/dev/null \
-    | tr -d '\r\0' | grep -v '^$' | head -1) || true
+  # Detect WSL distro name. $WSL_DISTRO_NAME is set by WSL itself for the
+  # current session — use it first. Falling back to `wsl.exe --list --running`
+  # picks the wrong distro (non-deterministic ordering) when more than one
+  # distro is registered/running, e.g. a leftover install alongside the
+  # current one, which silently points the Alacritty symlink at a path that
+  # doesn't exist.
+  DISTRO_NAME="${WSL_DISTRO_NAME:-}"
+  [[ -z "$DISTRO_NAME" ]] && \
+    DISTRO_NAME=$(powershell.exe -NonInteractive -c "wsl.exe --list --running --quiet" 2>/dev/null \
+      | tr -d '\r\0' | grep -v '^$' | head -1) || true
   [[ -z "$DISTRO_NAME" ]] && \
     DISTRO_NAME=$(grep "^NAME=" /etc/os-release 2>/dev/null | cut -d'"' -f2 | tr ' ' '-') || true
 
