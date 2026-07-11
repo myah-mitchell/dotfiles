@@ -39,7 +39,7 @@ ui {
 // zjstatus: themed tab/status bar used by layouts/default.kdl.
 plugins {
     autolock location="file:~/.local/share/zellij/plugins/zellij-autolock.wasm" {
-        triggers         "nvim|hx|fzf|zoxide|atuin"
+        triggers         "nvim|hx|fzf|zoxide|atuin|tmux"
         //watch_interval   "2"
         reload_config    "true"
     }
@@ -395,10 +395,22 @@ keybinds clear-defaults=false {
     // ── locked mode: all keys pass through (managed by zellij-autolock) ─────
     // Do NOT add bindings here — this mode is for full passthrough to nvim/hx
     locked clear-defaults=true {
-    //    bind "Ctrl g" { SwitchToMode "Normal"; }  // emergency escape from locked mode
+        bind "Ctrl g" { 
+            // Enable the autolock plugin.
+            MessagePlugin "autolock" {payload "enable";};
+            // Unlock Zellij.
+            SwitchToMode "Normal"; 
+        }
     }
 
     shared_except "locked" "tmux" {
     //    bind "Ctrl g" { SwitchToMode "Locked"; }
+
+        bind "Ctrl g" {
+            // Disable the autolock plugin.
+            MessagePlugin "autolock" {payload "disable";};
+            // Lock Zellij.
+            SwitchToMode "Locked";
+        }
     }
 }
