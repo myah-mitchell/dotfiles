@@ -67,6 +67,10 @@ opt.backup         = false
 opt.writebackup    = false
 opt.fileencoding   = "utf-8"
 
+-- Python: force pyright (npm, Mason-installable via the ~/.local Node) instead of
+-- basedpyright, which installs via pip — and there is no pip on this machine.
+vim.g.lazyvim_python_lsp = "pyright"
+
 -- Set leader to space (LazyVim default; backtick is Zellij's prefix)
 vim.g.mapleader      = " "
 vim.g.maplocalleader = "\\"

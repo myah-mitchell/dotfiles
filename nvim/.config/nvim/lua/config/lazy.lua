@@ -22,6 +22,17 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.coding.luasnip" },
     { import = "lazyvim.plugins.extras.coding.mini-surround" },
     { import = "lazyvim.plugins.extras.util.mini-hipatterns" },
+    -- Sticky scroll: pins the enclosing scope (fn/class/loop) to the top of the
+    -- window so you always see where you are in the file (VSCode "Sticky Scroll").
+    { import = "lazyvim.plugins.extras.ui.treesitter-context" },
+    -- Language support. Rust uses cargo/rust-analyzer; Python and PHP LSP servers
+    -- (basedpyright/ruff, intelephense) install via the Node in ~/.local. HTML,
+    -- CSS, Emmet and Bash servers are added manually in plugins/lsp-servers.lua
+    -- (no dedicated lang.* extras exist for them). PowerShell is treesitter-only
+    -- until a .NET runtime is installed (powershell_es needs it).
+    { import = "lazyvim.plugins.extras.lang.rust" },
+    { import = "lazyvim.plugins.extras.lang.python" },
+    { import = "lazyvim.plugins.extras.lang.php" },
 
     -- Custom plugins
     { import = "plugins" },
