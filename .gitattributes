@@ -2,6 +2,11 @@
 install.sh eol=lf
 install.sh diff=shell
 
+# Normalize baked-in /home/<user>/ absolute paths to a placeholder on commit,
+# re-expand to this machine's $HOME on checkout — see git-filters/*.sh
+zellij/.config/zellij/config.kdl filter=homepath
+nvim/.config/nvim/lua/config/autocmds.lua filter=homepath
+
 # Force LF line endings for all shell scripts and config files
 *.sh       eol=lf
 *.nu       eol=lf

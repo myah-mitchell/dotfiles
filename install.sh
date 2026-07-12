@@ -542,6 +542,11 @@ if [[ "$LINK_ONLY" == false ]]; then
     "jq|-|jqlang/jq|linux|aarch64|jq-linux-arm64|jq"
     "jq|-|jqlang/jq|darwin|x86_64|jq-macos-amd64|jq"
     "jq|-|jqlang/jq|darwin|aarch64|jq-macos-arm64|jq"
+    
+    "tree-sitter-cli|-|tree-sitter/tree-sitter|linux|x86_64|tree-sitter-cli-linux-x64|tree-sitter"
+    "tree-sitter-cli|-|tree-sitter/tree-sitter|linux|aarch64|tree-sitter-cli-linux-arm64|tree-sitter"
+    "tree-sitter-cli|-|tree-sitter/tree-sitter|darwin|x86_64|tree-sitter-cli-macos-x64|tree-sitter"
+    "tree-sitter-cli|-|tree-sitter/tree-sitter|darwin|aarch64|tree-sitte-clir-macos-arm64|tree-sitter"
   )
   for t in "${CLI_TOOLS[@]}"; do install_tool "$t"; done
 
@@ -749,23 +754,33 @@ for pkg in "${PACKAGES[@]}"; do
   link_package "$pkg"
 done
 
-# ── Patch user-specific absolute paths ────────────────────────────────────────
+# ── Register the "homepath" git filter ────────────────────────────────────────
 # zjstatus's command_*_command paths and Neovim's g.clipboard exec path must be
 # real absolute paths — zjstatus runs its WASM plugin commands directly with no
 # shell (no ~ or $HOME expansion), and Neovim's clipboard exec is likewise not
-# shell-expanded. Since these configs are symlinked (not copied) they carry
-# whichever machine's username last wrote them, so on every run rewrite any
-# baked-in /home/<user>/ prefix under the dotfiles-managed script dirs to match
-# whoever is running install.sh now.
-log "=== Patching user-specific paths ==="
-patch_user_path() {
-  local file="$1"
-  [[ -f "$file" ]] || return
-  sed -i -E "s#/home/[^/[:space:]\"]+/\.config/zellij/scripts/#${HOME//&/\\&}/.config/zellij/scripts/#g" "$file"
-}
-patch_user_path "$DOTFILES/zellij/.config/zellij/config.kdl"
-patch_user_path "$DOTFILES/nvim/.config/nvim/lua/config/autocmds.lua"
-ok "Patched user-specific paths"
+# shell-expanded. zellij/.config/zellij/config.kdl and
+# nvim/.config/nvim/lua/config/autocmds.lua store a __DOTFILES_HOME__
+# placeholder instead of a real path; git's clean/smudge filters (defined in
+# git-filters/*.sh, wired up via .gitattributes) expand it to this machine's
+# $HOME on checkout and fold it back to the placeholder before anything is
+# staged — so switching machines/usernames never shows up as a diff to commit.
+# Filter *commands* live in local git config (not versioned), so they must be
+# registered on every clone/run; the checkout below re-smudges the working
+# tree in case the filter wasn't registered yet when these files were last
+# checked out (e.g. right after a fresh clone).
+log "=== Registering homepath git filter ==="
+git -C "$DOTFILES" config filter.homepath.clean "$DOTFILES/git-filters/homepath-clean.sh"
+git -C "$DOTFILES" config filter.homepath.smudge "$DOTFILES/git-filters/homepath-smudge.sh"
+git -C "$DOTFILES" config filter.homepath.required true
+# `git checkout --` is a no-op when the working-tree file already
+# content-matches the index (e.g. right after a fresh clone left the raw
+# placeholder in place because the filter wasn't registered yet) — it won't
+# re-run smudge in that case. `checkout-index -f` always rewrites from the
+# index, so it reliably re-smudges regardless of prior state.
+git -C "$DOTFILES" checkout-index -f -- \
+  zellij/.config/zellij/config.kdl \
+  nvim/.config/nvim/lua/config/autocmds.lua
+ok "Registered homepath git filter"
 
 # ── Nushell plugin registration ───────────────────────────────────────────────
 log "=== Registering Nushell plugins ==="

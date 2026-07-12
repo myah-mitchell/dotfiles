@@ -12,7 +12,7 @@ pane_frames        true
 mouse_mode         true
 scroll_buffer_size 100000
 copy_on_select     true
-copy_command       "/home/m0rsla/.config/zellij/scripts/clip-clean.py"  // strips Nerd Font icons before writing to the system clipboard (see script docstring); overrides copy_clipboard below
+copy_command       "__DOTFILES_HOME__/.config/zellij/scripts/clip-clean.py"  // strips Nerd Font icons before writing to the system clipboard (see script docstring); overrides copy_clipboard below
 copy_clipboard     "system"  // unused while copy_command is set; kept as the fallback if copy_command is ever removed
 simplified_ui      false
 
@@ -157,17 +157,17 @@ plugins {
         notification_show_interval           "60"
 
         // Weather script pill - Caches API results for 15 minutes
-        command_weather_command  "/home/m0rsla/.config/zellij/scripts/weather.py"
+        command_weather_command  "__DOTFILES_HOME__/.config/zellij/scripts/weather.py"
         command_weather_format   "#[fg=$pill_weather]#[bg=$pill_weather,fg=$pill_icon]󱦥 #[bg=$pill_bg,fg=$pill_weather,bold] {stdout}#[fg=$pill_bg]"
         command_weather_interval "60"
       
         // System Info script pill
-        command_sysinfo_command  "/home/m0rsla/.config/zellij/scripts/sysinfo.py"
+        command_sysinfo_command  "__DOTFILES_HOME__/.config/zellij/scripts/sysinfo.py"
         command_sysinfo_format   "#[fg=$pill_sysinfo]#[bg=$pill_sysinfo,fg=$pill_icon]󰓅 #[bg=$pill_bg,fg=$pill_sysinfo,bold]  {stdout}#[fg=$pill_bg]"
         command_sysinfo_interval "60" 
       
         // Battery script pill - Caches API results for 15 minutes
-        command_battery_command  "/home/m0rsla/.config/zellij/scripts/battery.py"
+        command_battery_command  "__DOTFILES_HOME__/.config/zellij/scripts/battery.py"
         command_battery_format   "#[fg=$pill_battery]#[bg=$pill_battery,fg=$pill_icon] #[bg=$pill_bg,fg=$pill_battery,bold] {stdout}#[fg=$pill_bg]"
         command_battery_interval "60"
       
