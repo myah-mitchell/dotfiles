@@ -11,7 +11,7 @@ default_mode "normal"
 pane_frames        true
 mouse_mode         true
 scroll_buffer_size 100000
-copy_on_select     true
+copy_on_select     false  // mouse selection auto-copies on release disabled; "y"/Ctrl+C in scroll mode yank explicitly (see keybinds below)
 copy_command       "__DOTFILES_HOME__/.config/zellij/scripts/clip-clean.py"  // strips Nerd Font icons before writing to the system clipboard (see script docstring); overrides copy_clipboard below
 copy_clipboard     "system"  // unused while copy_command is set; kept as the fallback if copy_command is ever removed
 simplified_ui      false
@@ -361,7 +361,9 @@ keybinds clear-defaults=false {
         bind "/"         { SwitchToMode "EnterSearch"; SearchInput 0; }
         bind "Esc" "q"   { SwitchToMode "Normal"; }
         bind "e"         { EditScrollback; SwitchToMode "Normal"; }
-        // Ctrl+C copies selection to clipboard (via copy_on_select above)
+        // tmux/vim-style yank: select with the mouse, then y/Ctrl+C copies and
+        // stays in scroll mode — overrides Zellij's default Ctrl+C (ScrollToBottom).
+        bind "y" "Ctrl c" { Copy; }
     }
 
     search {
