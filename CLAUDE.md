@@ -146,6 +146,20 @@ Requires Windows Developer Mode. `install.sh` prints a manual fallback if symlin
 
 ---
 
+## Neovim (LazyVim) layout
+
+The Neovim config is LazyVim-based; **keep changes idiomatic** — reach for an official LazyVim extra or a standard spec pattern before hand-rolling. Inspect `~/.local/share/nvim/lazy/LazyVim/lua/lazyvim/plugins/extras/` to find one. The design splits responsibilities: **Zellij is the chrome (tabs, status bar, panes), Neovim is the editor.**
+
+- **File sidebar:** Snacks explorer via the official `snacks_explorer` extra (imported in `lua/config/lazy.lua`), bound to `<leader>e`. `plugins/snacks.lua` sets `picker.sources.explorer.hidden = true` — **required**, because this repo is almost entirely dot-directories (`.config`/`.local`) and dotfiles; without it most package folders expand to nothing. `ignored` stays off so downloaded binaries under `bin/.local/` don't flood the tree (`H`/`I` toggle hidden/ignored at runtime).
+- **Status bar:** lualine is **disabled** (`plugins/lualine.lua`, `enabled=false`) with `laststatus=0` (in `config/options.lua`), because the Zellij zjstatus bar already renders mode/git/clock/system — a bottom statusline would just duplicate it. Per-window labels come from `incline.nvim` (`plugins/incline.lua`; minimal: icon + filename + modified dot) instead.
+- **AI sidebar:** `coder/claudecode.nvim` (`plugins/claudecode.lua`, `<leader>a…`, toggle `<leader>ac`) speaks the same MCP/WebSocket protocol as the VSCode extension. It replaced the earlier `sudo-tee/opencode.nvim` (user wants Claude Code only). `claude` is on `$PATH` (`~/.local/bin/claude`), so no `terminal_cmd` override.
+- **Terminal:** snacks terminal docked bottom (`<c-/>`). The Nushell `zellij_autostart` guard (`config.nu`) also checks `$NVIM`, so a terminal opened *inside* Neovim never spawns a nested Zellij session.
+- **`lazy-lock.json` is gitignored** — nvim plugin versions are deliberately not pinned across machines the way `install.sh`'s `.versions` are. If a `Lazy sync` errors writing it, check the file isn't root-owned (`chown` back to your user).
+
+Load-bearing must-keeps: the catppuccin theme and the Ctrl+hjkl Zellij navigation (see [Unified Ctrl+hjkl navigation](#unified-ctrlhjkl-navigation)).
+
+---
+
 ## Theme
 
 Catppuccin Mocha everywhere. Palette hex values are in:
@@ -166,7 +180,7 @@ When adjusting colors, check all of the above — they don't share a single sour
 Several small/young (or fork-dependent) plugins are load-bearing for navigation and the status bar:
 - `fresh2dev/zellij-autolock` — switches Zellij to locked mode for nvim/hx/fzf/zoxide/atuin
 - `swaits/zellij-nav.nvim` — Ctrl+hjkl in Neovim with Zellij edge-crossing
-- `sudo-tee/opencode.nvim` — AI sidebar in Neovim (`<leader>ao`)
+- `coder/claudecode.nvim` — Claude Code AI sidebar in Neovim (`<leader>a…`, toggle `<leader>ac`)
 - `dj95/zjstatus` — status bar (mode/tab/system pills)
 - `AlexZasorin/zellij-newtab-plus` — floating new-tab picker with zoxide
 - `zjstatus-hints` — **highest risk of the group**: built from source off a *temporary community fork branch* (not upstream `main`), because upstream has no usable release. If the fork disappears or diverges further, the hints bar silently stops building — check `build_zjstatus_hints()` in `install.sh` for the current fork/branch and the TODO to revert once upstream catches up.

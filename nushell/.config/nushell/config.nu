@@ -203,9 +203,11 @@ source ~/.cache/starship/init.nu
 source ~/.cache/carapace/init.nu
 
 # ── Zellij auto-start ─────────────────────────────────────────────────────────
-# Only start Zellij if we're not already inside it and it's an interactive session
+# Only start Zellij if we're not already inside it and it's an interactive session.
+# The $NVIM guard stops a terminal opened *inside* Neovim (snacks/toggleterm) from
+# spawning a nested Zellij in the terminal buffer, even when nvim runs outside Zellij.
 def --env zellij_autostart [] {
-  if not ("ZELLIJ" in $env) {
+  if not ("ZELLIJ" in $env) and not ("NVIM" in $env) {
     if ($env.ZELLIJ_AUTO_ATTACH? == "true") {
       zellij attach --create
     } else {

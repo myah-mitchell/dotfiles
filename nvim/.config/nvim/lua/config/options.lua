@@ -22,6 +22,9 @@ opt.sidescrolloff  = 8
 opt.wrap           = false
 opt.cursorline     = true
 opt.signcolumn     = "yes"
+-- No bottom statusline: lualine is disabled (see plugins/lualine.lua); the
+-- Zellij zjstatus bar + incline.nvim cover mode/git/filename instead.
+opt.laststatus     = 0
 opt.colorcolumn    = "120"
 opt.list           = true
 opt.listchars      = { tab = "→ ", trail = "·", nbsp = "␣" }
