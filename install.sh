@@ -248,6 +248,81 @@ download_release() {
   ok "${dest} installed at ${latest}"
 }
 
+# ── Node.js installer (from nodejs.org, not a GitHub release) ─────────────────
+# Node is a runtime *tree* (bin/node + lib/node_modules/npm, with npm/npx as
+# relative symlinks into lib), not a single binary, so download_release can't
+# handle it. Installs the latest LTS straight into ~/.local/{bin,lib,include,
+# share} as real files (outside the dotfiles symlink tree, so prune/link never
+# touch it). This is what unblocks Mason's npm-based LSP servers (html, css,
+# emmet, bash, intelephense, pyright). ~/.local/bin is already prepended ahead
+# of the Windows nodejs path in env.nu, so the Linux `npm` wins.
+install_node() {
+  local key="node" installed latest
+  installed=$(get_installed_version "$key")
+
+  log "Checking node..."
+
+  # Latest LTS from the dist index, without jq: each release object ends in '}',
+  # so split per object, keep those with a string "lts":"Name" (false has no
+  # quote after the colon), take the newest (index is newest-first).
+  latest=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+    "https://nodejs.org/dist/index.json" \
+    | tr '}' '\n' | grep '"lts":"' \
+    | grep -oP '"version":\s*"\Kv[^"]+' | head -1) || true
+  if [[ -z "$latest" ]]; then
+    warn "Could not determine latest Node LTS — skipping."
+    return
+  fi
+  if [[ "$installed" == "$latest" && "$FORCE_UPDATE" == false ]]; then
+    ok "node already at ${latest}"
+    return
+  fi
+
+  local node_os node_arch
+  case "$OS" in
+    linux)  node_os="linux" ;;
+    darwin) node_os="darwin" ;;
+    *) warn "Unsupported OS for Node.js (${OS}) — skipping."; return ;;
+  esac
+  case "$ARCH" in
+    x86_64)  node_arch="x64" ;;
+    aarch64) node_arch="arm64" ;;
+    *) warn "Unsupported arch for Node.js (${ARCH}) — skipping."; return ;;
+  esac
+
+  local base="node-${latest}-${node_os}-${node_arch}"
+  local url="https://nodejs.org/dist/${latest}/${base}.tar.xz"
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  trap "rm -rf '$tmpdir'" RETURN
+
+  log "Downloading Node.js ${latest} (${node_os}-${node_arch})..."
+  if ! curl -fL --connect-timeout 30 --max-time 600 --retry 2 "$url" -o "$tmpdir/node.tar.xz"; then
+    warn "Node.js download failed — skipping."
+    return
+  fi
+  if ! tar -xJf "$tmpdir/node.tar.xz" -C "$tmpdir"; then
+    warn "Node.js extract failed — skipping."
+    return
+  fi
+
+  local root="$tmpdir/$base"
+  if [[ ! -d "$root/bin" ]]; then
+    warn "Unexpected Node.js archive layout — skipping."
+    return
+  fi
+
+  # Merge into ~/.local, preserving the relative npm/npx symlinks (cp -a).
+  mkdir -p "$LOCAL_BIN" "$LOCAL_SHARE" "$HOME/.local/lib" "$HOME/.local/include"
+  cp -a "$root/bin/."          "$LOCAL_BIN/"
+  cp -a "$root/lib/."          "$HOME/.local/lib/"
+  [[ -d "$root/include" ]] && cp -a "$root/include/." "$HOME/.local/include/"
+  [[ -d "$root/share"   ]] && cp -a "$root/share/."   "$LOCAL_SHARE/"
+
+  set_installed_version "$key" "$latest"
+  ok "node installed at ${latest} ($("$LOCAL_BIN/node" --version 2>/dev/null || echo '?'))"
+}
+
 # ── Cargo installer ───────────────────────────────────────────────────────────
 # Usage: cargo_install CRATE DEST_BIN
 # Installs to dotfiles bin dir via cargo (symlinked to ~/.local/bin by link_package).
@@ -459,6 +534,15 @@ if [[ "$LINK_ONLY" == false ]]; then
     "zoxide|zoxide|ajeetdsouza/zoxide|linux|aarch64|zoxide-*-aarch64*linux*musl*.tar.gz|-"
     "zoxide|zoxide|ajeetdsouza/zoxide|darwin|*|zoxide-*-*apple*darwin*.tar.gz|-"
 
+    # ruff: Python linter/formatter (+ built-in `ruff server` LSP). Standalone
+    # binary, so it works without pip — Mason's ruff is pip-based and can't
+    # install here. nvim points its ruff server at this via mason=false
+    # (see nvim plugins/lsp-servers.lua).
+    "ruff|ruff|astral-sh/ruff|linux|x86_64|ruff-x86_64-unknown-linux-musl.tar.gz|-"
+    "ruff|ruff|astral-sh/ruff|linux|aarch64|ruff-aarch64-unknown-linux-musl.tar.gz|-"
+    "ruff|ruff|astral-sh/ruff|darwin|x86_64|ruff-x86_64-apple-darwin.tar.gz|-"
+    "ruff|ruff|astral-sh/ruff|darwin|aarch64|ruff-aarch64-apple-darwin.tar.gz|-"
+
     "lazygit|-|jesseduffield/lazygit|linux|x86_64|lazygit_*_Linux_x86_64.tar.gz|-"
     "lazygit|-|jesseduffield/lazygit|linux|aarch64|lazygit_*_Linux_arm64.tar.gz|-"
     "lazygit|-|jesseduffield/lazygit|darwin|*|lazygit_*_Darwin_*.tar.gz|-"
@@ -628,6 +712,9 @@ if [[ "$LINK_ONLY" == false ]]; then
     fi
     "$BIN_DIR/bat" cache --build &>/dev/null && ok "bat theme cache built"
   fi
+
+  # ── Node.js (unblocks Mason's npm-based LSP servers: html/css/emmet/bash/php/py)
+  install_node
 
   # ── Nushell catppuccin theme ───────────────────────────────────────────────
   NUSHELL_THEME_DIR="$HOME/.config/nushell/themes"
