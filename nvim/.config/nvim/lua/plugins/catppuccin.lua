@@ -23,6 +23,7 @@ return {
         telescope        = { enabled = true },
         which_key        = true,
         mason            = true,
+        dropbar          = { enabled = true },
         noice            = true,
         lazy             = true,
         lsp_trouble      = true,
