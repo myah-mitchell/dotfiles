@@ -856,17 +856,33 @@ done
 # tree in case the filter wasn't registered yet when these files were last
 # checked out (e.g. right after a fresh clone).
 log "=== Registering homepath git filter ==="
+# git execs these directly (no shell wrapper), so the mode bit must be +x or
+# every clean/smudge invocation fails — same pitfall as the zjstatus/clipboard
+# scripts noted above. Enforce it defensively in case a checkout ever drops it.
+chmod +x "$DOTFILES/git-filters/homepath-clean.sh" "$DOTFILES/git-filters/homepath-smudge.sh"
 git -C "$DOTFILES" config filter.homepath.clean "$DOTFILES/git-filters/homepath-clean.sh"
 git -C "$DOTFILES" config filter.homepath.smudge "$DOTFILES/git-filters/homepath-smudge.sh"
 git -C "$DOTFILES" config filter.homepath.required true
-# `git checkout --` is a no-op when the working-tree file already
-# content-matches the index (e.g. right after a fresh clone left the raw
-# placeholder in place because the filter wasn't registered yet) — it won't
-# re-run smudge in that case. `checkout-index -f` always rewrites from the
-# index, so it reliably re-smudges regardless of prior state.
+# `checkout-index -f` still skips re-smudging when the working-tree file's
+# stat already matches the index (e.g. right after a fresh clone left the raw
+# placeholder in place because the filter wasn't registered yet) — `-f` only
+# forces overwriting, it doesn't bypass that freshness check. Removing the
+# file first guarantees a real rewrite, so the filter always actually runs.
+rm -f "$DOTFILES/zellij/.config/zellij/config.kdl" \
+      "$DOTFILES/nvim/.config/nvim/lua/config/autocmds.lua"
 git -C "$DOTFILES" checkout-index -f -- \
   zellij/.config/zellij/config.kdl \
   nvim/.config/nvim/lua/config/autocmds.lua
+# Verify the placeholder actually got replaced — the filter has failed
+# silently before (non-executable script, stat-cache skip above), and a
+# leftover __DOTFILES_HOME__ breaks zjstatus/Neovim clipboard with no visible
+# error at runtime. Fail loudly here instead of discovering it later.
+if grep -q '__DOTFILES_HOME__' \
+  "$DOTFILES/zellij/.config/zellij/config.kdl" \
+  "$DOTFILES/nvim/.config/nvim/lua/config/autocmds.lua"; then
+  err "homepath filter did not expand __DOTFILES_HOME__ — check git-filters/*.sh are executable and filter.homepath.* is registered"
+  exit 1
+fi
 ok "Registered homepath git filter"
 
 # ── Nushell plugin registration ───────────────────────────────────────────────
