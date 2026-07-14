@@ -33,6 +33,11 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.rust" },
     { import = "lazyvim.plugins.extras.lang.python" },
     { import = "lazyvim.plugins.extras.lang.php" },
+    -- Markdown: render-markdown.nvim (in-buffer rendering) plus the marksman
+    -- LSP, markdownlint-cli2/prettier/markdown-toc (Mason/Node) and the
+    -- markdown-preview.nvim browser preview (<leader>cp). Toggle rendering with
+    -- <leader>um.
+    { import = "lazyvim.plugins.extras.lang.markdown" },
 
     -- Custom plugins
     { import = "plugins" },
