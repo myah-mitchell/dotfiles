@@ -28,8 +28,9 @@ require("lazy").setup({
     -- Language support. Rust uses cargo/rust-analyzer; Python and PHP LSP servers
     -- (basedpyright/ruff, intelephense) install via the Node in ~/.local. HTML,
     -- CSS, Emmet and Bash servers are added manually in plugins/lsp-servers.lua
-    -- (no dedicated lang.* extras exist for them). PowerShell is treesitter-only
-    -- until a .NET runtime is installed (powershell_es needs it).
+    -- (no dedicated lang.* extras exist for them). PowerShell's server
+    -- (powershell_es) is there too — it runs on the self-contained pwsh that
+    -- install.sh installs, which bundles its own .NET runtime.
     { import = "lazyvim.plugins.extras.lang.rust" },
     { import = "lazyvim.plugins.extras.lang.python" },
     { import = "lazyvim.plugins.extras.lang.php" },

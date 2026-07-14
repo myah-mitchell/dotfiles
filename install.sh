@@ -323,6 +323,71 @@ install_node() {
   ok "node installed at ${latest} ($("$LOCAL_BIN/node" --version 2>/dev/null || echo '?'))"
 }
 
+# ── PowerShell installer (self-contained, bundles .NET; from GitHub release) ───
+# The PowerShell LSP (powershell_es) just needs `pwsh` on PATH. PowerShell ships
+# a self-contained tarball that bundles the .NET runtime — no separate .NET, no
+# root. It's a flat app *tree* (~190 MB: pwsh + hundreds of .dlls), not a single
+# binary, so it can't use download_release: extract it whole into
+# ~/.local/lib/powershell and symlink pwsh into ~/.local/bin. Mason then installs
+# the PowerShell Editor Services bundle (a plain download, not pip/npm) and
+# powershell_es runs it via pwsh (see nvim plugins/lsp-servers.lua).
+install_powershell() {
+  local key="pwsh" installed latest tag
+  installed=$(get_installed_version "$key")
+
+  log "Checking pwsh..."
+  tag=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/PowerShell/PowerShell/releases/latest" \
+    | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
+  if [[ -z "$tag" ]]; then
+    warn "Could not determine latest PowerShell release — skipping."
+    return
+  fi
+  latest="${tag#v}"
+  if [[ "$installed" == "$latest" && "$FORCE_UPDATE" == false ]]; then
+    ok "pwsh already at ${latest}"
+    return
+  fi
+
+  local ps_os ps_arch
+  case "$OS" in
+    linux)  ps_os="linux" ;;
+    darwin) ps_os="osx" ;;
+    *) warn "Unsupported OS for PowerShell (${OS}) — skipping."; return ;;
+  esac
+  case "$ARCH" in
+    x86_64)  ps_arch="x64" ;;
+    aarch64) ps_arch="arm64" ;;
+    *) warn "Unsupported arch for PowerShell (${ARCH}) — skipping."; return ;;
+  esac
+
+  local asset="powershell-${latest}-${ps_os}-${ps_arch}.tar.gz"
+  local url="https://github.com/PowerShell/PowerShell/releases/download/${tag}/${asset}"
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  trap "rm -rf '$tmpdir'" RETURN
+
+  log "Downloading PowerShell ${latest} (${ps_os}-${ps_arch})..."
+  if ! curl -fL --connect-timeout 30 --max-time 600 --retry 2 "$url" -o "$tmpdir/pwsh.tar.gz"; then
+    warn "PowerShell download failed — skipping."
+    return
+  fi
+
+  # Flat archive → extract the whole tree into a dedicated dir (replace on update).
+  local dest="$HOME/.local/lib/powershell"
+  rm -rf "$dest"
+  mkdir -p "$dest" "$LOCAL_BIN"
+  if ! tar -xzf "$tmpdir/pwsh.tar.gz" -C "$dest"; then
+    warn "PowerShell extract failed — skipping."
+    return
+  fi
+  chmod +x "$dest/pwsh"
+  ln -sf "$dest/pwsh" "$LOCAL_BIN/pwsh"
+
+  set_installed_version "$key" "$latest"
+  ok "pwsh installed at ${latest} ($("$LOCAL_BIN/pwsh" -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>/dev/null || echo '?'))"
+}
+
 # ── Cargo installer ───────────────────────────────────────────────────────────
 # Usage: cargo_install CRATE DEST_BIN
 # Installs to dotfiles bin dir via cargo (symlinked to ~/.local/bin by link_package).
@@ -715,6 +780,9 @@ if [[ "$LINK_ONLY" == false ]]; then
 
   # ── Node.js (unblocks Mason's npm-based LSP servers: html/css/emmet/bash/php/py)
   install_node
+
+  # ── PowerShell (self-contained pwsh + bundled .NET; unblocks powershell_es LSP)
+  install_powershell
 
   # ── Nushell catppuccin theme ───────────────────────────────────────────────
   NUSHELL_THEME_DIR="$HOME/.config/nushell/themes"

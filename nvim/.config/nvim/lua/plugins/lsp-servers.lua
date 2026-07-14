@@ -12,6 +12,9 @@ return {
         cssls = {},
         emmet_language_server = {},
         bashls = {},
+        -- PowerShell: needs `pwsh` on PATH (installed self-contained by
+        -- install.sh). Mason installs the PowerShell Editor Services bundle.
+        powershell_es = {},
         -- ruff comes from install.sh (standalone binary on PATH), NOT Mason —
         -- Mason's ruff is pip-based and there's no pip here. mason=false stops
         -- LazyVim from trying (and failing) to install it, and uses ~/.local/bin/ruff.
