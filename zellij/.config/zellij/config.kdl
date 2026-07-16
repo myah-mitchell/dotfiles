@@ -89,6 +89,7 @@ plugins {
         color_pill_dim      "#9399b2" // overlay2
         color_pill_sysinfo  "#f5c2e7" // pink
         color_pill_battery  "#f5c2e7" // pink
+        color_pill_claude   "#cba6f7" // mauve
         color_pill_datetime "#eba0ac" // maroon
 
         // Modes
@@ -170,6 +171,11 @@ plugins {
         command_battery_command  "__DOTFILES_HOME__/.config/zellij/scripts/battery.py"
         command_battery_format   "#[fg=$pill_battery]#[bg=$pill_battery,fg=$pill_icon] #[bg=$pill_bg,fg=$pill_battery,bold] {stdout}#[fg=$pill_bg]"
         command_battery_interval "60"
+
+        // Claude Code usage pill (5h block / week / all-time, via ccusage --offline)
+        command_claudeusage_command  "__DOTFILES_HOME__/.config/zellij/scripts/claude-usage.py"
+        command_claudeusage_format   "#[fg=$pill_claude]#[bg=$pill_claude,fg=$pill_icon]󰚩 #[bg=$pill_bg,fg=$pill_claude,bold] {stdout}#[fg=$pill_bg]"
+        command_claudeusage_interval "60"
       
         // Format datetime pill
         datetime                 "#[fg=$pill_datetime]#[bg=$pill_datetime,fg=$pill_icon]󰃭 #[bg=$pill_bg,fg=$pill_datetime,bold] {format} "

@@ -1,0 +1,15 @@
+{
+  "theme": "dark",
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/scripts/claude-notify.py"
+          }
+        ]
+      }
+    ]
+  }
+}

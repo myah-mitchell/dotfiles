@@ -16,7 +16,7 @@ layout {
             plugin location="zjstatus" {
                 format_left   "{mode} {pipe_zjstatus_hints}"
                 format_center "{notifications}"
-                format_right  "{command_weather} {command_sysinfo} {datetime}"
+                format_right  "{command_weather} {command_sysinfo} {command_claudeusage} {datetime}"
             }
         }
     }

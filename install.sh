@@ -323,6 +323,40 @@ install_node() {
   ok "node installed at ${latest} ($("$LOCAL_BIN/node" --version 2>/dev/null || echo '?'))"
 }
 
+# ── ccusage (npm CLI; powers the claude-usage.py zjstatus pill) ───────────────
+# Pinned rather than always-latest (unlike the GitHub-release CLI_TOOLS below):
+# claude-usage.py parses ccusage's --json output directly, so an unreviewed
+# version bump could silently change field names underneath it. Bump this
+# deliberately (npm view ccusage version) after checking `ccusage blocks --json`
+# / `ccusage weekly --json` output shape hasn't changed, and re-verify
+# claude-usage.py's parsing against the new output.
+install_ccusage() {
+  local key="ccusage"
+  local pinned_version="20.0.17"
+  local installed
+  installed=$(get_installed_version "$key")
+
+  log "Checking ccusage..."
+
+  if [[ "$installed" == "$pinned_version" && "$FORCE_UPDATE" == false ]]; then
+    ok "ccusage already at ${pinned_version}"
+    return
+  fi
+
+  if ! command -v npm &>/dev/null; then
+    warn "npm not found (node install may have failed) — skipping ccusage."
+    return
+  fi
+
+  log "Installing ccusage ${pinned_version}..."
+  if npm install -g "ccusage@${pinned_version}" --prefix "$HOME/.local" &>/dev/null; then
+    set_installed_version "$key" "$pinned_version"
+    ok "ccusage installed at ${pinned_version}"
+  else
+    warn "ccusage install failed — the claude-usage pill will show cached/stale data until this succeeds."
+  fi
+}
+
 # ── PowerShell installer (self-contained, bundles .NET; from GitHub release) ───
 # The PowerShell LSP (powershell_es) just needs `pwsh` on PATH. PowerShell ships
 # a self-contained tarball that bundles the .NET runtime — no separate .NET, no
@@ -781,6 +815,9 @@ if [[ "$LINK_ONLY" == false ]]; then
   # ── Node.js (unblocks Mason's npm-based LSP servers: html/css/emmet/bash/php/py)
   install_node
 
+  # ── ccusage (Claude Code usage stats, for the zjstatus claude-usage pill) ──
+  install_ccusage
+
   # ── PowerShell (self-contained pwsh + bundled .NET; unblocks powershell_es LSP)
   install_powershell
 
@@ -809,7 +846,7 @@ fi  # end --link / skip downloads
 # ── Package list (shared by deploy and remove) ────────────────────────────────
 PACKAGES=(
   bin bash nushell starship zellij nvim
-  git ripgrep bat yazi atuin lazygit tealdeer ssh alacritty
+  git ripgrep bat yazi atuin lazygit tealdeer ssh alacritty claude
 )
 
 # ── Remove deployed symlinks ──────────────────────────────────────────────────
