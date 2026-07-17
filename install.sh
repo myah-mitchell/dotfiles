@@ -357,6 +357,47 @@ install_ccusage() {
   fi
 }
 
+# ── claude-swap (multi-account switcher for Claude Code CLI) ──────────────────
+# PyPI-only (no GitHub-release binaries) — installed via `uv tool install`,
+# the exact install method the tool's own self-upgrade command (`cswap
+# upgrade`) is built to detect and drive. Requires uv, downloaded into
+# $BIN_DIR by the CLI_TOOLS loop above; called via that repo-tree path
+# directly rather than PATH lookup, since link_package hasn't symlinked it
+# into ~/.local/bin yet at this point in the script (same reasoning as the
+# bat theme-cache build above). Always-latest like the rest of CLI_TOOLS, not
+# pinned like ccusage: nothing here parses claude-swap's output, so a version
+# bump can't silently break a script the way an unreviewed ccusage bump could
+# — `uv tool list` is a local, zero-cost check, so it's fine to re-run every
+# invocation instead of gating on the .versions cache.
+install_claude_swap() {
+  if [[ ! -x "$BIN_DIR/uv" ]]; then
+    warn "uv not found (uv install may have failed) — skipping claude-swap."
+    return
+  fi
+
+  log "Checking claude-swap..."
+  if [[ "$FORCE_UPDATE" == true ]]; then
+    if "$BIN_DIR/uv" tool upgrade claude-swap &>/dev/null \
+      || "$BIN_DIR/uv" tool install claude-swap &>/dev/null; then
+      ok "claude-swap upgraded"
+    else
+      warn "claude-swap upgrade/install failed — skipping."
+    fi
+    return
+  fi
+
+  if "$BIN_DIR/uv" tool list 2>/dev/null | grep -q '^claude-swap'; then
+    ok "claude-swap already installed"
+    return
+  fi
+
+  if "$BIN_DIR/uv" tool install claude-swap &>/dev/null; then
+    ok "claude-swap installed"
+  else
+    warn "claude-swap install failed — skipping."
+  fi
+}
+
 # ── PowerShell installer (self-contained, bundles .NET; from GitHub release) ───
 # The PowerShell LSP (powershell_es) just needs `pwsh` on PATH. PowerShell ships
 # a self-contained tarball that bundles the .NET runtime — no separate .NET, no
@@ -642,6 +683,14 @@ if [[ "$LINK_ONLY" == false ]]; then
     "ruff|ruff|astral-sh/ruff|darwin|x86_64|ruff-x86_64-apple-darwin.tar.gz|-"
     "ruff|ruff|astral-sh/ruff|darwin|aarch64|ruff-aarch64-apple-darwin.tar.gz|-"
 
+    # uv: Python package/tool manager. Not needed for anything above — it
+    # exists solely to `uv tool install claude-swap` (see install_claude_swap
+    # below, called once this loop has downloaded uv into $BIN_DIR).
+    "uv|-|astral-sh/uv|linux|x86_64|uv-x86_64-unknown-linux-musl.tar.gz|-"
+    "uv|-|astral-sh/uv|linux|aarch64|uv-aarch64-unknown-linux-musl.tar.gz|-"
+    "uv|-|astral-sh/uv|darwin|x86_64|uv-x86_64-apple-darwin.tar.gz|-"
+    "uv|-|astral-sh/uv|darwin|aarch64|uv-aarch64-apple-darwin.tar.gz|-"
+
     "lazygit|-|jesseduffield/lazygit|linux|x86_64|lazygit_*_Linux_x86_64.tar.gz|-"
     "lazygit|-|jesseduffield/lazygit|linux|aarch64|lazygit_*_Linux_arm64.tar.gz|-"
     "lazygit|-|jesseduffield/lazygit|darwin|*|lazygit_*_Darwin_*.tar.gz|-"
@@ -817,6 +866,9 @@ if [[ "$LINK_ONLY" == false ]]; then
 
   # ── ccusage (Claude Code usage stats, for the zjstatus claude-usage pill) ──
   install_ccusage
+
+  # ── claude-swap (multi-account switcher for Claude Code) ───────────────────
+  install_claude_swap
 
   # ── PowerShell (self-contained pwsh + bundled .NET; unblocks powershell_es LSP)
   install_powershell
