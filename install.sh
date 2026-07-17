@@ -357,6 +357,41 @@ install_ccusage() {
   fi
 }
 
+# ── ccstatusline (npm CLI; renders the Claude Code statusLine) ────────────────
+# Pinned like ccusage above, for the same reason: ccstatusline writes its own
+# installedVersion/method back into ~/.config/ccstatusline/settings.json (the
+# "installation" block, deployed as part of the ccstatusline package below) and
+# detects drift between that and the actual npm-installed version — an
+# unreviewed bump could desync the two and trip its own update prompt. Bump
+# deliberately (npm view ccstatusline version) and update the "installation"
+# block in ccstatusline/.config/ccstatusline/settings.json to match.
+install_ccstatusline() {
+  local key="ccstatusline"
+  local pinned_version="2.2.23"
+  local installed
+  installed=$(get_installed_version "$key")
+
+  log "Checking ccstatusline..."
+
+  if [[ "$installed" == "$pinned_version" && "$FORCE_UPDATE" == false ]]; then
+    ok "ccstatusline already at ${pinned_version}"
+    return
+  fi
+
+  if ! command -v npm &>/dev/null; then
+    warn "npm not found (node install may have failed) — skipping ccstatusline."
+    return
+  fi
+
+  log "Installing ccstatusline ${pinned_version}..."
+  if npm install -g "ccstatusline@${pinned_version}" --prefix "$HOME/.local" &>/dev/null; then
+    set_installed_version "$key" "$pinned_version"
+    ok "ccstatusline installed at ${pinned_version}"
+  else
+    warn "ccstatusline install failed — the statusLine will show stale/no data until this succeeds."
+  fi
+}
+
 # ── claude-swap (multi-account switcher for Claude Code CLI) ──────────────────
 # PyPI-only (no GitHub-release binaries) — installed via `uv tool install`,
 # the exact install method the tool's own self-upgrade command (`cswap
@@ -867,6 +902,9 @@ if [[ "$LINK_ONLY" == false ]]; then
   # ── ccusage (Claude Code usage stats, for the zjstatus claude-usage pill) ──
   install_ccusage
 
+  # ── ccstatusline (Claude Code statusLine renderer) ──────────────────────────
+  install_ccstatusline
+
   # ── claude-swap (multi-account switcher for Claude Code) ───────────────────
   install_claude_swap
 
@@ -898,7 +936,7 @@ fi  # end --link / skip downloads
 # ── Package list (shared by deploy and remove) ────────────────────────────────
 PACKAGES=(
   bin bash nushell starship zellij nvim
-  git ripgrep bat yazi atuin lazygit tealdeer ssh alacritty claude
+  git ripgrep bat yazi atuin lazygit tealdeer ssh alacritty claude ccstatusline
 )
 
 # ── Remove deployed symlinks ──────────────────────────────────────────────────
