@@ -1205,6 +1205,7 @@ ZELLIJ_PLUGINS=(
   "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.2.2"
   "zjstatus.wasm|dj95/zjstatus|v0.23.0"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
+  "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.2.1"
 )
 log "=== Zellij plugins ==="
 for entry in "${ZELLIJ_PLUGINS[@]}"; do
@@ -1263,71 +1264,6 @@ for entry in "${ZELLIJ_PLUGIN_PERMISSIONS[@]}"; do
   } >> "$ZELLIJ_PERMISSIONS_FILE"
   ok "Pre-approved zellij permissions for ${dest}"
 done
-
-# zjstatus-hints has no usable release: v0.1.4 (its only release) predates
-# ~11 months of upstream fixes on `main`, so this builds from source instead
-# of downloading a release asset. Requires cargo (see the --cargo Rust
-# toolchain step above) + the wasm32-wasip1 target. Tracked by commit SHA
-# rather than a version tag since it always follows main.
-build_zjstatus_hints() {
-  # TEMPORARY OVERRIDE: building from AdamsGH's fork/branch (customizable
-  # hints) instead of upstream b0o/zjstatus-hints@main. Revert to
-  # repo="b0o/zjstatus-hints" branch="main" once the fork's changes land
-  # upstream or this is no longer needed.
-  #local repo="AdamsGH/zjstatus-hints" branch="feat/customizable-hints" dest="zjstatus-hints.wasm"
-  local repo="ultranity/zjstatus-hints" branch="feat/zellij-0.44.2-and-customizable-hints" dest="zjstatus-hints.wasm"
-  local cargo_bin="$HOME/.cargo/bin/cargo"
-  if [[ ! -x "$cargo_bin" ]]; then
-    warn "${dest}: cargo not available — skipping (run install.sh --cargo first, or install Rust via rustup.rs)"
-    return
-  fi
-
-  local latest_sha
-  latest_sha=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
-    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/commits/${branch}" \
-    | grep -oP '"sha":\s*"\K[^"]+' | head -1) || true
-  if [[ -z "$latest_sha" ]]; then
-    warn "Could not check ${repo}@${branch} — skipping ${dest}"
-    return
-  fi
-
-  local installed
-  installed=$(get_installed_version "$dest")
-  if [[ "$installed" == "$latest_sha" && "$FORCE_UPDATE" == false ]]; then
-    ok "${dest} already built from ${latest_sha:0:7}"
-    return
-  fi
-
-  log "Building ${dest} from ${repo}@${branch}@${latest_sha:0:7}..."
-  "$HOME/.cargo/bin/rustup" target add wasm32-wasip1 &>/dev/null || true
-
-  local tmpdir
-  tmpdir=$(mktemp -d)
-  trap "rm -rf '$tmpdir'" RETURN
-
-  if ! curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
-       "https://github.com/${repo}/archive/${latest_sha}.tar.gz" -o "${tmpdir}/src.tar.gz"; then
-    warn "Download failed for ${repo} source — skipping ${dest}"
-    return
-  fi
-  tar -xzf "${tmpdir}/src.tar.gz" -C "$tmpdir"
-  local srcdir
-  srcdir=$(find "$tmpdir" -maxdepth 1 -type d -name "zjstatus-hints-*" | head -1)
-  if [[ -z "$srcdir" ]]; then
-    warn "Could not find extracted source for ${dest} — skipping"
-    return
-  fi
-
-  if ! (cd "$srcdir" && "$cargo_bin" build --release --target=wasm32-wasip1 --quiet); then
-    warn "cargo build failed for ${dest} — skipping"
-    return
-  fi
-
-  install -m 644 "${srcdir}/target/wasm32-wasip1/release/zjstatus-hints.wasm" "${ZELLIJ_PLUGIN_DIR}/${dest}"
-  set_installed_version "$dest" "$latest_sha"
-  ok "${dest} built from ${latest_sha:0:7}"
-}
-build_zjstatus_hints
 
 # link_package("bin") already ran above (before this Zellij plugins section
 # existed), so any plugin just downloaded/built here has no ~/.local/share
