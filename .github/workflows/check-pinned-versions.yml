@@ -1,0 +1,70 @@
+name: Check pinned package versions
+
+# Everything install.sh downloads via download_release()'s /releases/latest
+# lookup (nu, starship, zellij, bat, fd, rg, ...) already self-updates on
+# every install.sh run — no bump PR needed for those. This workflow only
+# covers the handful of *pinned* versions hardcoded in install.sh, which
+# stay frozen until someone edits the string by hand: the four ZELLIJ_PLUGINS
+# release tags, and the npm-pinned ccusage/ccstatusline versions. See
+# CLAUDE.md's "install.sh" section for why each of those is pinned instead
+# of always-latest before merging a bump.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: zellij-autolock
+            kind: github-release
+            repo: fresh2dev/zellij-autolock
+          - name: zjstatus
+            kind: github-release
+            repo: dj95/zjstatus
+          - name: zellij-newtab-plus
+            kind: github-release
+            repo: AlexZasorin/zellij-newtab-plus
+          - name: zjstatus-hints
+            kind: github-release
+            repo: myah-mitchell/zjstatus-hints
+          - name: ccusage
+            kind: npm
+            package: ccusage
+          - name: ccstatusline
+            kind: npm
+            package: ccstatusline
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check ${{ matrix.name }}
+        env:
+          NAME: ${{ matrix.name }}
+          KIND: ${{ matrix.kind }}
+          REPO: ${{ matrix.repo }}
+          PACKAGE: ${{ matrix.package }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: .github/scripts/check-pinned-version.sh
+
+      - name: Open pull request
+        if: env.VERSION_CHANGED == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "install.sh: bump ${{ matrix.name }} to ${{ env.NEW_VERSION }}"
+          title: "install.sh: bump ${{ matrix.name }} ${{ env.OLD_VERSION }} -> ${{ env.NEW_VERSION }}"
+          body: |
+            Automated bump of the pinned `${{ matrix.name }}` version from `${{ env.OLD_VERSION }}` to `${{ env.NEW_VERSION }}`, opened by the `check-pinned-versions` workflow.
+
+            ${{ env.REVIEW_NOTE }}
+          branch: bump/${{ matrix.name }}-${{ env.NEW_VERSION }}
+          delete-branch: true
+          labels: dependencies
