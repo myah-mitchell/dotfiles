@@ -200,3 +200,13 @@ Several small/young (or fork-dependent) plugins are load-bearing for navigation 
 - `zjstatus-hints` — downloaded from tagged releases of our own fork (`myah-mitchell/zjstatus-hints`), because upstream (`b0o/zjstatus-hints`) has no usable release. Since we own the fork and publish our own release tags, this is more stable than depending on a third-party fork branch or building from source.
 
 If any of these becomes unmaintained, the relevant config section will need replacing. They're small enough to fork if needed.
+
+---
+
+## Automated pinned-version bump PRs
+
+`.github/workflows/check-pinned-versions.yml` runs weekly (and on manual dispatch) and opens a PR whenever one of `install.sh`'s hardcoded pins falls behind upstream: the four `ZELLIJ_PLUGINS` release tags and the npm-pinned `ccusage`/`ccstatusline` versions. It deliberately does **not** cover `CORE_TOOLS`/`CLI_TOOLS` (nu, starship, zellij, bat, fd, rg, ...) — those already resolve `/releases/latest` at install time via `download_release()`, so there's no stale pin to bump.
+
+Each matrix entry runs `.github/scripts/check-pinned-version.sh`, which extracts the current pin from `install.sh`, queries upstream (GitHub releases API or the npm registry), and — using Perl with values passed through `%ENV` rather than string-interpolated into `-e` source, since release tags/npm versions are untrusted input — rewrites only that one version string in place (for `ccstatusline`, also syncing `ccstatusline/.config/ccstatusline/settings.json`'s `installation.installedVersion`). Each PR carries a review note pointing at the specific manual check called out in this file (e.g. re-verifying `ccusage`'s `--json` output shape, or checking a Zellij plugin's `request_permission()` scopes against `ZELLIJ_PLUGIN_PERMISSIONS`) — these bumps are opened for review, never auto-merged.
+
+Requires the repo setting **"Allow GitHub Actions to create pull requests"** enabled (Settings → Actions → General) — without it, the `peter-evans/create-pull-request` step fails to open the PR even though the version-bump commit succeeds.
