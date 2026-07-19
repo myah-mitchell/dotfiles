@@ -7,7 +7,10 @@
 # --copy        Copy configs instead of symlinking (useful on NTFS or shared servers)
 # --remove      Remove all deployed symlinks from $HOME and exit (does not touch binaries)
 # --no-windows  Skip Windows/Alacritty PowerShell setup (WSL2 only)
-# --cargo       Build all Rust tools from source via cargo (slow; Go/C tools still download)
+# --cargo       Build ALL Rust tools from source via cargo (slow, disk-heavy; Go/C tools
+#               still download). Without this flag, prebuilt releases are used wherever
+#               available — cargo is only invoked for the handful of tools (e.g. some
+#               Nushell plugins) that ship no prebuilt binary at all.
 
 set -euo pipefail
 
@@ -581,17 +584,31 @@ install_tool() {
 # ── Binary downloads ──────────────────────────────────────────────────────────
 if [[ "$LINK_ONLY" == false ]]; then
 
-  if [[ "$USE_CARGO" == true ]]; then
-    log "=== Rust toolchain ==="
-    CARGO_BIN="$HOME/.cargo/bin/cargo"
-    if [[ -x "$CARGO_BIN" ]]; then
-      ok "cargo already installed: $("$CARGO_BIN" --version)"
-    else
-      log "Installing Rust via rustup..."
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-        | sh -s -- -y --no-modify-path --quiet
+  # Rust toolchain bootstrap — unconditional (not gated on --cargo), because a
+  # couple of Nushell plugins (see NUSHELL_PLUGINS_CARGO below) ship no prebuilt
+  # binary at all and can only be installed by compiling from source. --cargo
+  # only changes whether *everything else* (nu, starship, zellij, bat, fd, ...)
+  # also builds from source instead of downloading a prebuilt release. Failure
+  # here is non-fatal: it just means the couple cargo-only tools get skipped,
+  # same as if cargo were never found.
+  HAVE_CARGO=false
+  log "=== Rust toolchain ==="
+  CARGO_BIN="$HOME/.cargo/bin/cargo"
+  if [[ -x "$CARGO_BIN" ]]; then
+    ok "cargo already installed: $("$CARGO_BIN" --version)"
+    HAVE_CARGO=true
+  else
+    log "Installing Rust via rustup (needed for tools with no prebuilt binaries)..."
+    if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --no-modify-path --quiet; then
       ok "Rust installed: $("$CARGO_BIN" --version)"
+      HAVE_CARGO=true
+    else
+      warn "rustup install failed — skipping cargo-only tools."
     fi
+  fi
+
+  if [[ "$HAVE_CARGO" == true ]]; then
     export PATH="$HOME/.cargo/bin:$PATH"
 
     # cargo needs a C linker (cc/gcc) even for pure-Rust crates.
@@ -600,17 +617,24 @@ if [[ "$LINK_ONLY" == false ]]; then
       if command -v apt-get &>/dev/null; then
         sudo apt-get install -y build-essential \
           && ok "build-essential installed" \
-          || { err "Could not install build-essential — cargo builds will fail."; }
+          || { warn "Could not install build-essential — cargo builds will fail, skipping cargo-only tools."; HAVE_CARGO=false; }
       elif command -v brew &>/dev/null; then
-        brew install gcc && ok "gcc installed"
+        brew install gcc && ok "gcc installed" \
+          || { warn "Could not install gcc — skipping cargo-only tools."; HAVE_CARGO=false; }
       else
-        err "No C linker found and no known package manager to install one."
-        err "Install gcc/build-essential manually, then re-run with --cargo."
-        exit 1
+        warn "No C linker found and no known package manager to install one — skipping cargo-only tools."
+        warn "Install gcc/build-essential manually, then re-run install.sh."
+        HAVE_CARGO=false
       fi
     fi
+  fi
 
-    warn "Cargo mode: all Rust tools will compile from source — this may take a while."
+  if [[ "$USE_CARGO" == true ]]; then
+    if [[ "$HAVE_CARGO" == true ]]; then
+      warn "Cargo mode: all Rust tools will compile from source — this may take a while."
+    else
+      err "--cargo was requested but no working cargo/linker is available — Rust tools will be skipped, not downloaded."
+    fi
   fi
 
   log "=== Core shell stack ==="
@@ -829,16 +853,13 @@ if [[ "$LINK_ONLY" == false ]]; then
     #"nu_plugin_x509|nu_plugin_x509"
     #"nu_plugin_clipboard|nu_plugin_clipboard"
   )
-  PLUGIN_CARGO_BIN="$HOME/.cargo/bin/cargo"
-  if [[ -x "$PLUGIN_CARGO_BIN" ]]; then
-    export PATH="$HOME/.cargo/bin:$PATH"
+  if [[ "$HAVE_CARGO" == true ]]; then
     for entry in "${NUSHELL_PLUGINS_CARGO[@]}"; do
       IFS='|' read -r pdest pcrate <<< "$entry"
       cargo_install "$pcrate" "$pdest"
     done
   else
-    warn "cargo not found — skipping all Nushell plugins (they require cargo)"
-    warn "Install Rust via https://rustup.rs then re-run install.sh"
+    warn "cargo not available — skipping all Nushell plugins (they require cargo, and have no prebuilt binaries)"
   fi
 
   # yazi (includes ya companion binary) — two binaries from the same archive
