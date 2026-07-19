@@ -85,7 +85,7 @@
 	aliases = "!git config --get-regexp '^alias\\.' | sort"
 
 [credential]
-	helper = /usr/lib/git-core/git-credential-libsecret
+	helper = /mnt/c/Program Files/Git/mingw64/bin/git-credential-manager.exe
 
 [interactive]
 	diffFilter = cat  # use cat since we're not using delta
@@ -104,3 +104,9 @@
 
 [tag]
 	sort = -version:refname
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
