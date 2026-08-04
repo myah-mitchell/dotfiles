@@ -343,7 +343,7 @@ keybinds clear-defaults=false {
         }
     }
     shared {
-        bind "Ctrl c" { Copy; }
+        bind "y" { Copy; }
     }
     shared_except "locked" {
         // Ctrl+hjkl: pane navigation (intercepted when NOT in nvim/hx)
