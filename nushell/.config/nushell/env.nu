@@ -73,6 +73,20 @@ $env.TERM_PROGRAM = ($env.TERM_PROGRAM? | default "")
 # install.sh creates this file empty if it doesn't exist so source always works.
 source ~/.config/nushell/secrets.nu
 
+# ── SSH Agent ────────────────────────────────────────────────────────────────
+# Setup ssh-agent for Nushell
+let socket_path = $"($env.HOME)/.ssh/ssh-agent.sock"
+
+if not ($socket_path | path exists) {
+    # Start ssh-agent and bind it to a fixed socket path
+    ^ssh-agent -a $socket_path | awk -F'[=;]' '/SSH_AGENT_PID/ {print $2}' | save -f $"($env.HOME)/.ssh/ssh-agent.pid"
+}
+
+# Export the variables so ssh-add can find the agent
+load-env {
+    SSH_AUTH_SOCK: $socket_path
+}
+
 # ── WSL clipboard helper ──────────────────────────────────────────────────────
 # Make wl-copy/wl-paste available via clip.exe on WSL2
 # (Neovim clipboard provider falls back to this automatically)

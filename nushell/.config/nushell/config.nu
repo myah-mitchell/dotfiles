@@ -209,7 +209,7 @@ source ~/.cache/carapace/init.nu
 def --env zellij_autostart [] {
   if not ("ZELLIJ" in $env) and not ("NVIM" in $env) {
     if ($env.ZELLIJ_AUTO_ATTACH? == "true") {
-      zellij attach --create
+      zellij attach --create --remember default
     } else {
       zellij
     }
