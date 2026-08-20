@@ -292,7 +292,8 @@ load_plugins {
 keybinds clear-defaults=false {
 
     normal {
-        bind "`" { SwitchToMode "tmux"; }
+        // bind "`" { SwitchToMode "tmux"; }
+        bind "Ctrl w" { SwitchToMode "Move"; }
     }
     resize {
     }
@@ -343,7 +344,7 @@ keybinds clear-defaults=false {
         }
     }
     shared {
-        bind "y" { Copy; }
+        //bind "y" { Copy; }
     }
     shared_except "locked" {
         // Ctrl+hjkl: pane navigation (intercepted when NOT in nvim/hx)
