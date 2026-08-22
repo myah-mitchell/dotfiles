@@ -15,24 +15,36 @@
 set -euo pipefail
 
 # ── Colours ──────────────────────────────────────────────────────────────────
-RED='\033[0;31m'; YELLOW='\033[1;33m'; GREEN='\033[0;32m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
-log()  { echo -e "${CYAN}[dotfiles]${RESET} $*"; }
-ok()   { echo -e "${GREEN}[✓]${RESET} $*"; }
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+RESET='\033[0m'
+log() { echo -e "${CYAN}[dotfiles]${RESET} $*"; }
+ok() { echo -e "${GREEN}[✓]${RESET} $*"; }
 warn() { echo -e "${YELLOW}[!]${RESET} $*"; }
-err()  { echo -e "${RED}[✗]${RESET} $*" >&2; }
+err() { echo -e "${RED}[✗]${RESET} $*" >&2; }
 
 # ── Args ──────────────────────────────────────────────────────────────────────
-FORCE_UPDATE=false; LINK_ONLY=false; USE_COPY=false; DO_REMOVE=false; NO_WINDOWS=false; USE_CARGO=false
+FORCE_UPDATE=false
+LINK_ONLY=false
+USE_COPY=false
+DO_REMOVE=false
+NO_WINDOWS=false
+USE_CARGO=false
 for arg in "$@"; do
   case $arg in
-    --update)     FORCE_UPDATE=true ;;
-    --link)       LINK_ONLY=true ;;
-    --copy)       USE_COPY=true ;;
-    --remove)     DO_REMOVE=true ;;
-    --no-windows) NO_WINDOWS=true ;;
-    --cargo)      USE_CARGO=true ;;
-    *) err "Unknown flag: $arg"; exit 1 ;;
+  --update) FORCE_UPDATE=true ;;
+  --link) LINK_ONLY=true ;;
+  --copy) USE_COPY=true ;;
+  --remove) DO_REMOVE=true ;;
+  --no-windows) NO_WINDOWS=true ;;
+  --cargo) USE_CARGO=true ;;
+  *)
+    err "Unknown flag: $arg"
+    exit 1
+    ;;
   esac
 done
 
@@ -90,11 +102,11 @@ if [[ "$OS" == "linux" ]] && command -v apt-get &>/dev/null; then
   git_ver=$(git --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1) || true
   git_major=${git_ver%%.*}
   git_minor=${git_ver##*.}
-  if (( git_major < 2 || (git_major == 2 && git_minor < 35) )); then
+  if ((git_major < 2 || (git_major == 2 && git_minor < 35))); then
     log "Upgrading git to 2.35+ (required for zdiff3 merge style)..."
-    if sudo add-apt-repository -y ppa:git-core/ppa 2>/dev/null \
-      && sudo apt-get update -qq 2>/dev/null \
-      && sudo apt-get install -y git 2>/dev/null; then
+    if sudo add-apt-repository -y ppa:git-core/ppa 2>/dev/null &&
+      sudo apt-get update -qq 2>/dev/null &&
+      sudo apt-get install -y git 2>/dev/null; then
       ok "git upgraded to $(git --version)"
     else
       warn "git upgrade failed — zdiff3 merge style may not work (non-fatal)"
@@ -108,8 +120,8 @@ fi
 if [[ "$OS" == "linux" ]] && command -v locale-gen &>/dev/null; then
   if ! locale -a 2>/dev/null | grep -q "en_US.utf8"; then
     log "Generating en_US.UTF-8 locale..."
-    if sudo locale-gen en_US.UTF-8 2>/dev/null \
-      && sudo update-locale LANG=en_US.UTF-8 2>/dev/null; then
+    if sudo locale-gen en_US.UTF-8 2>/dev/null &&
+      sudo update-locale LANG=en_US.UTF-8 2>/dev/null; then
       ok "Locale en_US.UTF-8 generated"
     else
       warn "locale-gen failed — LC_ALL warnings from subprocesses may appear (non-fatal)"
@@ -119,8 +131,8 @@ fi
 
 # ── Directory setup ───────────────────────────────────────────────────────────
 mkdir -p "$BIN_DIR" "$SHARE_DIR" "$LOCAL_BIN" "$LOCAL_SHARE" \
-         "$HOME/.ssh/sockets" "$HOME/.cache/starship" "$HOME/.cache/carapace" \
-         "$HOME/.local/share/atuin" "$HOME/.config/nushell"
+  "$HOME/.ssh/sockets" "$HOME/.cache/starship" "$HOME/.cache/carapace" \
+  "$HOME/.local/share/atuin" "$HOME/.config/nushell"
 chmod 700 "$HOME/.ssh"
 touch "$VERSIONS_FILE"
 # Nushell sources these at parse time — files must always exist even if empty
@@ -134,7 +146,7 @@ set_installed_version() {
   if grep -q "^${key}=" "$VERSIONS_FILE" 2>/dev/null; then
     sed -i "s|^${key}=.*|${key}=${ver}|" "$VERSIONS_FILE"
   else
-    echo "${key}=${ver}" >> "$VERSIONS_FILE"
+    echo "${key}=${ver}" >>"$VERSIONS_FILE"
   fi
 }
 
@@ -185,12 +197,12 @@ download_release() {
 
   # Find the matching asset URL from the cached API response
   local asset_url
-  asset_url=$(echo "$api_response" \
-    | grep '"browser_download_url"' \
-    | grep -v '\.sha256\|\.sha512\|\.asc\|\.sig\|checksums\|\.deb\|\.rpm\|\.msi\|\.dmg\|\.pkg\|-apple-darwin\|windows\|\.exe\|android' \
-    | grep -iE "$regex" \
-    | head -1 \
-    | cut -d'"' -f4) || true
+  asset_url=$(echo "$api_response" |
+    grep '"browser_download_url"' |
+    grep -v '\.sha256\|\.sha512\|\.asc\|\.sig\|checksums\|\.deb\|\.rpm\|\.msi\|\.dmg\|\.pkg\|-apple-darwin\|windows\|\.exe\|android' |
+    grep -iE "$regex" |
+    head -1 |
+    cut -d'"' -f4) || true
 
   if [[ -z "$asset_url" ]]; then
     # Fallback: /releases/latest may have no assets on some repos. Try the
@@ -198,12 +210,12 @@ download_release() {
     local releases_response
     releases_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
       "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases?per_page=5") || true
-    asset_url=$(echo "$releases_response" \
-      | grep '"browser_download_url"' \
-      | grep -v '\.sha256\|\.sha512\|\.asc\|\.sig\|checksums\|\.deb\|\.rpm\|\.msi\|\.dmg\|\.pkg\|-apple-darwin\|windows\|\.exe\|android' \
-      | grep -iE "$regex" \
-      | head -1 \
-      | cut -d'"' -f4) || true
+    asset_url=$(echo "$releases_response" |
+      grep '"browser_download_url"' |
+      grep -v '\.sha256\|\.sha512\|\.asc\|\.sig\|checksums\|\.deb\|\.rpm\|\.msi\|\.dmg\|\.pkg\|-apple-darwin\|windows\|\.exe\|android' |
+      grep -iE "$regex" |
+      head -1 |
+      cut -d'"' -f4) || true
     if [[ -n "$asset_url" ]]; then
       # Extract version from the URL for tracking
       latest=$(echo "$releases_response" | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
@@ -269,9 +281,9 @@ install_node() {
   # so split per object, keep those with a string "lts":"Name" (false has no
   # quote after the colon), take the newest (index is newest-first).
   latest=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
-    "https://nodejs.org/dist/index.json" \
-    | tr '}' '\n' | grep '"lts":"' \
-    | grep -oP '"version":\s*"\Kv[^"]+' | head -1) || true
+    "https://nodejs.org/dist/index.json" |
+    tr '}' '\n' | grep '"lts":"' |
+    grep -oP '"version":\s*"\Kv[^"]+' | head -1) || true
   if [[ -z "$latest" ]]; then
     warn "Could not determine latest Node LTS — skipping."
     return
@@ -283,14 +295,20 @@ install_node() {
 
   local node_os node_arch
   case "$OS" in
-    linux)  node_os="linux" ;;
-    darwin) node_os="darwin" ;;
-    *) warn "Unsupported OS for Node.js (${OS}) — skipping."; return ;;
+  linux) node_os="linux" ;;
+  darwin) node_os="darwin" ;;
+  *)
+    warn "Unsupported OS for Node.js (${OS}) — skipping."
+    return
+    ;;
   esac
   case "$ARCH" in
-    x86_64)  node_arch="x64" ;;
-    aarch64) node_arch="arm64" ;;
-    *) warn "Unsupported arch for Node.js (${ARCH}) — skipping."; return ;;
+  x86_64) node_arch="x64" ;;
+  aarch64) node_arch="arm64" ;;
+  *)
+    warn "Unsupported arch for Node.js (${ARCH}) — skipping."
+    return
+    ;;
   esac
 
   local base="node-${latest}-${node_os}-${node_arch}"
@@ -317,10 +335,10 @@ install_node() {
 
   # Merge into ~/.local, preserving the relative npm/npx symlinks (cp -a).
   mkdir -p "$LOCAL_BIN" "$LOCAL_SHARE" "$HOME/.local/lib" "$HOME/.local/include"
-  cp -a "$root/bin/."          "$LOCAL_BIN/"
-  cp -a "$root/lib/."          "$HOME/.local/lib/"
+  cp -a "$root/bin/." "$LOCAL_BIN/"
+  cp -a "$root/lib/." "$HOME/.local/lib/"
   [[ -d "$root/include" ]] && cp -a "$root/include/." "$HOME/.local/include/"
-  [[ -d "$root/share"   ]] && cp -a "$root/share/."   "$LOCAL_SHARE/"
+  [[ -d "$root/share" ]] && cp -a "$root/share/." "$LOCAL_SHARE/"
 
   set_installed_version "$key" "$latest"
   ok "node installed at ${latest} ($("$LOCAL_BIN/node" --version 2>/dev/null || echo '?'))"
@@ -415,8 +433,8 @@ install_claude_swap() {
 
   log "Checking claude-swap..."
   if [[ "$FORCE_UPDATE" == true ]]; then
-    if "$BIN_DIR/uv" tool upgrade claude-swap &>/dev/null \
-      || "$BIN_DIR/uv" tool install claude-swap &>/dev/null; then
+    if "$BIN_DIR/uv" tool upgrade claude-swap &>/dev/null ||
+      "$BIN_DIR/uv" tool install claude-swap &>/dev/null; then
       ok "claude-swap upgraded"
     else
       warn "claude-swap upgrade/install failed — skipping."
@@ -450,8 +468,8 @@ install_powershell() {
 
   log "Checking pwsh..."
   tag=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
-    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/PowerShell/PowerShell/releases/latest" \
-    | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
+    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/PowerShell/PowerShell/releases/latest" |
+    grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
   if [[ -z "$tag" ]]; then
     warn "Could not determine latest PowerShell release — skipping."
     return
@@ -464,14 +482,20 @@ install_powershell() {
 
   local ps_os ps_arch
   case "$OS" in
-    linux)  ps_os="linux" ;;
-    darwin) ps_os="osx" ;;
-    *) warn "Unsupported OS for PowerShell (${OS}) — skipping."; return ;;
+  linux) ps_os="linux" ;;
+  darwin) ps_os="osx" ;;
+  *)
+    warn "Unsupported OS for PowerShell (${OS}) — skipping."
+    return
+    ;;
   esac
   case "$ARCH" in
-    x86_64)  ps_arch="x64" ;;
-    aarch64) ps_arch="arm64" ;;
-    *) warn "Unsupported arch for PowerShell (${ARCH}) — skipping."; return ;;
+  x86_64) ps_arch="x64" ;;
+  aarch64) ps_arch="arm64" ;;
+  *)
+    warn "Unsupported arch for PowerShell (${ARCH}) — skipping."
+    return
+    ;;
   esac
 
   local asset="powershell-${latest}-${ps_os}-${ps_arch}.tar.gz"
@@ -516,8 +540,8 @@ cargo_install() {
   local latest
   latest=$(curl -sf --connect-timeout 15 \
     -H "User-Agent: dotfiles-install/1.0" \
-    "https://crates.io/api/v1/crates/${crate}" \
-    | grep -oP '"newest_version"\s*:\s*"\K[^"]+' | head -1) || true
+    "https://crates.io/api/v1/crates/${crate}" |
+    grep -oP '"newest_version"\s*:\s*"\K[^"]+' | head -1) || true
   if [[ -z "$latest" ]]; then
     warn "Could not fetch latest version for ${crate} — skipping"
     return
@@ -525,8 +549,8 @@ cargo_install() {
   local installed
   installed=$(get_installed_version "$dest")
   if [[ -z "$installed" ]]; then
-    installed=$("$cargo_bin" install --list --root "$DOTFILES/bin/.local" 2>/dev/null \
-      | grep -oP "^${crate} v\K[0-9][^:]+") || true
+    installed=$("$cargo_bin" install --list --root "$DOTFILES/bin/.local" 2>/dev/null |
+      grep -oP "^${crate} v\K[0-9][^:]+") || true
     [[ -n "$installed" ]] && set_installed_version "$dest" "$installed"
   fi
   if [[ "$installed" == "$latest" && "$FORCE_UPDATE" == false ]]; then
@@ -565,7 +589,7 @@ cargo_install() {
 declare -A _cargo_done=()
 install_tool() {
   local dest crate repo os arch glob bin
-  IFS='|' read -r dest crate repo os arch glob bin <<< "$1"
+  IFS='|' read -r dest crate repo os arch glob bin <<<"$1"
   [[ "$bin" == "-" ]] && bin="$dest"
 
   if [[ "$USE_CARGO" == true && "$crate" != "-" ]]; then
@@ -599,8 +623,8 @@ if [[ "$LINK_ONLY" == false ]]; then
     HAVE_CARGO=true
   else
     log "Installing Rust via rustup (needed for tools with no prebuilt binaries)..."
-    if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-        | sh -s -- -y --no-modify-path --quiet; then
+    if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
+      sh -s -- -y --no-modify-path --quiet; then
       ok "Rust installed: $("$CARGO_BIN" --version)"
       HAVE_CARGO=true
     else
@@ -615,12 +639,18 @@ if [[ "$LINK_ONLY" == false ]]; then
     if ! command -v cc &>/dev/null && ! command -v gcc &>/dev/null; then
       log "C linker not found — installing build-essential..."
       if command -v apt-get &>/dev/null; then
-        sudo apt-get install -y build-essential \
-          && ok "build-essential installed" \
-          || { warn "Could not install build-essential — cargo builds will fail, skipping cargo-only tools."; HAVE_CARGO=false; }
+        sudo apt-get install -y build-essential &&
+          ok "build-essential installed" ||
+          {
+            warn "Could not install build-essential — cargo builds will fail, skipping cargo-only tools."
+            HAVE_CARGO=false
+          }
       elif command -v brew &>/dev/null; then
-        brew install gcc && ok "gcc installed" \
-          || { warn "Could not install gcc — skipping cargo-only tools."; HAVE_CARGO=false; }
+        brew install gcc && ok "gcc installed" ||
+          {
+            warn "Could not install gcc — skipping cargo-only tools."
+            HAVE_CARGO=false
+          }
       else
         warn "No C linker found and no known package manager to install one — skipping cargo-only tools."
         warn "Install gcc/build-essential manually, then re-run install.sh."
@@ -661,8 +691,8 @@ if [[ "$LINK_ONLY" == false ]]; then
   # which is unavailable in most WSL2 kernels.
   log "Checking nvim..."
   latest=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
-    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/neovim/neovim/releases/latest" \
-    | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
+    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/neovim/neovim/releases/latest" |
+    grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
   if [[ -z "$latest" ]]; then
     warn "Could not determine nvim latest version — skipping."
   else
@@ -824,7 +854,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "glow|-|charmbracelet/glow|linux|x86_64|glow_*_linux_x86_64.tar.gz|glow"
     "glow|-|charmbracelet/glow|linux|aarch64|glow_*_linux_arm64.tar.gz|glow"
     "glow|-|charmbracelet/glow|darwin|*|glow_*_darwin_*.tar.gz|glow"
-    
+
     "7zz|7zz|ip7z/7zip|linux|x86_64|7z*-linux-x64.tar.xz|7zz"
     "7zz|7zz|ip7z/7zip|linux|aarch64|7z*-linux-arm.tar.xz|7zz"
     "7zz|7zz|ip7z/7zip|darwin|*|7z*-mac.tar.xz|7zz"
@@ -833,7 +863,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "jq|-|jqlang/jq|linux|aarch64|jq-linux-arm64|jq"
     "jq|-|jqlang/jq|darwin|x86_64|jq-macos-amd64|jq"
     "jq|-|jqlang/jq|darwin|aarch64|jq-macos-arm64|jq"
-    
+
     "tree-sitter-cli|-|tree-sitter/tree-sitter|linux|x86_64|tree-sitter-cli-linux-x64|tree-sitter"
     "tree-sitter-cli|-|tree-sitter/tree-sitter|linux|aarch64|tree-sitter-cli-linux-arm64|tree-sitter"
     "tree-sitter-cli|-|tree-sitter/tree-sitter|darwin|x86_64|tree-sitter-cli-macos-x64|tree-sitter"
@@ -855,7 +885,7 @@ if [[ "$LINK_ONLY" == false ]]; then
   )
   if [[ "$HAVE_CARGO" == true ]]; then
     for entry in "${NUSHELL_PLUGINS_CARGO[@]}"; do
-      IFS='|' read -r pdest pcrate <<< "$entry"
+      IFS='|' read -r pdest pcrate <<<"$entry"
       cargo_install "$pcrate" "$pdest"
     done
   else
@@ -869,8 +899,8 @@ if [[ "$LINK_ONLY" == false ]]; then
     log "Extracting ya companion binary..."
     tmpdir=$(mktemp -d)
     latest_yazi=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
-      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/sxyazi/yazi/releases/latest" \
-      | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
+      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/sxyazi/yazi/releases/latest" |
+      grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
     if [[ -z "$latest_yazi" ]]; then
       warn "Could not fetch latest version for sxyazi/yazi — skipping ya companion binary."
     elif ! curl -sfL --connect-timeout 30 --max-time 600 --retry 2 \
@@ -939,20 +969,20 @@ if [[ "$LINK_ONLY" == false ]]; then
     log "Downloading Nushell Catppuccin Mocha theme..."
     curl -sfL --connect-timeout 15 \
       "https://raw.githubusercontent.com/catppuccin/nushell/main/themes/catppuccin_mocha.nu" \
-      -o "$NUSHELL_THEME_DIR/catppuccin_mocha.nu" \
-      && ok "Nushell theme downloaded" \
-      || warn "Nushell theme download failed — source manually from catppuccin/nushell"
+      -o "$NUSHELL_THEME_DIR/catppuccin_mocha.nu" &&
+      ok "Nushell theme downloaded" ||
+      warn "Nushell theme download failed — source manually from catppuccin/nushell"
   fi
   if [[ ! -f "$NUSHELL_THEME_DIR/catppuccin_mocha.tmTheme" ]]; then
     log "Downloading Nushell Plugin Highlight Catppuccin Mocha theme..."
     curl -sfL --connect-timeout 15 \
       "https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme" \
-      -o "$NUSHELL_THEME_DIR/catppuccin_mocha.tmTheme" \
-      && ok "Nushell Highlight theme downloaded" \
-      || warn "Nushell Highlight theme download failed — source manually from catppuccin/bat"
+      -o "$NUSHELL_THEME_DIR/catppuccin_mocha.tmTheme" &&
+      ok "Nushell Highlight theme downloaded" ||
+      warn "Nushell Highlight theme download failed — source manually from catppuccin/bat"
   fi
 
-fi  # end --link / skip downloads
+fi # end --link / skip downloads
 
 # ── Package list (shared by deploy and remove) ────────────────────────────────
 PACKAGES=(
@@ -998,11 +1028,11 @@ prune_stale_symlinks() {
     [[ "$target" == "$DOTFILES"/* ]] || continue
     rm "$link"
     ok "Removed stale symlink: $link -> $target"
-    (( pruned++ )) || true
+    ((pruned++)) || true
   done < <(find "$HOME" \
     \( -path "$HOME/.cache" -o -path "$HOME/.cargo" -o -path "$HOME/.rustup" \
-       -o -path "$HOME/.npm" -o -path "$HOME/.local/share/nvim" \
-       -o -path "$DOTFILES" \) -prune -o \
+    -o -path "$HOME/.npm" -o -path "$HOME/.local/share/nvim" \
+    -o -path "$DOTFILES" \) -prune -o \
     -xtype l -print0 2>/dev/null)
   [[ "$pruned" -eq 0 ]] && ok "No stale symlinks found" || ok "Pruned ${pruned} stale symlink(s)"
 }
@@ -1026,7 +1056,7 @@ link_package() {
     while IFS= read -r pattern; do
       [[ -z "$pattern" || "$pattern" == \#* ]] && continue
       ignore_patterns+=("$pattern")
-    done < "$ignore_file"
+    done <"$ignore_file"
   fi
   while IFS= read -r -d '' src; do
     local rel="${src#$pkg_dir/}"
@@ -1035,7 +1065,11 @@ link_package() {
     [[ "$rel" == ".linkignore" ]] && skip=true
     for pat in "${ignore_patterns[@]}"; do
       # shellcheck disable=SC2254
-      case "$rel" in $pat) skip=true; break ;; esac
+      case "$rel" in $pat)
+        skip=true
+        break
+        ;;
+      esac
     done
     [[ "$skip" == true ]] && continue
     local target="$HOME/$rel"
@@ -1085,7 +1119,7 @@ git -C "$DOTFILES" config filter.homepath.required true
 # forces overwriting, it doesn't bypass that freshness check. Removing the
 # file first guarantees a real rewrite, so the filter always actually runs.
 rm -f "$DOTFILES/zellij/.config/zellij/config.kdl" \
-      "$DOTFILES/nvim/.config/nvim/lua/config/autocmds.lua"
+  "$DOTFILES/nvim/.config/nvim/lua/config/autocmds.lua"
 git -C "$DOTFILES" checkout-index -f -- \
   zellij/.config/zellij/config.kdl \
   nvim/.config/nvim/lua/config/autocmds.lua
@@ -1107,12 +1141,12 @@ NU_BIN="${LOCAL_BIN}/nu"
 [[ -f "$NU_BIN" ]] || NU_BIN="$(command -v nu 2>/dev/null)" || true
 if [[ -n "${NU_BIN:-}" && -x "${NU_BIN}" ]]; then
   for entry in "${NUSHELL_PLUGINS_CARGO[@]}"; do
-    IFS='|' read -r plugin _ <<< "$entry"
+    IFS='|' read -r plugin _ <<<"$entry"
     plugin_path="${LOCAL_BIN}/${plugin}"
     plugin_short="${plugin#nu_plugin_}"
     if [[ -f "$plugin_path" ]]; then
-      if "${NU_BIN}" -c "plugin add $plugin_path" 2>/dev/null && \
-         "${NU_BIN}" -c "plugin use ${plugin_short}" 2>/dev/null; then
+      if "${NU_BIN}" -c "plugin add $plugin_path" 2>/dev/null &&
+        "${NU_BIN}" -c "plugin use ${plugin_short}" 2>/dev/null; then
         ok "Registered ${plugin}"
       else
         warn "Failed to register ${plugin} — run: nu -c 'plugin add ${plugin_path}; plugin use ${plugin_short}'"
@@ -1132,8 +1166,8 @@ if [[ -f "$LOCAL_BIN/nvim" ]] || command -v nvim &>/dev/null; then
   else
     log "Installing Neovim plugins (headless — this may take a minute)..."
     VIMRUNTIME="$HOME/.local/share/nvim/runtime" \
-      "$NVIM_CMD" --headless '+Lazy! sync' +qa 2>&1 | tail -5 \
-      || warn "nvim plugins: some issues encountered — run :Lazy sync manually"
+      "$NVIM_CMD" --headless '+Lazy! sync' +qa 2>&1 | tail -5 ||
+      warn "nvim plugins: some issues encountered — run :Lazy sync manually"
     ok "Neovim plugins installed"
   fi
 fi
@@ -1142,26 +1176,30 @@ fi
 log "=== Generating shell init scripts ==="
 
 if [[ ! -f "$HOME/.local/share/atuin/init.nu" ]] && { command -v atuin &>/dev/null || [[ -f "$LOCAL_BIN/atuin" ]]; }; then
-  ATUIN="${LOCAL_BIN}/atuin"; [[ -f "$ATUIN" ]] || ATUIN="atuin"
-  "$ATUIN" init nu --disable-up-arrow > "$HOME/.local/share/atuin/init.nu" 2>/dev/null && ok "atuin init generated"
+  ATUIN="${LOCAL_BIN}/atuin"
+  [[ -f "$ATUIN" ]] || ATUIN="atuin"
+  "$ATUIN" init nu --disable-up-arrow >"$HOME/.local/share/atuin/init.nu" 2>/dev/null && ok "atuin init generated"
 fi
 
 if [[ ! -f "$HOME/.cache/starship/init.nu" ]] && { command -v starship &>/dev/null || [[ -f "$LOCAL_BIN/starship" ]]; }; then
-  STARSHIP="${LOCAL_BIN}/starship"; [[ -f "$STARSHIP" ]] || STARSHIP="starship"
+  STARSHIP="${LOCAL_BIN}/starship"
+  [[ -f "$STARSHIP" ]] || STARSHIP="starship"
   mkdir -p "$HOME/.cache/starship"
-  "$STARSHIP" init nu > "$HOME/.cache/starship/init.nu" 2>/dev/null && ok "starship init generated"
+  "$STARSHIP" init nu >"$HOME/.cache/starship/init.nu" 2>/dev/null && ok "starship init generated"
 fi
 
 if [[ ! -f "$HOME/.local/share/zoxide/init.nu" ]] && { command -v zoxide &>/dev/null || [[ -f "$LOCAL_BIN/zoxide" ]]; }; then
-  ZOXIDE="${LOCAL_BIN}/zoxide"; [[ -f "$ZOXIDE" ]] || ZOXIDE="zoxide"
+  ZOXIDE="${LOCAL_BIN}/zoxide"
+  [[ -f "$ZOXIDE" ]] || ZOXIDE="zoxide"
   mkdir -p "$HOME/.local/share/zoxide"
-  "$ZOXIDE" init nushell > "$HOME/.local/share/zoxide/init.nu" 2>/dev/null && ok "zoxide init generated"
+  "$ZOXIDE" init nushell >"$HOME/.local/share/zoxide/init.nu" 2>/dev/null && ok "zoxide init generated"
 fi
 
 # Use ! -s (not non-empty) since the file is pre-touched empty in directory setup
 if [[ ! -s "$HOME/.cache/carapace/init.nu" ]] && { command -v carapace &>/dev/null || [[ -f "$LOCAL_BIN/carapace" ]]; }; then
-  CARAPACE="${LOCAL_BIN}/carapace"; [[ -f "$CARAPACE" ]] || CARAPACE="carapace"
-  "$CARAPACE" _carapace nushell > "$HOME/.cache/carapace/init.nu" 2>/dev/null && ok "carapace init generated"
+  CARAPACE="${LOCAL_BIN}/carapace"
+  [[ -f "$CARAPACE" ]] || CARAPACE="carapace"
+  "$CARAPACE" _carapace nushell >"$HOME/.cache/carapace/init.nu" 2>/dev/null && ok "carapace init generated"
 fi
 
 # ── Yazi: packages (flavors + plugins) ────────────────────────────────────────
@@ -1203,13 +1241,13 @@ ZELLIJ_PLUGIN_DIR="${SHARE_DIR}/zellij/plugins"
 mkdir -p "$ZELLIJ_PLUGIN_DIR"
 ZELLIJ_PLUGINS=(
   "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.2.2"
-  "zjstatus.wasm|dj95/zjstatus|v0.23.0"
+  "zjstatus.wasm|dj95/zjstatus|v0.24.0"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
-  "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.2.1"
+  "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.4.0"
 )
 log "=== Zellij plugins ==="
 for entry in "${ZELLIJ_PLUGINS[@]}"; do
-  IFS='|' read -r dest repo tag <<< "$entry"
+  IFS='|' read -r dest repo tag <<<"$entry"
   installed=$(get_installed_version "$dest")
   if [[ "$installed" == "$tag" && "$FORCE_UPDATE" == false ]]; then
     ok "${dest} already at ${tag}"
@@ -1217,8 +1255,8 @@ for entry in "${ZELLIJ_PLUGINS[@]}"; do
   fi
   log "Downloading ${dest} ${tag}..."
   if curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
-       "https://github.com/${repo}/releases/download/${tag}/${dest}" \
-       -o "${ZELLIJ_PLUGIN_DIR}/${dest}"; then
+    "https://github.com/${repo}/releases/download/${tag}/${dest}" \
+    -o "${ZELLIJ_PLUGIN_DIR}/${dest}"; then
     set_installed_version "$dest" "$tag"
     ok "${dest} installed at ${tag}"
   else
@@ -1250,7 +1288,7 @@ ZELLIJ_PERMISSIONS_FILE="$HOME/.cache/zellij/permissions.kdl"
 mkdir -p "$(dirname "$ZELLIJ_PERMISSIONS_FILE")"
 touch "$ZELLIJ_PERMISSIONS_FILE"
 for entry in "${ZELLIJ_PLUGIN_PERMISSIONS[@]}"; do
-  IFS='|' read -r dest perms <<< "$entry"
+  IFS='|' read -r dest perms <<<"$entry"
   plugin_path="${HOME}/.local/share/zellij/plugins/${dest}"
   if grep -qF "\"${plugin_path}\"" "$ZELLIJ_PERMISSIONS_FILE"; then
     continue
@@ -1261,7 +1299,7 @@ for entry in "${ZELLIJ_PLUGIN_PERMISSIONS[@]}"; do
       echo "    ${perm}"
     done
     echo "}"
-  } >> "$ZELLIJ_PERMISSIONS_FILE"
+  } >>"$ZELLIJ_PERMISSIONS_FILE"
   ok "Pre-approved zellij permissions for ${dest}"
 done
 
@@ -1293,10 +1331,10 @@ if [[ "$IS_WSL" == false ]]; then
     ok "JetBrainsMono Nerd Font already at ${font_latest}"
   else
     log "Downloading JetBrainsMono Nerd Font ${font_latest}..."
-    font_zip_url=$(echo "$font_api_response" \
-      | grep '"browser_download_url"' \
-      | grep 'JetBrainsMono\.zip' \
-      | cut -d'"' -f4 | head -1) || true
+    font_zip_url=$(echo "$font_api_response" |
+      grep '"browser_download_url"' |
+      grep 'JetBrainsMono\.zip' |
+      cut -d'"' -f4 | head -1) || true
 
     if [[ -z "$font_zip_url" ]]; then
       warn "Could not find JetBrainsMono.zip asset — skipping font install."
@@ -1318,7 +1356,7 @@ if [[ "$IS_WSL" == false ]]; then
         font_count=0
         while IFS= read -r -d '' ttf; do
           cp "$ttf" "$FONT_DEST/"
-          (( font_count++ )) || true
+          ((font_count++)) || true
         done < <(find "$font_tmp/fonts" -name "JetBrainsMonoNerdFont*.ttf" -print0)
 
         [[ "$OS" == "linux" ]] && fc-cache -f "$FONT_DEST" 2>/dev/null || true
@@ -1353,38 +1391,38 @@ if [[ "$IS_WSL" == true && "$NO_WINDOWS" == false ]]; then
     warn "To enable: add 'enabled=true' under [interop] in /etc/wsl.conf, then run 'wsl --shutdown' and reopen."
   else
 
-  # Detect WSL distro name. $WSL_DISTRO_NAME is set by WSL itself for the
-  # current session — use it first. Falling back to `wsl.exe --list --running`
-  # picks the wrong distro (non-deterministic ordering) when more than one
-  # distro is registered/running, e.g. a leftover install alongside the
-  # current one, which silently points the Alacritty symlink at a path that
-  # doesn't exist.
-  DISTRO_NAME="${WSL_DISTRO_NAME:-}"
-  [[ -z "$DISTRO_NAME" ]] && \
-    DISTRO_NAME=$(powershell.exe -NonInteractive -c "wsl.exe --list --running --quiet" 2>/dev/null \
-      | tr -d '\r\0' | grep -v '^$' | head -1) || true
-  [[ -z "$DISTRO_NAME" ]] && \
-    DISTRO_NAME=$(grep "^NAME=" /etc/os-release 2>/dev/null | cut -d'"' -f2 | tr ' ' '-') || true
+    # Detect WSL distro name. $WSL_DISTRO_NAME is set by WSL itself for the
+    # current session — use it first. Falling back to `wsl.exe --list --running`
+    # picks the wrong distro (non-deterministic ordering) when more than one
+    # distro is registered/running, e.g. a leftover install alongside the
+    # current one, which silently points the Alacritty symlink at a path that
+    # doesn't exist.
+    DISTRO_NAME="${WSL_DISTRO_NAME:-}"
+    [[ -z "$DISTRO_NAME" ]] &&
+      DISTRO_NAME=$(powershell.exe -NonInteractive -c "wsl.exe --list --running --quiet" 2>/dev/null |
+        tr -d '\r\0' | grep -v '^$' | head -1) || true
+    [[ -z "$DISTRO_NAME" ]] &&
+      DISTRO_NAME=$(grep "^NAME=" /etc/os-release 2>/dev/null | cut -d'"' -f2 | tr ' ' '-') || true
 
-  # Build Windows path to the alacritty.toml source file in dotfiles
-  WIN_CONFIG_TARGET=""
-  if [[ "$DOTFILES" =~ ^/mnt/([a-zA-Z])(/.*)$ ]]; then
-    DRIVE="${BASH_REMATCH[1]^^}"
-    REST="${BASH_REMATCH[2]}"
-    WIN_CONFIG_TARGET="${DRIVE}:${REST//\//\\}\\alacritty\\.config\\alacritty\\alacritty.toml"
-  else
-    WIN_CONFIG_TARGET="\\\\wsl.localhost\\${DISTRO_NAME}${DOTFILES//\//\\}\\alacritty\\.config\\alacritty\\alacritty.toml"
-  fi
+    # Build Windows path to the alacritty.toml source file in dotfiles
+    WIN_CONFIG_TARGET=""
+    if [[ "$DOTFILES" =~ ^/mnt/([a-zA-Z])(/.*)$ ]]; then
+      DRIVE="${BASH_REMATCH[1]^^}"
+      REST="${BASH_REMATCH[2]}"
+      WIN_CONFIG_TARGET="${DRIVE}:${REST//\//\\}\\alacritty\\.config\\alacritty\\alacritty.toml"
+    else
+      WIN_CONFIG_TARGET="\\\\wsl.localhost\\${DISTRO_NAME}${DOTFILES//\//\\}\\alacritty\\.config\\alacritty\\alacritty.toml"
+    fi
 
-  PS_WIN_PATH=$(wslpath -w "$DOTFILES/windows-setup.ps1")
-  log "Running Windows setup (Alacritty, font, config)..."
-  powershell.exe -NonInteractive -ExecutionPolicy Bypass \
-    -File "$PS_WIN_PATH" -AlacrittyTarget "$WIN_CONFIG_TARGET" 2>&1 \
-    | tr -d '\r\0' | grep -v "^$" \
-    || warn "PowerShell step had warnings (non-fatal)"
+    PS_WIN_PATH=$(wslpath -w "$DOTFILES/windows-setup.ps1")
+    log "Running Windows setup (Alacritty, font, config)..."
+    powershell.exe -NonInteractive -ExecutionPolicy Bypass \
+      -File "$PS_WIN_PATH" -AlacrittyTarget "$WIN_CONFIG_TARGET" 2>&1 |
+      tr -d '\r\0' | grep -v "^$" ||
+      warn "PowerShell step had warnings (non-fatal)"
 
-  fi  # end WSL_INTEROP_OK
-fi  # end IS_WSL
+  fi # end WSL_INTEROP_OK
+fi   # end IS_WSL
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""

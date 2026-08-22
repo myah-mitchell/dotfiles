@@ -12,6 +12,8 @@ default_shell "nu"
 default_mode "normal"
 
 pane_frames        true
+pane_frame_style   "full"
+stacked_pane_list  false
 mouse_mode         true
 scroll_buffer_size 100000
 copy_on_select     false  // mouse selection auto-copies on release disabled; "y"/Ctrl+C in scroll mode yank explicitly (see keybinds below)
@@ -316,6 +318,10 @@ keybinds clear-defaults=false {
         unbind "Ctrl c" //{ ScrollToBottom; SwitchToMode "Normal"; }
     }
     search {
+        // tmux/vim-style yank: select with the mouse, then y/Ctrl+C copies and
+        // stays in scroll mode - overrides Zellij's default Ctrl+C (ScrollToBottom).
+        bind "y" "Ctrl c" { Copy; }
+
         unbind "Ctrl c" //{ ScrollToBottom; SwitchToMode "Normal"; }
     }
     entersearch {
@@ -344,7 +350,7 @@ keybinds clear-defaults=false {
         }
     }
     shared {
-        //bind "y" { Copy; }
+        bind "Ctrl y" { Copy; }
     }
     shared_except "locked" {
         // Ctrl+hjkl: pane navigation (intercepted when NOT in nvim/hx)
