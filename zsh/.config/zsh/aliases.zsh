@@ -55,4 +55,6 @@ alias glog='git log --oneline --graph --decorate --all'
 # show, not sort order) and --sort=modified alone already sorts oldest-first
 # (newest last) — the equivalent of GNU `ls -tr`, which is what this is going
 # for. Adding --reverse here would flip it to newest-first instead.
-alias l='ls -al --sort=modified'
+# -g/--group adds the Group column (eza's -l shows owner but not group by
+# default, unlike GNU ls -l); --header labels every column.
+alias l='ls -alg --header --sort=modified'
