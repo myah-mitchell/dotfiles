@@ -22,7 +22,7 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-That's it. The script downloads all binaries, symlinks configs into `~`, and on WSL2 also installs Alacritty and the font on the Windows side.
+That's it. The script downloads all binaries and symlinks configs into `~`. On WSL2, opening this distro through Windows Alacritty also needs `./install.sh --windows` to install Alacritty and the font on the Windows side — see [What install.sh does](#what-installsh-does).
 
 Set `GITHUB_TOKEN` in your environment first if doing a fresh install — unauthenticated GitHub API requests are capped at 60/hr, and this script checks 25+ tools' latest releases.
 
@@ -36,7 +36,7 @@ Set `GITHUB_TOKEN` in your environment first if doing a fresh install — unauth
 6. Generates init scripts for atuin, starship, zoxide, and carapace
 7. Installs Yazi's Catppuccin flavor and plugin set
 8. Downloads the Zellij plugins that back the status bar and navigation (`zjstatus`, `zellij-autolock`, `zellij-newtab-plus`), builds `zjstatus-hints` from source, and pre-approves their Zellij permissions
-9. **WSL2 only:** installs Alacritty via winget, installs the Nerd Font per-user, and creates a Windows symlink for the Alacritty config. On native Linux/macOS it downloads the font directly instead.
+9. **WSL2 + `--windows`/`--full` only:** installs Alacritty via winget, installs the Nerd Font per-user, and creates a Windows symlink for the Alacritty config — off by default even under WSL2, since not every WSL box is opened through Windows Alacritty. On native Linux/macOS it downloads the font directly instead (unconditionally, no flag needed).
 
 Re-run at any time to apply config changes:
 
@@ -46,14 +46,15 @@ Re-run at any time to apply config changes:
 ./install.sh --link       # skip binary downloads, only re-link configs (fast)
 ./install.sh --copy       # copy configs instead of symlinking (useful on NTFS or shared servers)
 ./install.sh --remove     # remove all deployed symlinks from $HOME and exit (binaries untouched)
-./install.sh --no-windows # skip Windows/PowerShell steps
 ./install.sh --cargo      # build Rust tools from source via cargo instead of downloading (slow)
+./install.sh --windows    # install Windows-side integration under WSL2: Alacritty, the font, and the
+                           # config symlink — off by default, no-op outside WSL2; implied by --full
 ./install.sh --claude     # install the Claude Code stack: Claude Code itself, Node.js, ccstatusline,
                            # and claude-swap — off by default, since none of them are useful without
                            # Claude Code; implied by --full
-./install.sh --full       # everything --claude installs, plus PowerShell and Neovim's heavier LSPs
-                           # (html/css/emmet/bash/php/pyright/powershell_es, ~460MB of Mason packages)
-                           # — off by default; skip on servers that just need the shell
+./install.sh --full       # everything --claude and --windows install, plus PowerShell and Neovim's
+                           # heavier LSPs (html/css/emmet/bash/php/pyright/powershell_es, ~460MB of
+                           # Mason packages) — off by default; skip on servers that just need the shell
 ./install.sh --cleanup    # remove rustup/cargo (unless --cargo), orphaned binaries/plugins/npm globals
                            # left behind by removed tools, node/ccstatusline if not --claude/--full,
                            # pwsh + full-only Mason LSPs if not --full, and old Claude Code version
