@@ -20,6 +20,12 @@ autoload -Uz compinit
 compinit
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' # case-insensitive
+# LIST_AMBIGUOUS is on by default: when there's a common prefix to insert,
+# zsh inserts it *without* showing the menu, requiring a second Tab press to
+# actually see it — the classic "why do I have to hit Tab twice" complaint.
+# Unset it so the grid menu appears on the very first Tab whenever the match
+# isn't already unambiguous (single match still just completes normally).
+unsetopt LIST_AMBIGUOUS
 
 # ── SSH agent ─────────────────────────────────────────────────────────────────
 _ssh_agent_socket="$HOME/.ssh/ssh-agent.sock"
