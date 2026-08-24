@@ -1,0 +1,13 @@
+# Personal default rule config for markdownlint-cli2, passed explicitly via
+# --config in lua/plugins/lint.lua (nvim-lint's markdownlint-cli2 linter).
+# --config sets the *base* config — a project's own .markdownlint.yaml or
+# .markdownlint-cli2.yaml still layers on top and can re-enable/override
+# anything here, it's just not required to opt out of these two by default.
+
+# Line length — flags every line over 80 chars by default; too noisy for
+# prose (long links, tables) and most projects don't enforce it anyway.
+MD013: false
+
+# First line in file must be a top-level heading — false positives on any
+# markdown file that opens with front matter, a badge row, or just prose.
+MD041: false
