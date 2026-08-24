@@ -7,7 +7,7 @@ Personal dotfiles deployed via a small hand-rolled symlinker (see [Layout](#layo
 | Layer | Tool |
 |---|---|
 | Terminal | [Alacritty](https://alacritty.org/) |
-| Shell | [Nushell](https://www.nushell.sh/) |
+| Shell | [zsh](https://www.zsh.org/) |
 | Prompt | [Starship](https://starship.rs/) |
 | Multiplexer | [Zellij](https://zellij.dev/) (+ [zjstatus](https://github.com/dj95/zjstatus) status bar) |
 | Editor | [Neovim](https://neovim.io/) (LazyVim) |
@@ -29,10 +29,10 @@ Set `GITHUB_TOKEN` in your environment first if doing a fresh install — unauth
 ## What install.sh does
 
 1. Downloads pre-built binaries for all tools into `bin/.local/bin/` (gitignored)
-2. Downloads Nushell, Starship, Zellij, and Neovim binaries
+2. Downloads Starship, Zellij, and Neovim binaries (zsh itself must be pre-installed — see [Notes](#notes))
 3. Symlinks (or, with `--copy`, copies) every package directory into `~`, one file at a time
 4. Prunes any dangling symlinks left behind by files that were renamed/removed from the repo
-5. Registers Nushell plugins and runs a headless `:Lazy sync` for Neovim
+5. Downloads the zsh plugins (autosuggestions, syntax highlighting, alias reminders) and runs a headless `:Lazy sync` for Neovim
 6. Generates init scripts for atuin, starship, zoxide, and carapace
 7. Installs Yazi's Catppuccin flavor and plugin set
 8. Downloads the Zellij plugins that back the status bar and navigation (`zjstatus`, `zellij-autolock`, `zellij-newtab-plus`), builds `zjstatus-hints` from source, and pre-approves their Zellij permissions
@@ -48,6 +48,16 @@ Re-run at any time to apply config changes:
 ./install.sh --remove     # remove all deployed symlinks from $HOME and exit (binaries untouched)
 ./install.sh --no-windows # skip Windows/PowerShell steps
 ./install.sh --cargo      # build Rust tools from source via cargo instead of downloading (slow)
+./install.sh --claude     # install the Claude Code stack: Claude Code itself, Node.js, ccstatusline,
+                           # and claude-swap — off by default, since none of them are useful without
+                           # Claude Code; implied by --full
+./install.sh --full       # everything --claude installs, plus PowerShell and Neovim's heavier LSPs
+                           # (html/css/emmet/bash/php/pyright/powershell_es, ~460MB of Mason packages)
+                           # — off by default; skip on servers that just need the shell
+./install.sh --cleanup    # remove rustup/cargo (unless --cargo), orphaned binaries/plugins/npm globals
+                           # left behind by removed tools, node/ccstatusline if not --claude/--full,
+                           # pwsh + full-only Mason LSPs if not --full, and old Claude Code version
+                           # binaries left by its own self-updater
 ```
 
 ## Layout
@@ -56,7 +66,8 @@ Each top-level directory is a package. `install.sh` walks it and symlinks every 
 
 ```
 dotfiles/
-├── nushell/.config/nushell/     → ~/.config/nushell/
+├── zsh/.zshenv, .zshrc          → ~/.zshenv, ~/.zshrc
+├── zsh/.config/zsh/             → ~/.config/zsh/
 ├── starship/.config/            → ~/.config/
 ├── zellij/.config/zellij/       → ~/.config/zellij/
 ├── nvim/.config/nvim/           → ~/.config/nvim/
@@ -116,7 +127,7 @@ The status bar (bottom, via zjstatus) shows the current mode, open tabs, weather
 
 ### Core tools (binaries downloaded by install.sh)
 
-`nu` · `starship` · `zellij` · `nvim`
+`starship` · `zellij` · `nvim`
 
 ### CLI tools
 
@@ -126,8 +137,8 @@ The status bar (bottom, via zjstatus) shows the current mode, open tabs, weather
 | [fd](https://github.com/sharkdp/fd) | `find` | Fast find |
 | [ripgrep](https://github.com/BurntSushi/ripgrep) | `grep` | Fast grep |
 | [ripgrep-all](https://github.com/phiresky/ripgrep-all) | — | Grep PDFs, archives, etc. |
-| [eza](https://github.com/eza-community/eza) | — | Modern `ls` replacement (installed, not yet aliased over `ls`) |
-| [fzf](https://github.com/junegunn/fzf) | — | Fuzzy finder (also bound to `Ctrl+F` in Nushell) |
+| [eza](https://github.com/eza-community/eza) | `ls` | Modern `ls` replacement, Catppuccin Mocha themed |
+| [fzf](https://github.com/junegunn/fzf) | — | Fuzzy finder (also bound to `Ctrl+F` in zsh) |
 | [zoxide](https://github.com/ajeetdsouza/zoxide) | `cd` | Smart cd |
 | [yazi](https://github.com/sxyazi/yazi) | `y` | File manager |
 | [lazygit](https://github.com/jesseduffield/lazygit) | `lg` | Git TUI |
@@ -151,18 +162,19 @@ The status bar (bottom, via zjstatus) shows the current mode, open tabs, weather
 | [presenterm](https://github.com/mfontanini/presenterm) | — | Terminal slideshows |
 | [asciinema](https://github.com/asciinema/asciinema) | — | Terminal recording |
 
-### `nr` — call native system binaries
+### `command` — call native system binaries
 
-When you need the original system tool instead of the Rust replacement:
+When you need the original system tool instead of the Rust replacement, zsh's builtin `command` bypasses an alias:
 
-```nu
-nr ls -la          # /usr/bin/ls
-nr du -sh .        # /usr/bin/du
-nr rm -rf /tmp/x   # /usr/bin/rm
+```sh
+command ls -la          # /usr/bin/ls
+command du -sh .        # /usr/bin/du
+command rm -rf /tmp/x   # /usr/bin/rm
 ```
 
 ## Notes
 
+- **zsh**: must be pre-installed (`apt install zsh` / `brew install zsh`) — `install.sh` checks for it and exits with instructions rather than installing it, since (unlike `mosh` below) it's not treated as an exception to the "no system package installs" rule.
 - **mosh**: installed via `apt-get` if available (no GitHub release binaries). Usually pre-installed on servers.
 - **git**: on Ubuntu/Debian with git older than 2.35, `install.sh` upgrades it via the git-core PPA — the only other exception to the "no system package installs" rule, needed for `zdiff3` merge style.
 - **zjstatus-hints**: has no usable upstream release, so `install.sh` builds it from source (requires cargo + the `wasm32-wasip1` target) off a temporary community fork branch rather than upstream `main`. See `install.sh` for details if the hints bar stops building.

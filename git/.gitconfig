@@ -28,7 +28,7 @@
 	conflictstyle = zdiff3
 
 [diff]
-	# difftastic for structural diffs (set via GIT_EXTERNAL_DIFF in env.nu)
+	# difftastic for structural diffs (set via GIT_EXTERNAL_DIFF in zsh/.zshenv)
 	# also usable explicitly: git -c diff.external=difft diff
 	algorithm   = histogram
 	colorMoved  = default

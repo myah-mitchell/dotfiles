@@ -12,7 +12,7 @@ return {
       },
     },
     -- VSCode-style bottom-docked terminal (<c-/> toggles it).
-    -- Runs a plain shell; the Nushell zellij-autostart guard (checks $NVIM)
+    -- Runs a plain shell; the zsh zellij_autostart guard (checks $NVIM)
     -- keeps it from spawning a nested Zellij session inside the nvim terminal.
     terminal = {
       win = { position = "bottom", height = 0.3 },

@@ -34,7 +34,7 @@ y = 0
 
 # ── Terminal / Shell ──────────────────────────────────────────────────────────
 [terminal]
-# Launch WSL2 — bash starts, .bashrc execs into Nushell automatically
+# Launch WSL2 — bash starts, .bashrc execs into zsh automatically
 shell = { program = "C:\\Windows\\System32\\wsl.exe", args = ["--cd", "~"] }
 osc52 = "CopyPaste"  # allow OSC52 clipboard reads and writes (for nvim clipboard)
 

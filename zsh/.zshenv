@@ -1,46 +1,48 @@
-# env.nu — environment variables only (no output allowed here)
-# Sourced before config.nu on every Nushell startup.
+# .zshenv — environment variables only, sourced on every zsh invocation
+# (interactive, scripts, non-interactive) before .zshrc.
 
 # ── PATH ─────────────────────────────────────────────────────────────────────
-$env.PATH = (
-  $env.PATH
-  | split row (char esep)
-  | prepend [
-      ($env.HOME | path join ".local" "bin")
-      ($env.HOME | path join ".cargo" "bin")
-      ($env.HOME | path join "go" "bin")
-      "/usr/local/bin"
-      "/usr/bin"
-      "/bin"
-    ]
-  | uniq
+typeset -U path
+path=(
+  "$HOME/.local/bin"
+  "$HOME/.cargo/bin"
+  "$HOME/go/bin"
+  /usr/local/bin
+  /usr/bin
+  /bin
+  $path
 )
+export PATH
 
 # ── XDG base directories ─────────────────────────────────────────────────────
-$env.XDG_CONFIG_HOME = ($env.HOME | path join ".config")
-$env.XDG_DATA_HOME   = ($env.HOME | path join ".local" "share")
-$env.XDG_CACHE_HOME  = ($env.HOME | path join ".cache")
-$env.XDG_STATE_HOME  = ($env.HOME | path join ".local" "state")
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_STATE_HOME="$HOME/.local/state"
 
 # ── Editors ───────────────────────────────────────────────────────────────────
-$env.EDITOR  = "nvim"
-$env.VISUAL  = "nvim"
-$env.VIMRUNTIME = ($env.HOME | path join ".local" "share" "nvim" "runtime")
-$env.MANPAGER = "sh -c 'col -bx | bat -l man -p'"
+export EDITOR="nvim"
+export VISUAL="nvim"
+export VIMRUNTIME="$HOME/.local/share/nvim/runtime"
+export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 
 # ── Diff / Git ────────────────────────────────────────────────────────────────
-$env.GIT_EXTERNAL_DIFF = "difft"
-$env.DIFFTASTIC_DISPLAY = "side-by-side-show-both"
+export GIT_EXTERNAL_DIFF="difft"
+export DIFFTASTIC_DISPLAY="side-by-side-show-both"
 
 # ── Ripgrep ───────────────────────────────────────────────────────────────────
-$env.RIPGREP_CONFIG_PATH = ($env.HOME | path join ".config" "ripgrep" "ripgreprc")
+export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/ripgreprc"
 
 # ── Bat ───────────────────────────────────────────────────────────────────────
-$env.BAT_THEME = "Catppuccin Mocha"
+export BAT_THEME="Catppuccin Mocha"
+
+# ── eza ───────────────────────────────────────────────────────────────────────
+# Theme downloaded by install.sh from catppuccin/eza to $EZA_CONFIG_DIR/theme.yml
+export EZA_CONFIG_DIR="$HOME/.config/eza"
 
 # ── FZF — catppuccin mocha palette ────────────────────────────────────────────
-$env.FZF_DEFAULT_COMMAND = "fd --type f --hidden --follow --exclude .git"
-$env.FZF_DEFAULT_OPTS = "
+export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --exclude .git"
+export FZF_DEFAULT_OPTS="
   --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8
   --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc
   --color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8
@@ -50,43 +52,27 @@ $env.FZF_DEFAULT_OPTS = "
 "
 
 # ── Zellij auto-attach ────────────────────────────────────────────────────────
-$env.ZELLIJ_AUTO_ATTACH = "true"
-$env.ZELLIJ_AUTO_EXIT   = "false"
+export ZELLIJ_AUTO_ATTACH="true"
+export ZELLIJ_AUTO_EXIT="false"
 
 # ── Starship cache ────────────────────────────────────────────────────────────
-$env.STARSHIP_CACHE = ($env.HOME | path join ".cache" "starship")
+export STARSHIP_CACHE="$HOME/.cache/starship"
 
 # ── Pager ─────────────────────────────────────────────────────────────────────
-$env.LESS = "-R --mouse"
-$env.PAGER = "less"
+export LESS="-R --mouse"
+export PAGER="less"
 
 # ── Locale ────────────────────────────────────────────────────────────────────
-$env.LANG   = "en_US.UTF-8"
-$env.LC_ALL = "en_US.UTF-8"
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
 
 # ── Colors ────────────────────────────────────────────────────────────────────
-$env.COLORTERM = "truecolor"
-$env.TERM_PROGRAM = ($env.TERM_PROGRAM? | default "")
+export COLORTERM="truecolor"
+export TERM_PROGRAM="${TERM_PROGRAM:-}"
 
-# ── Secrets (not committed — edit ~/.config/nushell/secrets.nu) ──────────────
-# e.g. $env.GITHUB_TOKEN = "ghp_..."
-# install.sh creates this file empty if it doesn't exist so source always works.
-source ~/.config/nushell/secrets.nu
-
-# ── SSH Agent ────────────────────────────────────────────────────────────────
-# Setup ssh-agent for Nushell
-let socket_path = $"($env.HOME)/.ssh/ssh-agent.sock"
-
-if not ($socket_path | path exists) {
-    # Start ssh-agent and bind it to a fixed socket path
-    ^ssh-agent -a $socket_path | awk -F'[=;]' '/SSH_AGENT_PID/ {print $2}' | save -f $"($env.HOME)/.ssh/ssh-agent.pid"
-}
-
-# Export the variables so ssh-add can find the agent
-load-env {
-    SSH_AUTH_SOCK: $socket_path
-}
-
-# ── WSL clipboard helper ──────────────────────────────────────────────────────
-# Make wl-copy/wl-paste available via clip.exe on WSL2
-# (Neovim clipboard provider falls back to this automatically)
+# ── Secrets (not committed — edit ~/.config/zsh/secrets.zsh) ─────────────────
+# e.g. export GITHUB_TOKEN="ghp_..."
+# Guarded rather than pre-touched: zsh's source is a runtime check (unlike
+# Nu's parse-time-only source), so this file doesn't need to exist for this
+# line to be safe — install.sh doesn't need to pre-seed it empty.
+[[ -f ~/.config/zsh/secrets.zsh ]] && source ~/.config/zsh/secrets.zsh
