@@ -29,9 +29,4 @@ Desktop.ini
 .env.local
 .env.*.local
 
-# ── Nushell history ───────────────────────────────────────────────────────────
-history.sqlite3
-history.sqlite3-shm
-history.sqlite3-wal
-
 **/.claude/settings.local.json

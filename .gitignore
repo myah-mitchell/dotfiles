@@ -8,9 +8,6 @@ bin/.local/share/*
 bin/.local/.crates.toml
 bin/.local/.crates2.json
 
-# Downloaded theme files
-nushell/.config/nushell/themes/catppuccin_mocha.nu
-
 # SSH keys and sockets (never commit)
 ssh/.ssh/id_*
 ssh/.ssh/*.pub
@@ -29,7 +26,7 @@ ssh/.ssh/sockets/
 *.local
 
 # Secret env vars (tokens, API keys — never commit)
-nushell/.config/nushell/secrets.nu
+zsh/.config/zsh/secrets.zsh
 
 # Yazi packages installed by `ya pkg` — managed at runtime, not committed
 yazi/.config/yazi/flavors/

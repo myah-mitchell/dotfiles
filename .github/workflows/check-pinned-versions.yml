@@ -5,7 +5,7 @@ name: Check pinned package versions
 # every install.sh run — no bump PR needed for those. This workflow only
 # covers the handful of *pinned* versions hardcoded in install.sh, which
 # stay frozen until someone edits the string by hand: the four ZELLIJ_PLUGINS
-# release tags, and the npm-pinned ccusage/ccstatusline versions. See
+# release tags, and the npm-pinned ccstatusline version. See
 # CLAUDE.md's "install.sh" section for why each of those is pinned instead
 # of always-latest before merging a bump.
 
@@ -37,9 +37,6 @@ jobs:
           - name: zjstatus-hints
             kind: github-release
             repo: myah-mitchell/zjstatus-hints
-          - name: ccusage
-            kind: npm
-            package: ccusage
           - name: ccstatusline
             kind: npm
             package: ccstatusline

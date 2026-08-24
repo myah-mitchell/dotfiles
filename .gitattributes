@@ -9,7 +9,7 @@ nvim/.config/nvim/lua/config/autocmds.lua filter=homepath
 
 # Force LF line endings for all shell scripts and config files
 *.sh       eol=lf
-*.nu       eol=lf
+*.zsh      eol=lf
 *.toml     eol=lf
 *.kdl      eol=lf
 *.yaml     eol=lf

@@ -1,0 +1,112 @@
+# .zshrc — interactive shell configuration, sourced after .zshenv
+
+# ── History ───────────────────────────────────────────────────────────────────
+HISTFILE="$HOME/.local/share/zsh/history"
+HISTSIZE=1000000
+SAVEHIST=1000000
+mkdir -p "${HISTFILE:h}"
+setopt SHARE_HISTORY       # write/read history incrementally across sessions
+setopt INC_APPEND_HISTORY  # append each command as it's run, not at shell exit
+setopt HIST_IGNORE_DUPS    # don't record a line if it duplicates the previous one
+setopt HIST_IGNORE_SPACE   # don't record lines starting with a space
+# atuin owns fuzzy/synced history search (Ctrl+R, bound by its own init below);
+# this HISTFILE is just zsh's own plain backing store.
+
+# ── Editing ───────────────────────────────────────────────────────────────────
+bindkey -v                 # vi keybindings (parity with Nu's edit_mode: vi)
+
+# ── Completion ────────────────────────────────────────────────────────────────
+autoload -Uz compinit
+compinit
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' # case-insensitive
+
+# ── SSH agent ─────────────────────────────────────────────────────────────────
+_ssh_agent_socket="$HOME/.ssh/ssh-agent.sock"
+if [[ ! -S "$_ssh_agent_socket" ]]; then
+  ssh-agent -a "$_ssh_agent_socket" |
+    awk -F'[=;]' '/SSH_AGENT_PID/ {print $2}' >"$HOME/.ssh/ssh-agent.pid"
+fi
+export SSH_AUTH_SOCK="$_ssh_agent_socket"
+unset _ssh_agent_socket
+
+# ── Tool integrations ─────────────────────────────────────────────────────────
+[[ -f ~/.local/share/zoxide/init.zsh ]] && source ~/.local/share/zoxide/init.zsh
+[[ -f ~/.local/share/atuin/init.zsh ]] && source ~/.local/share/atuin/init.zsh
+[[ -f ~/.cache/starship/init.zsh ]] && source ~/.cache/starship/init.zsh
+[[ -f ~/.cache/carapace/init.zsh ]] && source ~/.cache/carapace/init.zsh
+
+# ── Zellij auto-start ─────────────────────────────────────────────────────────
+# Only start Zellij if we're not already inside it and it's an interactive
+# session. The $NVIM guard stops a terminal opened *inside* Neovim
+# (snacks/toggleterm) from spawning a nested Zellij in the terminal buffer,
+# even when nvim runs outside Zellij.
+zellij_autostart() {
+  if [[ -z "$ZELLIJ" && -z "$NVIM" ]]; then
+    if [[ "$ZELLIJ_AUTO_ATTACH" == "true" ]]; then
+      zellij attach --create --remember default
+    else
+      zellij
+    fi
+    [[ "$ZELLIJ_AUTO_EXIT" == "false" ]] && return
+    exit
+  fi
+}
+[[ -o interactive ]] && zellij_autostart
+
+# ── Yazi wrapper — changes directory on exit ──────────────────────────────────
+y() {
+  local tmp cwd
+  tmp=$(mktemp -t "yazi-cwd.XXXXXX")
+  yazi "$@" --cwd-file "$tmp"
+  cwd=$(cat "$tmp")
+  [[ -n "$cwd" && "$cwd" != "$PWD" ]] && cd "$cwd"
+  rm -f "$tmp"
+}
+
+# ── sudo — preserve user PATH so ~/.local/bin tools are visible ───────────────
+# sudo's secure_path (set in /etc/sudoers) strips PATH by default, independent
+# of shell; this wrapper re-injects PATH so `sudo bat`, `sudo rg`, etc. find
+# the tools installed in ~/.local/bin. `sudo !!` to re-run the last command
+# with sudo needs no separate helper here — zsh's built-in `!!` history
+# expansion already does that (Nu needed a dedicated `sudo!!` command because
+# it has no history-expansion syntax).
+sudo() {
+  command sudo env "PATH=$PATH" "$@"
+}
+
+# ── Keybindings ───────────────────────────────────────────────────────────────
+# Ctrl+F — fzf file picker, insert path at cursor (Ctrl+R is bound by atuin's
+# own init above)
+fzf-file-widget-insert() {
+  local file
+  file=$(fzf --popup --prompt 'File> ')
+  LBUFFER+="$file"
+  zle redisplay
+}
+zle -N fzf-file-widget-insert
+bindkey -M viins '^F' fzf-file-widget-insert
+bindkey -M vicmd '^F' fzf-file-widget-insert
+
+# ── Aliases ───────────────────────────────────────────────────────────────────
+[[ -f ~/.config/zsh/aliases.zsh ]] && source ~/.config/zsh/aliases.zsh
+
+# ── Plugins (source last, syntax-highlighting absolutely last — it must load
+# after anything else that wraps zle widgets) ─────────────────────────────────
+# No official catppuccin/zsh-autosuggestions port exists (unlike the syntax
+# highlighting theme below), so this is a manual pick matching Catppuccin
+# Mocha's "overlay0" gray — set before sourcing, since the plugin only fills
+# in its own default when unset.
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6c7086'
+[[ -f ~/.local/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh ]] &&
+  source ~/.local/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh
+[[ -f ~/.local/share/zsh/plugins/zsh-you-should-use/you-should-use.plugin.zsh ]] &&
+  source ~/.local/share/zsh/plugins/zsh-you-should-use/you-should-use.plugin.zsh
+
+# Catppuccin Mocha colors for zsh-syntax-highlighting — must be sourced
+# *before* the plugin itself (sets ZSH_HIGHLIGHT_STYLES, which the plugin
+# only populates with its own defaults if unset).
+[[ -f ~/.config/zsh/themes/catppuccin_mocha-zsh-syntax-highlighting.zsh ]] &&
+  source ~/.config/zsh/themes/catppuccin_mocha-zsh-syntax-highlighting.zsh
+[[ -f ~/.local/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh ]] &&
+  source ~/.local/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh
