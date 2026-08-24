@@ -1156,18 +1156,19 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # ── Register the "homepath" git filter ────────────────────────────────────────
-# zjstatus's command_*_command paths and Neovim's g.clipboard exec path must be
-# real absolute paths — zjstatus runs its WASM plugin commands directly with no
-# shell (no ~ or $HOME expansion), and Neovim's clipboard exec is likewise not
-# shell-expanded. zellij/.config/zellij/config.kdl and
-# nvim/.config/nvim/lua/config/autocmds.lua store a __DOTFILES_HOME__
-# placeholder instead of a real path; git's clean/smudge filters (defined in
+# zjstatus's command_*_command paths must be real absolute paths — it runs its
+# WASM plugin commands directly with no shell (no ~ or $HOME expansion).
+# zellij/.config/zellij/config.kdl stores a __DOTFILES_HOME__ placeholder
+# instead of a real path; git's clean/smudge filters (defined in
 # git-filters/*.sh, wired up via .gitattributes) expand it to this machine's
 # $HOME on checkout and fold it back to the placeholder before anything is
 # staged — so switching machines/usernames never shows up as a diff to commit.
+# (Neovim's equivalent, autocmds.lua's clipboard exec, used to need this same
+# treatment, but it's Lua — vim.fn.expand() computes the real path at runtime
+# there instead, so it was dropped from this filter entirely.)
 # Filter *commands* live in local git config (not versioned), so they must be
 # registered on every clone/run; the checkout below re-smudges the working
-# tree in case the filter wasn't registered yet when these files were last
+# tree in case the filter wasn't registered yet when the file was last
 # checked out (e.g. right after a fresh clone).
 log "=== Registering homepath git filter ==="
 # git execs these directly (no shell wrapper), so the mode bit must be +x or
@@ -1182,18 +1183,13 @@ git -C "$DOTFILES" config filter.homepath.required true
 # placeholder in place because the filter wasn't registered yet) — `-f` only
 # forces overwriting, it doesn't bypass that freshness check. Removing the
 # file first guarantees a real rewrite, so the filter always actually runs.
-rm -f "$DOTFILES/zellij/.config/zellij/config.kdl" \
-  "$DOTFILES/nvim/.config/nvim/lua/config/autocmds.lua"
-git -C "$DOTFILES" checkout-index -f -- \
-  zellij/.config/zellij/config.kdl \
-  nvim/.config/nvim/lua/config/autocmds.lua
+rm -f "$DOTFILES/zellij/.config/zellij/config.kdl"
+git -C "$DOTFILES" checkout-index -f -- zellij/.config/zellij/config.kdl
 # Verify the placeholder actually got replaced — the filter has failed
 # silently before (non-executable script, stat-cache skip above), and a
-# leftover __DOTFILES_HOME__ breaks zjstatus/Neovim clipboard with no visible
-# error at runtime. Fail loudly here instead of discovering it later.
-if grep -q '__DOTFILES_HOME__' \
-  "$DOTFILES/zellij/.config/zellij/config.kdl" \
-  "$DOTFILES/nvim/.config/nvim/lua/config/autocmds.lua"; then
+# leftover __DOTFILES_HOME__ breaks zjstatus with no visible error at runtime.
+# Fail loudly here instead of discovering it later.
+if grep -q '__DOTFILES_HOME__' "$DOTFILES/zellij/.config/zellij/config.kdl"; then
   err "homepath filter did not expand __DOTFILES_HOME__ — check git-filters/*.sh are executable and filter.homepath.* is registered"
   exit 1
 fi

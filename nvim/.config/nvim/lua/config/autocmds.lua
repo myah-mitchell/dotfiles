@@ -59,11 +59,18 @@ vim.api.nvim_create_autocmd("FileType", {
 
 -- WSL2 clipboard — OSC52 passthrough via Alacritty
 if vim.fn.has("wsl") == 1 then
+  -- Neovim's clipboard exec isn't shell-expanded, so a literal "~" or "$HOME"
+  -- in the command string wouldn't resolve — but unlike zellij/config.kdl
+  -- (static KDL data read by zjstatus's WASM plugin, which has no expansion
+  -- of its own either — see the homepath git filter note in CLAUDE.md), this
+  -- is Lua, evaluated by nvim itself on whatever machine it's running on. No
+  -- baked-in path or git filter needed: just compute it here.
+  local clip_clean = vim.fn.expand("~/.config/zellij/scripts/clip-clean.py")
   vim.g.clipboard = {
     name  = "WslClipboard",
     -- routes through clip-clean.py (see zellij/scripts) instead of clip.exe directly,
     -- so yanked Nerd Font icons don't turn into tofu boxes when pasted elsewhere
-    copy  = { ["+"] = "__DOTFILES_HOME__/.config/zellij/scripts/clip-clean.py", ["*"] = "__DOTFILES_HOME__/.config/zellij/scripts/clip-clean.py" },
+    copy  = { ["+"] = clip_clean, ["*"] = clip_clean },
     paste = {
       ["+"] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
       ["*"] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
