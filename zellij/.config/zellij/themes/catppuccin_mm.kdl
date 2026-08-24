@@ -1,5 +1,5 @@
 themes {
-    catppuccin_m0rsla {
+    catppuccin_mm {
         fg "#cdd6f4"         // text
         bg "#1e1e2e"         // base
         black "#11111b"      // crust
@@ -126,4 +126,4 @@ themes {
     }
 }
 
-theme "catppuccin_m0rsla"
+theme "catppuccin_mm"

@@ -6,7 +6,7 @@
 
 // -- Global options ------------------------------------------------------------
 // Test Theme by running: zellij plugin -f -- https://github.com/imsnif/theme-tester/releases/latest/download/theme-tester.wasm
-theme "catppuccin_m0rsla"
+theme "catppuccin_mm"
 default_layout "default"
 default_shell "zsh"
 default_mode "normal"
