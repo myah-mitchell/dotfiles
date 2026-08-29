@@ -13,13 +13,65 @@ setopt HIST_IGNORE_SPACE   # don't record lines starting with a space
 # this HISTFILE is just zsh's own plain backing store.
 
 # ── Editing ───────────────────────────────────────────────────────────────────
-bindkey -v                 # vi keybindings (parity with Nu's edit_mode: vi)
+# Emacs keybindings (zsh's default — no modal insert/normal split). Vi mode
+# (bindkey -v) was tried for parity with Nu's edit_mode: vi and with Neovim,
+# but its modal state kept getting entered by accident (a stray Esc-prefixed
+# escape sequence — Home/Delete/arrows all start with one — landing you in vi
+# command mode, where ordinary letters act as commands instead of inserting
+# text, and `~` specifically toggles the case of the character under the
+# cursor). bindkey -e forces emacs mode explicitly rather than relying on
+# zsh's own EDITOR/VISUAL-based default-keymap detection.
+bindkey -e
+unsetopt BEEP               # no terminal bell (and no visual-bell screen flash it
+                             # triggers) on tab-complete-no-match, empty backspace, etc.
+
+# KEYTIMEOUT is how long (in hundredths of a second) zsh waits after a lone
+# ESC byte to see if more bytes follow as part of a longer escape sequence
+# (arrow keys, Delete, Home/End all start with ESC — as do emacs mode's own
+# Alt-key combos, which terminals send as Esc+key). The 40 (400ms) default is
+# tuned for old slow serial links; on a modern terminal the whole sequence
+# arrives in one read(), but if it's ever a beat late — WSL2, Zellij
+# passthrough, just typing fast — zsh can misread a split sequence. 1 (10ms)
+# all but eliminates that race.
+KEYTIMEOUT=1
+
+# Terminfo-based bindings for Delete/Home/End/PageUp/PageDown so they're
+# recognized as a single bound action rather than depending on the emacs
+# keymap's own defaults (which don't cover all of these on every system).
+[[ -n "${terminfo[kdch1]}" ]] && bindkey -M emacs "${terminfo[kdch1]}" delete-char
+[[ -n "${terminfo[khome]}" ]] && bindkey -M emacs "${terminfo[khome]}" beginning-of-line
+[[ -n "${terminfo[kend]}"  ]] && bindkey -M emacs "${terminfo[kend]}"  end-of-line
+# terminfo's khome/kend report the *application cursor-key mode* sequences
+# (^[OH / ^[OF), but zsh's line editor never puts the terminal into that
+# mode — at a bare prompt Alacritty sends the *normal-mode* forms instead
+# (^[[H / ^[[F), which the terminfo lookup above misses entirely. Some
+# terminals (rxvt/putty-style) use a third, numbered form (^[[1~ / ^[[4~).
+# Bind all three directly so it works regardless of which one is actually
+# in flight.
+bindkey -M emacs '^[[H' beginning-of-line
+bindkey -M emacs '^[[1~' beginning-of-line
+bindkey -M emacs '^[[F' end-of-line
+bindkey -M emacs '^[[4~' end-of-line
+# PageUp/PageDown -> cycle history entries that start with whatever's already
+# typed (the standard readline/bash convention) — a quick prefix-based
+# complement to atuin's fuzzy full-text Ctrl+R search above.
+[[ -n "${terminfo[kpp]}" ]] && bindkey -M emacs "${terminfo[kpp]}" history-beginning-search-backward
+[[ -n "${terminfo[knp]}" ]] && bindkey -M emacs "${terminfo[knp]}" history-beginning-search-forward
 
 # ── Completion ────────────────────────────────────────────────────────────────
 autoload -Uz compinit
 compinit
 zstyle ':completion:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' # case-insensitive
+# Case-insensitive matching. Tried 'exact match first, case-insensitive
+# fallback' (matcher-list '' 'm:{a-zA-Z}={A-Za-z}') so same-name case
+# duplicates (Foo.txt/foo.txt) would resolve to the exact typed case instead
+# of listing both — but zsh's matcher-list picks the *first* spec with *any*
+# match and stops there, so it also hid genuinely different files: with
+# read-this.md and README.md both present, typing r<Tab> matched
+# read-this.md exactly and never even considered README.md. That's worse, so
+# back to plain folding — every case-insensitive match is shown; the rare
+# same-name-different-case collision just shows up as an ambiguous pair too.
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 # LIST_AMBIGUOUS is on by default: when there's a common prefix to insert,
 # zsh inserts it *without* showing the menu, requiring a second Tab press to
 # actually see it — the classic "why do I have to hit Tab twice" complaint.
@@ -91,8 +143,7 @@ fzf-file-widget-insert() {
   zle redisplay
 }
 zle -N fzf-file-widget-insert
-bindkey -M viins '^F' fzf-file-widget-insert
-bindkey -M vicmd '^F' fzf-file-widget-insert
+bindkey -M emacs '^F' fzf-file-widget-insert
 
 # ── Aliases ───────────────────────────────────────────────────────────────────
 [[ -f ~/.config/zsh/aliases.zsh ]] && source ~/.config/zsh/aliases.zsh
