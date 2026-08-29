@@ -94,6 +94,26 @@ unset _ssh_agent_socket
 [[ -f ~/.cache/starship/init.zsh ]] && source ~/.cache/starship/init.zsh
 [[ -f ~/.cache/carapace/init.zsh ]] && source ~/.cache/carapace/init.zsh
 
+# Carapace bridges ~700 commands — including cp/ls/mv/rm/cat/mkdir/etc — to
+# its own external completion engine, which generates and filters candidates
+# itself (via the carapace binary) before zsh's matcher-list zstyle above
+# ever sees them. That's why the case-insensitive fold matching set up in
+# the Completion section works for some things but not these: it's not a
+# matcher-list bug, carapace's own candidate generation just never goes
+# through zsh's native matching at all. Hand the everyday file-manipulation
+# commands back to zsh's own bundled completers (which do respect
+# matcher-list) so path completion for them stays case-insensitive; carapace
+# keeps everything else (git, docker, kubectl, and the rest of its ~700).
+compdef _ls ls
+compdef _cp cp
+compdef _mv mv
+compdef _rm rm
+compdef _cat cat
+compdef _mkdir mkdir
+compdef _rmdir rmdir
+compdef _touch touch
+compdef _ln ln
+
 # ── Zellij auto-start ─────────────────────────────────────────────────────────
 # Only start Zellij if we're not already inside it and it's an interactive
 # session. The $NVIM guard stops a terminal opened *inside* Neovim
