@@ -13,7 +13,6 @@
 --paging=auto
 
 # Map syntax for file types bat doesn't know natively
---map-syntax="*.nu:Bourne Again Shell (bash)"
 --map-syntax=".env*:DotENV"
 --map-syntax="*.kdl:TOML"
 --map-syntax="Dockerfile*:Dockerfile"

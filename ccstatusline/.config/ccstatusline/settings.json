@@ -163,10 +163,10 @@
         "id": "8e9c037a-4382-4b93-8e35-2c9cec229784",
         "type": "cache-read",
         "color": "white",
+        "rawValue": false,
         "metadata": {
           "cacheScopeSession": "false"
-        },
-        "rawValue": false
+        }
       },
       {
         "id": "1b283bac-f9ec-48af-bd52-e73a67ac071c",
@@ -177,10 +177,10 @@
         "id": "f2710926-ee4b-4224-b844-1cb3638658f2",
         "type": "cache-read",
         "color": "white",
+        "rawValue": true,
         "metadata": {
           "cacheScopeSession": "true"
-        },
-        "rawValue": true
+        }
       },
       {
         "id": "160b59c1-449a-4cd9-87ad-851bce4b36c9",
@@ -211,10 +211,10 @@
         "id": "dba6692a-96a0-4a30-a2b1-5d93769357d3",
         "type": "cache-write",
         "color": "white",
+        "rawValue": true,
         "metadata": {
           "cacheScopeSession": "true"
-        },
-        "rawValue": true
+        }
       },
       {
         "id": "bcb4dc1d-7ada-4e49-99f3-d825158bc929",
@@ -249,10 +249,11 @@
     ],
     []
   ],
-  "flexMode": "full-minus-40",
+  "flexMode": "full",
   "compactThreshold": 60,
   "colorLevel": 2,
   "defaultPadding": "",
+  "defaultPaddingSide": "both",
   "inheritSeparatorColors": false,
   "globalBold": false,
   "gitCacheTtlSeconds": 5,
@@ -272,6 +273,6 @@
   },
   "installation": {
     "method": "pinned",
-    "installedVersion": "2.2.23"
+    "installedVersion": "2.2.27"
   }
 }
