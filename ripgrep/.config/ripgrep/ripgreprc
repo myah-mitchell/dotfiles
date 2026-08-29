@@ -1,5 +1,5 @@
 # ripgrep config — ~/.config/ripgrep/ripgreprc
-# RIPGREP_CONFIG_PATH is set in nushell/env.nu
+# RIPGREP_CONFIG_PATH is set in zsh/.zshenv
 
 # Case: ignore unless pattern has uppercase
 --smart-case
