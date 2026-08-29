@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install.sh — bootstrap dotfiles, download binaries, symlink configs
-# Usage: ./install.sh [--update] [--link] [--copy] [--remove] [--windows] [--cargo] [--claude] [--full] [--cleanup] [--help]
+# Usage: ./install.sh [--update] [--link] [--copy] [--remove] [--windows] [--cargo] [--claude] [--full] [--cleanup] [--check-pins] [--upgrade=<name>] [--help]
 #
 # --update      Force re-download/rebuild all tools even if already at latest version
 # --link        Skip binary downloads, only re-link configs (fast config-only updates)
@@ -52,6 +52,35 @@
 #               safe to automate, so it just warns instead of guessing).
 #               Combine with other flags freely; has no effect with --link (the tool
 #               arrays it diffs against are never populated without a real run).
+# --check-pins  Read-only: print each deliberately-pinned dependency (Zellij plugins,
+#               Zsh plugins, ccstatusline — see CLAUDE.md's "Zellij status bar &
+#               plugin loading" for why these three are pinned instead of
+#               always-latest like CORE_TOOLS/CLI_TOOLS) alongside its current
+#               upstream version, and exits — no downloads, no file changes. Ignores
+#               every other flag and runs before the zsh/git/locale prerequisite
+#               checks.
+# --upgrade=<name>  Bump exactly one pinned dependency to its latest upstream version
+#               (edits install.sh's own pin in place), install it right away, and
+#               print the same manual-review note the weekly pinned-version-bump
+#               workflow would carry — then exits. <name> is the "NAME" column from
+#               --check-pins (e.g. --upgrade=zjstatus.wasm, --upgrade=ccstatusline).
+#               Deliberately one dependency per invocation, not a blanket "upgrade
+#               everything" — each of these three bumps carries its own manual
+#               follow-up (a Zellij plugin's request_permission() scopes, Zsh
+#               plugins' lack of an automated latest-tag check, ccstatusline's
+#               mirrored settings.json) that's meant to be reviewed individually
+#               before committing, same as the automated bump-PR workflow.
+# --yubikey     Retrieve resident SSH key(s) already provisioned on a YubiKey (or any
+#               FIDO2 authenticator) via `ssh-keygen -K`, downloading them straight
+#               into ~/.ssh/. Requires an OpenSSH client built with FIDO2/security-key
+#               support (8.2+) — checked and reported with install instructions on
+#               failure, not auto-installed (this repo avoids apt installs beyond the
+#               two documented exceptions; see CLAUDE.md's Deliberate Omissions table).
+#               Retrieve-only: this does not create a new resident key on the
+#               YubiKey — provision one first (ssh-keygen -t ed25519-sk -O resident),
+#               on this machine or another, then use --yubikey wherever that key
+#               needs to exist as local files too. Standalone like --check-pins/
+#               --upgrade/--remove: does its own thing and exits.
 
 set -euo pipefail
 
@@ -102,6 +131,15 @@ ${BOLD}Flags:${RESET}
               from this script, old Claude Code version binaries, and —
               unless the matching flag is also passed — --cargo's
               rustup/cargo toolchain and --full's extra Mason LSPs
+  ${CYAN}--check-pins${RESET}  Read-only: print Zellij plugins, Zsh plugins, and
+              ccstatusline (the three deliberately-pinned deps) next to
+              their current upstream version, then exit. No downloads.
+  ${CYAN}--upgrade=${RESET}${BOLD}<name>${RESET}  Bump one pinned dependency to latest, install it, print
+              its review note, then exit. <name> is a NAME from
+              --check-pins, e.g. --upgrade=ccstatusline
+  ${CYAN}--yubikey${RESET}   Retrieve resident SSH key(s) already on a YubiKey/FIDO2
+              authenticator into ~/.ssh/ (ssh-keygen -K). Retrieve-only —
+              provision a resident key first if the YubiKey doesn't have one.
   ${CYAN}--help${RESET}, ${CYAN}-h${RESET}  Show this help and exit
 
 Flags combine freely (e.g. --full --update --cleanup). See the top of this
@@ -119,6 +157,9 @@ USE_CARGO=false
 INSTALL_CLAUDE=false
 FULL_INSTALL=false
 DO_CLEANUP=false
+CHECK_PINS=false
+UPGRADE_NAME=""
+DO_YUBIKEY=false
 for arg in "$@"; do
   case $arg in
   --update) FORCE_UPDATE=true ;;
@@ -130,6 +171,9 @@ for arg in "$@"; do
   --claude) INSTALL_CLAUDE=true ;;
   --full) FULL_INSTALL=true ;;
   --cleanup) DO_CLEANUP=true ;;
+  --check-pins) CHECK_PINS=true ;;
+  --upgrade=*) UPGRADE_NAME="${arg#--upgrade=}" ;;
+  --yubikey) DO_YUBIKEY=true ;;
   --help | -h)
     usage
     exit 0
@@ -155,6 +199,31 @@ SHARE_DIR="$DOTFILES/bin/.local/share"
 LOCAL_BIN="$HOME/.local/bin"
 VERSIONS_FILE="$LOCAL_BIN/.versions"
 LOCAL_SHARE="$HOME/.local/share"
+
+# ── Pinned dependency registry ────────────────────────────────────────────────
+# Single source of truth for the three deliberately-pinned-rather-than-latest
+# dependency groups (see CLAUDE.md's "Zellij status bar & plugin loading" for
+# why these three, unlike CORE_TOOLS/CLI_TOOLS below, don't just resolve
+# /releases/latest at install time). Declared here, at the top of the script,
+# so --check-pins/--upgrade=<name> can read and rewrite them without needing
+# the rest of the script's install machinery to have run first.
+#
+# ZELLIJ_PLUGINS / ZSH_PLUGINS row format: dest|owner/repo|pinned_tag
+ZELLIJ_PLUGINS=(
+  "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.2.2"
+  "zjstatus.wasm|dj95/zjstatus|v0.24.0"
+  "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
+  "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.4.0"
+)
+ZSH_PLUGINS=(
+  "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
+  "zsh-syntax-highlighting|zsh-users/zsh-syntax-highlighting|0.8.0"
+  "zsh-you-should-use|MichaelAquilina/zsh-you-should-use|1.11.1"
+)
+# ccstatusline: npm-pinned rather than always-latest (see install_ccstatusline
+# below for why) — kept as a plain variable, not a local inside that function,
+# so --check-pins/--upgrade=ccstatusline can read/rewrite it the same way.
+CCSTATUSLINE_PINNED_VERSION="2.2.27"
 
 # ── Platform detection ────────────────────────────────────────────────────────
 # Refuse to run in Git Bash / MSYS — symlink semantics break on Windows
@@ -201,6 +270,456 @@ for cmd in curl tar unzip; do
   fi
 done
 
+# ── Directory setup ───────────────────────────────────────────────────────────
+# Runs ahead of the zsh/git/locale prerequisite checks below: --check-pins and
+# --upgrade=<name> (dispatched further down, before those checks) need
+# $VERSIONS_FILE writable, but must exit without ever triggering those
+# checks' sudo git/locale installs — a plain version check shouldn't carry
+# that side effect.
+mkdir -p "$BIN_DIR" "$SHARE_DIR" "$LOCAL_BIN" "$LOCAL_SHARE" \
+  "$HOME/.ssh/sockets" "$HOME/.cache/starship" "$HOME/.cache/carapace" \
+  "$HOME/.local/share/atuin" "$HOME/.config/zsh" "$HOME/.local/share/zsh"
+chmod 700 "$HOME/.ssh"
+touch "$VERSIONS_FILE"
+
+# ── Version tracking ──────────────────────────────────────────────────────────
+get_installed_version() { grep "^$1=" "$VERSIONS_FILE" 2>/dev/null | cut -d= -f2 || echo ""; }
+set_installed_version() {
+  local key="$1" ver="$2"
+  if grep -q "^${key}=" "$VERSIONS_FILE" 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${ver}|" "$VERSIONS_FILE"
+  else
+    echo "${key}=${ver}" >>"$VERSIONS_FILE"
+  fi
+}
+
+# ── Pinned installers (dest/repo/tag or npm-pinned — shared by the normal
+# install flow below and --check-pins/--upgrade=<name>) ───────────────────────
+
+# ccstatusline: npm CLI, renders the Claude Code statusLine. Pinned rather
+# than always-latest (unlike the GitHub-release CLI_TOOLS below): it writes
+# its own installedVersion/method back into ~/.config/ccstatusline/
+# settings.json (the "installation" block, deployed as part of the
+# ccstatusline package below) and detects drift between that and the actual
+# npm-installed version — an unreviewed bump could desync the two and trip
+# its own update prompt. Bump deliberately via ./install.sh --upgrade=ccstatusline
+# (or by hand: npm view ccstatusline version, then update
+# CCSTATUSLINE_PINNED_VERSION above and the "installation" block in
+# ccstatusline/.config/ccstatusline/settings.json to match).
+# Optional $1 overrides the pin (used by --upgrade=ccstatusline to install a
+# freshly-fetched version in the same run the pin gets bumped).
+install_ccstatusline() {
+  local key="ccstatusline"
+  local pinned_version="${1:-$CCSTATUSLINE_PINNED_VERSION}"
+  local installed
+  installed=$(get_installed_version "$key")
+
+  log "Checking ccstatusline..."
+
+  if [[ "$installed" == "$pinned_version" && "$FORCE_UPDATE" == false ]]; then
+    ok "ccstatusline already at ${pinned_version}"
+    return
+  fi
+
+  if ! command -v npm &>/dev/null; then
+    warn "npm not found (node install may have failed) — skipping ccstatusline."
+    return
+  fi
+
+  log "Installing ccstatusline ${pinned_version}..."
+  if npm install -g "ccstatusline@${pinned_version}" --prefix "$HOME/.local" &>/dev/null; then
+    set_installed_version "$key" "$pinned_version"
+    ok "ccstatusline installed at ${pinned_version}"
+  else
+    warn "ccstatusline install failed — the statusLine will show stale/no data until this succeeds."
+  fi
+}
+
+# Zellij plugin: dest.wasm|owner/repo|tag. Downloads the pinned release asset
+# into the repo's bin/.local/share tree and symlinks it straight into
+# ~/.local/share itself, rather than relying on link_package's per-package
+# pass (see "Deploy configs" below) to pick it up — that pass runs earlier in
+# a normal install, before this download exists.
+install_zellij_plugin() {
+  local dest="$1" repo="$2" tag="$3"
+  local plugin_dir="${SHARE_DIR}/zellij/plugins"
+  local deployed_dir="$HOME/.local/share/zellij/plugins"
+  mkdir -p "$plugin_dir" "$deployed_dir"
+
+  local installed
+  installed=$(get_installed_version "$dest")
+  if [[ "$installed" == "$tag" && "$FORCE_UPDATE" == false ]]; then
+    ok "${dest} already at ${tag}"
+    ln -sf "${plugin_dir}/${dest}" "${deployed_dir}/${dest}"
+    return
+  fi
+
+  log "Downloading ${dest} ${tag}..."
+  if curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
+    "https://github.com/${repo}/releases/download/${tag}/${dest}" \
+    -o "${plugin_dir}/${dest}"; then
+    set_installed_version "$dest" "$tag"
+    ln -sf "${plugin_dir}/${dest}" "${deployed_dir}/${dest}"
+    ok "${dest} installed at ${tag}"
+  else
+    warn "Download failed for ${dest} — zjstatus/autolock won't load until this succeeds (re-run install.sh)"
+    return 1
+  fi
+}
+
+# Zsh plugin: dest|owner/repo|tag. These publish no GitHub Releases (tags
+# only, no binary asset), so each is a full source tarball extracted at a
+# pinned tag rather than a single release asset (see the "Zsh: plugins"
+# section below for the full reasoning). Deploys with the same per-file
+# symlink convention link_package uses — not a single directory symlink for
+# the whole plugin, because .zshrc sourcing a fixed entrypoint path would
+# work either way, but a directory symlink here would make the *next* normal
+# install.sh run see the plugin's real files (reached by traversing that
+# symlinked directory) as unmanaged and back them up into the dotfiles
+# checkout itself (link_package's `[[ -e "$target" && ! -L "$target" ]]`
+# check is false for a symlinked directory but true for a real file reached
+# through one).
+install_zsh_plugin() {
+  local dest="$1" repo="$2" tag="$3"
+  local plugin_root="${SHARE_DIR}/zsh/plugins"
+  mkdir -p "$plugin_root"
+
+  local installed
+  installed=$(get_installed_version "$dest")
+  if [[ "$installed" != "$tag" || "$FORCE_UPDATE" == true ]]; then
+    log "Downloading ${dest} ${tag}..."
+    local tmp
+    tmp=$(mktemp -d)
+    if curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
+      "https://github.com/${repo}/archive/refs/tags/${tag}.tar.gz" \
+      -o "${tmp}/${dest}.tar.gz" &&
+      tar -xzf "${tmp}/${dest}.tar.gz" -C "$tmp"; then
+      local src_dir
+      src_dir=$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -1)
+      rm -rf "${plugin_root:?}/${dest}"
+      mkdir -p "${plugin_root}/${dest}"
+      cp -r "${src_dir}/." "${plugin_root}/${dest}/"
+      set_installed_version "$dest" "$tag"
+      ok "${dest} installed at ${tag}"
+    else
+      warn "Download failed for ${dest} — it won't load until this succeeds (re-run install.sh)"
+      rm -rf "$tmp"
+      return 1
+    fi
+    rm -rf "$tmp"
+  else
+    ok "${dest} already at ${tag}"
+  fi
+
+  local f rel target
+  while IFS= read -r -d '' f; do
+    rel="${f#"$plugin_root"/}"
+    target="$HOME/.local/share/zsh/plugins/${rel}"
+    mkdir -p "$(dirname "$target")"
+    ln -sf "$f" "$target"
+  done < <(find "${plugin_root}/${dest}" -type f -print0)
+}
+
+# ── Pin version lookups (shared by --check-pins and --upgrade=<name>) ─────────
+# github-release: repos that publish a proper GitHub Release (all four
+# ZELLIJ_PLUGINS do — config.kdl pins the release asset directly rather than
+# resolving latest at runtime, but the release itself exists to query).
+latest_github_release() {
+  curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/$1/releases/latest" |
+    grep -oP '"tag_name":\s*"\K[^"]+' | head -1
+}
+
+# github-tag: repos with tags but no GitHub Releases (all three ZSH_PLUGINS —
+# see install_zsh_plugin above). The tags API has no "latest" concept the way
+# /releases/latest does, so pull the tag list and pick the highest by version
+# sort — preferring clean vX.Y.Z-style tags over ones with a pre-release
+# suffix (-alpha1, -beta1, -rc1, ...), since `sort -V` alone ranks e.g.
+# "0.8.0-alpha1-pre-redrawhook" above plain "0.8.0" even when (as confirmed
+# against zsh-users/zsh-syntax-highlighting's actual tag history) the suffixed
+# one is really an *older* pre-release tag that predates the clean release,
+# not a newer one. Best-effort even with that filter: an unusual tagging
+# scheme could still throw this off, which is exactly why --check-pins always
+# prints the resolved value for a human to sanity-check rather than silently
+# trusting it (this is also the `github-tag` checker kind CLAUDE.md notes
+# .github/scripts/check-pinned-version.sh doesn't have yet — ZSH_PLUGINS
+# isn't covered by the automated weekly bump PRs for that reason).
+latest_github_tag() {
+  local tags clean
+  tags=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/$1/tags?per_page=100" |
+    grep -oP '"name":\s*"\K[^"]+') || true
+  clean=$(echo "$tags" | grep -E '^v?[0-9]+(\.[0-9]+){1,2}$' | sort -V | tail -1) || true
+  if [[ -n "$clean" ]]; then
+    echo "$clean"
+  else
+    echo "$tags" | sort -V | tail -1
+  fi
+}
+
+# npm registry "latest" dist-tag (ccstatusline).
+latest_npm_version() {
+  curl -sf --connect-timeout 15 "https://registry.npmjs.org/$1/latest" |
+    grep -oP '"version":\s*"\K[^"]+' | head -1
+}
+
+# A fetched tag/version is untrusted upstream input. upgrade_pin() splices it
+# into install.sh's own source via sed and into ccstatusline's settings.json,
+# so restrict it to characters that can't break out of either — no sed
+# delimiters/metacharacters (# | / & \), no quotes, nothing that could inject
+# more than a plain version string. (check-pinned-version.sh's CI-side
+# equivalent uses Perl with values passed through %ENV instead of
+# interpolated into -e source for the same reason; sed has no such
+# passthrough, so this validates instead.)
+valid_pin_value() {
+  [[ "$1" =~ ^[A-Za-z0-9._-]+$ ]]
+}
+
+print_pin_row() {
+  local name="$1" pinned="$2" latest="$3" status
+  if [[ -z "$latest" ]]; then
+    status="${YELLOW}could not check${RESET}"
+  elif [[ "$pinned" == "$latest" ]]; then
+    status="${GREEN}up to date${RESET}"
+  else
+    status="${YELLOW}update available${RESET}"
+  fi
+  printf "  %-28s %-14s %-14s %b\n" "$name" "$pinned" "${latest:--}" "$status"
+}
+
+check_pins() {
+  log "=== Checking pinned versions against upstream ==="
+  echo
+  printf "  ${BOLD}%-28s %-14s %-14s %s${RESET}\n" "NAME" "PINNED" "LATEST" "STATUS"
+
+  echo -e "  ${CYAN}Zellij plugins${RESET} (GitHub releases)"
+  local entry dest repo tag latest
+  for entry in "${ZELLIJ_PLUGINS[@]}"; do
+    IFS='|' read -r dest repo tag <<<"$entry"
+    latest=$(latest_github_release "$repo") || true
+    print_pin_row "$dest" "$tag" "$latest"
+  done
+  echo
+
+  echo -e "  ${CYAN}Zsh plugins${RESET} (tags only, no GitHub releases — best-effort version sort)"
+  for entry in "${ZSH_PLUGINS[@]}"; do
+    IFS='|' read -r dest repo tag <<<"$entry"
+    latest=$(latest_github_tag "$repo") || true
+    print_pin_row "$dest" "$tag" "$latest"
+  done
+  echo
+
+  echo -e "  ${CYAN}npm-pinned CLIs${RESET}"
+  latest=$(latest_npm_version "ccstatusline") || true
+  print_pin_row "ccstatusline" "$CCSTATUSLINE_PINNED_VERSION" "$latest"
+  echo
+
+  echo "Bump one with: ./install.sh --upgrade=<name>   e.g. ./install.sh --upgrade=zjstatus.wasm"
+}
+
+# Bumps exactly one pinned dependency (not "upgrade everything") — see the
+# --upgrade=<name> comment at the top of this file for why that's
+# deliberate. Rewrites install.sh's own pin via sed, installs the new
+# version immediately using the freshly-fetched value (not the just-edited
+# file — this process already read the old array into memory, and doesn't
+# re-source itself mid-run), and prints the same manual-review note the
+# weekly automated bump-PR workflow (.github/workflows/check-pinned-
+# versions.yml) would have carried on that PR.
+upgrade_pin() {
+  local name="$1" entry dest repo tag latest
+
+  for entry in "${ZELLIJ_PLUGINS[@]}"; do
+    IFS='|' read -r dest repo tag <<<"$entry"
+    [[ "$dest" == "$name" ]] || continue
+    log "Checking upstream for ${dest}..."
+    latest=$(latest_github_release "$repo") || true
+    [[ -z "$latest" ]] && {
+      err "Could not fetch latest release for ${repo}."
+      exit 1
+    }
+    if [[ "$latest" == "$tag" ]]; then
+      ok "${dest} is already pinned at the latest release (${tag})."
+      exit 0
+    fi
+    valid_pin_value "$latest" || {
+      err "Fetched tag '${latest}' has unexpected characters — refusing to edit install.sh. Bump ZELLIJ_PLUGINS by hand instead."
+      exit 1
+    }
+    log "Bumping ${dest}: ${tag} -> ${latest}"
+    sed -i "s#${dest}|${repo}|${tag}#${dest}|${repo}|${latest}#" "$DOTFILES/install.sh"
+    install_zellij_plugin "$dest" "$repo" "$latest"
+    warn "Review before committing: re-check ${dest}'s request_permission() call against ZELLIJ_PLUGIN_PERMISSIONS in install.sh — if ${latest} requests new scopes, that array needs a matching entry (see CLAUDE.md's Plugin permission pre-seeding section), or the plugin will silently sit inert once approved."
+    ok "install.sh's pin is bumped and ${dest} ${latest} is installed."
+    exit 0
+  done
+
+  for entry in "${ZSH_PLUGINS[@]}"; do
+    IFS='|' read -r dest repo tag <<<"$entry"
+    [[ "$dest" == "$name" ]] || continue
+    log "Checking upstream for ${dest}..."
+    latest=$(latest_github_tag "$repo") || true
+    [[ -z "$latest" ]] && {
+      err "Could not fetch tags for ${repo}."
+      exit 1
+    }
+    if [[ "$latest" == "$tag" ]]; then
+      ok "${dest} is already pinned at the latest tag (${tag})."
+      exit 0
+    fi
+    valid_pin_value "$latest" || {
+      err "Fetched tag '${latest}' has unexpected characters — refusing to edit install.sh. Bump ZSH_PLUGINS by hand instead."
+      exit 1
+    }
+    log "Bumping ${dest}: ${tag} -> ${latest}"
+    sed -i "s#${dest}|${repo}|${tag}#${dest}|${repo}|${latest}#" "$DOTFILES/install.sh"
+    install_zsh_plugin "$dest" "$repo" "$latest"
+    warn "Review before committing: the tags API has no 'latest' the way GitHub Releases does (see latest_github_tag's comment above) — double-check ${latest} is really ${dest}'s newest tag, not just the highest-sorting one, before committing. ${dest} loads on every new shell."
+    ok "install.sh's pin is bumped and ${dest} ${latest} is installed."
+    exit 0
+  done
+
+  if [[ "$name" == "ccstatusline" ]]; then
+    log "Checking upstream for ccstatusline..."
+    latest=$(latest_npm_version "ccstatusline") || true
+    [[ -z "$latest" ]] && {
+      err "Could not fetch latest npm version for ccstatusline."
+      exit 1
+    }
+    if [[ "$latest" == "$CCSTATUSLINE_PINNED_VERSION" ]]; then
+      ok "ccstatusline is already pinned at the latest version (${CCSTATUSLINE_PINNED_VERSION})."
+      exit 0
+    fi
+    valid_pin_value "$latest" || {
+      err "Fetched version '${latest}' has unexpected characters — refusing to edit install.sh. Bump CCSTATUSLINE_PINNED_VERSION by hand instead."
+      exit 1
+    }
+    log "Bumping ccstatusline: ${CCSTATUSLINE_PINNED_VERSION} -> ${latest}"
+    sed -i "s/^CCSTATUSLINE_PINNED_VERSION=\"${CCSTATUSLINE_PINNED_VERSION}\"/CCSTATUSLINE_PINNED_VERSION=\"${latest}\"/" "$DOTFILES/install.sh"
+    local settings_json="$DOTFILES/ccstatusline/.config/ccstatusline/settings.json"
+    if [[ -f "$settings_json" ]]; then
+      sed -i "s/\"installedVersion\": \"${CCSTATUSLINE_PINNED_VERSION}\"/\"installedVersion\": \"${latest}\"/" "$settings_json"
+    fi
+    install_ccstatusline "$latest"
+    warn "Review before committing: ccstatusline mirrors its own installedVersion into ccstatusline/.config/ccstatusline/settings.json (updated automatically here) — sanity-check that diff, and see the comment above install_ccstatusline() for anything else worth re-verifying."
+    ok "install.sh's pin is bumped and ccstatusline ${latest} is installed."
+    exit 0
+  fi
+
+  err "Unknown pin name: '${name}'. Run ./install.sh --check-pins to see valid names."
+  exit 1
+}
+
+# ── --yubikey: retrieve resident SSH key(s) from a FIDO2 authenticator ────────
+# Retrieve-only, standalone (like --check-pins/--upgrade/--remove above) — does
+# not provision a new resident key on the YubiKey itself; run
+# `ssh-keygen -t ed25519-sk -O resident` first (on this machine or another) if
+# the YubiKey doesn't have one yet.
+#
+# `ssh-keygen -K` downloads every resident key on the authenticator into the
+# current directory using filenames it derives from what's stored on the
+# device, so this cd's into ~/.ssh first rather than trying to name the
+# output itself. It needs an OpenSSH client built with FIDO2/security-key
+# support (8.2+), which in turn needs libfido2 available at runtime — rather
+# than preflight-detecting that (fragile: package names, dlopen-vs-linked-in
+# support, and provider paths all vary by distro/OS), this just runs the real
+# operation and classifies the failure if there is one, per CLAUDE.md's
+# Deliberate Omissions table (no new silent apt install for this).
+#
+# Output streams straight to the terminal via `tee` (not captured and
+# reprinted after the fact) because retrieval is interactive: the
+# authenticator needs a physical touch, and may prompt for its PIN, both of
+# which the user needs to see and respond to in real time. `tee` also keeps a
+# copy in $yubikey_out so a failure can still be classified afterward.
+pull_yubikey_ssh_key() {
+  if ! command -v ssh-keygen &>/dev/null; then
+    err "ssh-keygen not found — install an OpenSSH client first."
+    exit 1
+  fi
+
+  mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
+
+  log "=== Retrieving resident SSH key(s) from YubiKey ==="
+  log "Insert the YubiKey if it isn't already, then touch it when it blinks — it may also prompt for its PIN."
+
+  local before after yubikey_out status
+  before=$(find "$HOME/.ssh" -maxdepth 1 -type f -name '*_sk*' 2>/dev/null | sort)
+  yubikey_out=$(mktemp)
+
+  # install.sh runs under `set -eo pipefail`, so this pipeline must be an
+  # `if` condition (one of set -e's documented exemptions) rather than a bare
+  # statement — a real, expected ssh-keygen failure (no key plugged in yet,
+  # say) would otherwise abort the whole script right here, before any of
+  # the classification below ever runs.
+  if (cd "$HOME/.ssh" && ssh-keygen -K) 2>&1 | tee "$yubikey_out"; then
+    status=0
+  else
+    status=${PIPESTATUS[0]}
+  fi
+
+  if [[ "$status" -ne 0 ]]; then
+    # Order matters: a real OpenSSH build with FIDO2 support built in still
+    # prints "Provider ... returned failure" for the ordinary "no key
+    # plugged in" case (confirmed against a real OpenSSH 10.2 client), so
+    # that specific, common case is checked first — a bare "provider" match
+    # below would otherwise misclassify it as libfido2 being missing.
+    if grep -qiE "illegal option|unknown option|invalid option" "$yubikey_out"; then
+      err "This ssh-keygen doesn't support -K — needs OpenSSH 8.2+ built with FIDO2/security-key support."
+      err "  Debian/Ubuntu: sudo apt install --only-upgrade openssh-client"
+      err "  macOS:         brew install openssh"
+    elif grep -qiE "device not found|no fido|no security key|no u2f|no such device|couldn't read" "$yubikey_out"; then
+      err "No FIDO2 authenticator detected — make sure the YubiKey is inserted (and touch it if it's blinking), then re-run."
+    elif grep -qiE "cannot open shared object|failed to dlopen|error while loading shared libraries|libfido2.*not found" "$yubikey_out"; then
+      err "ssh-keygen couldn't load its FIDO2 provider (libfido2) — install it and re-run:"
+      err "  Debian/Ubuntu: sudo apt install libfido2-1"
+      err "  macOS:         brew install libfido2"
+    else
+      err "ssh-keygen -K failed — see output above."
+    fi
+    rm -f "$yubikey_out"
+    exit 1
+  fi
+  rm -f "$yubikey_out"
+
+  after=$(find "$HOME/.ssh" -maxdepth 1 -type f -name '*_sk*' 2>/dev/null | sort)
+  local new_files
+  new_files=$(comm -13 <(echo "$before") <(echo "$after"))
+
+  if [[ -z "$new_files" ]]; then
+    warn "ssh-keygen -K reported success but no new files showed up in ~/.ssh — the YubiKey may not have any resident keys yet. Provision one first: ssh-keygen -t ed25519-sk -O resident"
+    exit 0
+  fi
+
+  local f
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    if [[ "$f" == *.pub ]]; then
+      chmod 644 "$f"
+    else
+      chmod 600 "$f"
+    fi
+    ok "Retrieved $(basename "$f")"
+  done <<<"$new_files"
+
+  echo
+  log "Add an IdentityFile line for the private stub file above to ~/.ssh/config's Host * block if you want it used by default (the checked-in default only lists id_ed25519/id_rsa)."
+}
+
+if [[ "$CHECK_PINS" == true ]]; then
+  check_pins
+  exit 0
+fi
+
+if [[ -n "$UPGRADE_NAME" ]]; then
+  upgrade_pin "$UPGRADE_NAME"
+  exit 0
+fi
+
+if [[ "$DO_YUBIKEY" == true ]]; then
+  pull_yubikey_ssh_key
+  exit 0
+fi
+
 # zsh is the primary shell (see zsh/.zshenv, zsh/.zshrc) but, unlike nu/starship/
 # zellij, has no cross-platform prebuilt release binary this script can download
 # — it's a system package everywhere. Deliberately NOT auto-installed via apt
@@ -246,24 +765,6 @@ if [[ "$OS" == "linux" ]] && command -v locale-gen &>/dev/null; then
     fi
   fi
 fi
-
-# ── Directory setup ───────────────────────────────────────────────────────────
-mkdir -p "$BIN_DIR" "$SHARE_DIR" "$LOCAL_BIN" "$LOCAL_SHARE" \
-  "$HOME/.ssh/sockets" "$HOME/.cache/starship" "$HOME/.cache/carapace" \
-  "$HOME/.local/share/atuin" "$HOME/.config/zsh" "$HOME/.local/share/zsh"
-chmod 700 "$HOME/.ssh"
-touch "$VERSIONS_FILE"
-
-# ── Version tracking ──────────────────────────────────────────────────────────
-get_installed_version() { grep "^$1=" "$VERSIONS_FILE" 2>/dev/null | cut -d= -f2 || echo ""; }
-set_installed_version() {
-  local key="$1" ver="$2"
-  if grep -q "^${key}=" "$VERSIONS_FILE" 2>/dev/null; then
-    sed -i "s|^${key}=.*|${key}=${ver}|" "$VERSIONS_FILE"
-  else
-    echo "${key}=${ver}" >>"$VERSIONS_FILE"
-  fi
-}
 
 # ── GitHub release downloader ─────────────────────────────────────────────────
 # Usage: download_release REPO ASSET_GLOB DEST_BIN [BINARY_IN_ARCHIVE]
@@ -457,42 +958,6 @@ install_node() {
 
   set_installed_version "$key" "$latest"
   ok "node installed at ${latest} ($("$LOCAL_BIN/node" --version 2>/dev/null || echo '?'))"
-}
-
-# ── ccstatusline (npm CLI; renders the Claude Code statusLine) ────────────────
-# Pinned rather than always-latest (unlike the GitHub-release CLI_TOOLS below):
-# ccstatusline writes its own installedVersion/method back into
-# ~/.config/ccstatusline/settings.json (the "installation" block, deployed as
-# part of the ccstatusline package below) and detects drift between that and
-# the actual npm-installed version — an unreviewed bump could desync the two
-# and trip its own update prompt. Bump deliberately (npm view ccstatusline
-# version) and update the "installation" block in
-# ccstatusline/.config/ccstatusline/settings.json to match.
-install_ccstatusline() {
-  local key="ccstatusline"
-  local pinned_version="2.2.27"
-  local installed
-  installed=$(get_installed_version "$key")
-
-  log "Checking ccstatusline..."
-
-  if [[ "$installed" == "$pinned_version" && "$FORCE_UPDATE" == false ]]; then
-    ok "ccstatusline already at ${pinned_version}"
-    return
-  fi
-
-  if ! command -v npm &>/dev/null; then
-    warn "npm not found (node install may have failed) — skipping ccstatusline."
-    return
-  fi
-
-  log "Installing ccstatusline ${pinned_version}..."
-  if npm install -g "ccstatusline@${pinned_version}" --prefix "$HOME/.local" &>/dev/null; then
-    set_installed_version "$key" "$pinned_version"
-    ok "ccstatusline installed at ${pinned_version}"
-  else
-    warn "ccstatusline install failed — the statusLine will show stale/no data until this succeeds."
-  fi
 }
 
 # ── Claude Code CLI (native installer) ─────────────────────────────────────────
@@ -1331,31 +1796,16 @@ fi
 # zellij_autostart, so a live fetch (or a dead pinned tag) would block every
 # new terminal, not just one session. Versions here must match config.kdl;
 # update both together when bumping one.
+# ZELLIJ_PLUGINS itself is declared up in "Pinned dependency registry" near
+# the top of this file (so --check-pins/--upgrade=<name> can reach it without
+# the rest of install.sh having run) — this dir var stays here since
+# cleanup_orphans() further below also references it.
 ZELLIJ_PLUGIN_DIR="${SHARE_DIR}/zellij/plugins"
 mkdir -p "$ZELLIJ_PLUGIN_DIR"
-ZELLIJ_PLUGINS=(
-  "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.2.2"
-  "zjstatus.wasm|dj95/zjstatus|v0.24.0"
-  "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
-  "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.4.0"
-)
 log "=== Zellij plugins ==="
 for entry in "${ZELLIJ_PLUGINS[@]}"; do
   IFS='|' read -r dest repo tag <<<"$entry"
-  installed=$(get_installed_version "$dest")
-  if [[ "$installed" == "$tag" && "$FORCE_UPDATE" == false ]]; then
-    ok "${dest} already at ${tag}"
-    continue
-  fi
-  log "Downloading ${dest} ${tag}..."
-  if curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
-    "https://github.com/${repo}/releases/download/${tag}/${dest}" \
-    -o "${ZELLIJ_PLUGIN_DIR}/${dest}"; then
-    set_installed_version "$dest" "$tag"
-    ok "${dest} installed at ${tag}"
-  else
-    warn "Download failed for ${dest} — zjstatus/autolock won't load until this succeeds (re-run install.sh)"
-  fi
+  install_zellij_plugin "$dest" "$repo" "$tag" || true
 done
 
 # ── Zellij: pre-approve plugin permissions ────────────────────────────────────
@@ -1403,37 +1853,14 @@ done
 # tag rather than a single release asset like the Zellij plugins above. Same
 # "don't hit the network on every shell start" reasoning: .zshrc sources the
 # extracted .plugin.zsh entrypoint from a fixed local path (see zsh/.zshrc).
+# ZSH_PLUGINS itself is declared up in "Pinned dependency registry" near the
+# top of this file, same reason as ZELLIJ_PLUGINS above.
 ZSH_PLUGIN_DIR="${SHARE_DIR}/zsh/plugins"
 mkdir -p "$ZSH_PLUGIN_DIR"
-ZSH_PLUGINS=(
-  "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
-  "zsh-syntax-highlighting|zsh-users/zsh-syntax-highlighting|0.8.0"
-  "zsh-you-should-use|MichaelAquilina/zsh-you-should-use|1.11.1"
-)
 log "=== Zsh plugins ==="
 for entry in "${ZSH_PLUGINS[@]}"; do
   IFS='|' read -r dest repo tag <<<"$entry"
-  installed=$(get_installed_version "$dest")
-  if [[ "$installed" == "$tag" && "$FORCE_UPDATE" == false ]]; then
-    ok "${dest} already at ${tag}"
-    continue
-  fi
-  log "Downloading ${dest} ${tag}..."
-  zsh_plugin_tmp=$(mktemp -d)
-  if curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
-    "https://github.com/${repo}/archive/refs/tags/${tag}.tar.gz" \
-    -o "${zsh_plugin_tmp}/${dest}.tar.gz" &&
-    tar -xzf "${zsh_plugin_tmp}/${dest}.tar.gz" -C "$zsh_plugin_tmp"; then
-    src_dir=$(find "$zsh_plugin_tmp" -mindepth 1 -maxdepth 1 -type d | head -1)
-    rm -rf "${ZSH_PLUGIN_DIR:?}/${dest}"
-    mkdir -p "${ZSH_PLUGIN_DIR}/${dest}"
-    cp -r "${src_dir}/." "${ZSH_PLUGIN_DIR}/${dest}/"
-    set_installed_version "$dest" "$tag"
-    ok "${dest} installed at ${tag}"
-  else
-    warn "Download failed for ${dest} — it won't load until this succeeds (re-run install.sh)"
-  fi
-  rm -rf "$zsh_plugin_tmp"
+  install_zsh_plugin "$dest" "$repo" "$tag" || true
 done
 
 # link_package("bin") already ran above (before this Zellij/zsh plugins
