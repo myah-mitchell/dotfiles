@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install.sh — bootstrap dotfiles, download binaries, symlink configs
-# Usage: ./install.sh [--update] [--link] [--copy] [--remove] [--windows] [--cargo] [--claude] [--full] [--cleanup]
+# Usage: ./install.sh [--update] [--link] [--copy] [--remove] [--windows] [--cargo] [--claude] [--full] [--cleanup] [--help]
 #
 # --update      Force re-download/rebuild all tools even if already at latest version
 # --link        Skip binary downloads, only re-link configs (fast config-only updates)
@@ -67,6 +67,48 @@ ok() { echo -e "${GREEN}[✓]${RESET} $*"; }
 warn() { echo -e "${YELLOW}[!]${RESET} $*"; }
 err() { echo -e "${RED}[✗]${RESET} $*" >&2; }
 
+usage() {
+  # echo -e (not a plain heredoc/cat) so ${BOLD}/${CYAN}/${RESET} — which
+  # hold literal \033[...m text, same as log()/ok()/warn()/err() above — get
+  # interpreted as real escape sequences instead of printing as raw text.
+  echo -e "${BOLD}Usage:${RESET} ./install.sh [flags]
+
+Deploys dotfiles configs and downloads pinned tool binaries into \$HOME (no
+system-wide changes, everything lives under ~/.local/). Safe to re-run any
+time — re-running with no flags just re-syncs configs and skips tools
+already at their pinned/latest version.
+
+${BOLD}Flags:${RESET}
+  ${CYAN}--update${RESET}    Force re-download/rebuild all tools even if already at latest
+  ${CYAN}--link${RESET}      Skip binary downloads, only re-link configs (fast)
+  ${CYAN}--copy${RESET}      Copy configs instead of symlinking (NTFS/shared servers)
+  ${CYAN}--remove${RESET}    Remove all deployed symlinks from \$HOME and exit (binaries
+              untouched)
+  ${CYAN}--windows${RESET}   WSL2 only: install Windows-side Alacritty (via winget), the
+              Nerd Font, and the Alacritty config symlink. Off by default,
+              no-op outside WSL2. Implied by --full.
+  ${CYAN}--cargo${RESET}     Build Rust tools from source via cargo instead of downloading
+              prebuilt releases (slow, disk-heavy)
+  ${CYAN}--claude${RESET}    Install the Claude Code stack: Claude Code CLI, Node.js (only
+              needed to npm-install ccstatusline), ccstatusline, and
+              claude-swap. None install without this flag or --full.
+  ${CYAN}--full${RESET}      Everything --claude and --windows install, plus PowerShell
+              (~190MB, for Neovim's powershell_es LSP) and Neovim's heavier
+              Mason-managed LSPs (html/cssls/emmet/bashls/pyright/PHP —
+              ~460MB). Use on a full IDE workstation opened via Windows
+              Alacritty; leave all three (--claude/--windows/--full) off on
+              servers/shared boxes that only need the shell environment.
+  ${CYAN}--cleanup${RESET}   Remove stale/orphaned local state left behind by tools removed
+              from this script, old Claude Code version binaries, and —
+              unless the matching flag is also passed — --cargo's
+              rustup/cargo toolchain and --full's extra Mason LSPs
+  ${CYAN}--help${RESET}, ${CYAN}-h${RESET}  Show this help and exit
+
+Flags combine freely (e.g. --full --update --cleanup). See the top of this
+script and CLAUDE.md for the full rationale behind each flag — why each
+defaults on/off, exactly what it downloads, and how they interact."
+}
+
 # ── Args ──────────────────────────────────────────────────────────────────────
 FORCE_UPDATE=false
 LINK_ONLY=false
@@ -88,6 +130,10 @@ for arg in "$@"; do
   --claude) INSTALL_CLAUDE=true ;;
   --full) FULL_INSTALL=true ;;
   --cleanup) DO_CLEANUP=true ;;
+  --help | -h)
+    usage
+    exit 0
+    ;;
   *)
     err "Unknown flag: $arg"
     exit 1
