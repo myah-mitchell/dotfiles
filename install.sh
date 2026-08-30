@@ -199,6 +199,30 @@ SHARE_DIR="$DOTFILES/bin/.local/share"
 LOCAL_BIN="$HOME/.local/bin"
 VERSIONS_FILE="$LOCAL_BIN/.versions"
 LOCAL_SHARE="$HOME/.local/share"
+LOG_FILE="$HOME/.local/state/dotfiles/install.log"
+
+# ── Run log ───────────────────────────────────────────────────────────────────
+# install.sh otherwise leaves no record of past runs — VERSIONS_FILE and
+# FULL_INSTALL_MARKER (below) are current-state snapshots that get overwritten
+# each run, not a history. Every invocation's full output (stdout+stderr,
+# interleaved in the order it was printed) is appended here instead, with a
+# timestamped header line per run so it's clear where one ends and the next
+# starts. Colors are stripped before writing (terminal output stays colored;
+# the log file doesn't) since ANSI escape codes just show up as noise once
+# the file is opened outside a terminal, e.g. `less`/`grep` over old runs.
+# Placed before the standalone early-exit flows (--check-pins/--upgrade/
+# --yubikey/--remove) so those get logged too, not just the main install path.
+mkdir -p "$(dirname "$LOG_FILE")"
+# Trim to the most recent 5000 lines before this run's output is appended, so
+# the log doesn't grow unbounded across months of re-runs — there's no
+# separate rotation step, and --cleanup has nothing to do with it (this is a
+# log, not a stale/orphaned tool install).
+if [[ -f "$LOG_FILE" ]]; then
+  tail -n 5000 "$LOG_FILE" >"$LOG_FILE.tmp" 2>/dev/null && mv "$LOG_FILE.tmp" "$LOG_FILE"
+fi
+echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") install.sh $* ===" >>"$LOG_FILE"
+exec > >(tee >(sed -u 's/\x1b\[[0-9;]*m//g' >>"$LOG_FILE")) 2>&1
+trap 'echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") install.sh exited (status $?) ==="' EXIT
 
 # ── Pinned dependency registry ────────────────────────────────────────────────
 # Single source of truth for the three deliberately-pinned-rather-than-latest
