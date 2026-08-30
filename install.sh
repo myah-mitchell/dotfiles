@@ -1768,10 +1768,6 @@ link_package() {
   [[ "$USE_COPY" == true ]] && ok "Copied $1" || ok "Linked $1"
 }
 
-for pkg in "${PACKAGES[@]}"; do
-  link_package "$pkg"
-done
-
 # ── Register the "homepath" git filter ────────────────────────────────────────
 # zjstatus's command_*_command paths must be real absolute paths — it runs its
 # WASM plugin commands directly with no shell (no ~ or $HOME expansion).
@@ -1787,6 +1783,21 @@ done
 # registered on every clone/run; the checkout below re-smudges the working
 # tree in case the filter wasn't registered yet when the file was last
 # checked out (e.g. right after a fresh clone).
+#
+# MUST run before the PACKAGES linking loop below, not after: some deploy
+# flows (e.g. this repo's ansible role) deliberately exclude
+# zellij/.config/zellij/config.kdl from whatever puts the tree on disk,
+# since it's meant to always be regenerated here instead — which means on a
+# host's first-ever run, this checkout is the only thing that ever creates
+# that file in the working tree at all. link_package only symlinks files
+# that already exist when it walks a package directory (see its `find
+# -type f` below); running this block after link_package's PACKAGES loop
+# left a run on a brand-new host with no config.kdl in the repo checkout
+# yet when link_package("zellij") looked for it, so it silently skipped
+# that one file — no warning, just a missing symlink at
+# ~/.config/zellij/config.kdl. Every other zellij package file (layouts,
+# scripts, themes) is present in the repo tree normally, so only this one
+# file was ever affected.
 log "=== Registering homepath git filter ==="
 # git execs these directly (no shell wrapper), so the mode bit must be +x or
 # every clean/smudge invocation fails — same pitfall as the zjstatus/clipboard
@@ -1811,6 +1822,10 @@ if grep -q '__DOTFILES_HOME__' "$DOTFILES/zellij/.config/zellij/config.kdl"; the
   exit 1
 fi
 ok "Registered homepath git filter"
+
+for pkg in "${PACKAGES[@]}"; do
+  link_package "$pkg"
+done
 
 # ── Neovim: headless plugin install ──────────────────────────────────────────
 if [[ -f "$LOCAL_BIN/nvim" ]] || command -v nvim &>/dev/null; then
