@@ -55,10 +55,12 @@ Re-run at any time to apply config changes:
 ./install.sh --full       # everything --claude and --windows install, plus PowerShell and Neovim's
                            # heavier LSPs (html/css/emmet/bash/php/pyright/powershell_es, ~460MB of
                            # Mason packages) — off by default; skip on servers that just need the shell
+./install.sh --nushell    # install Nushell (nu) as an optional secondary shell; zsh stays the
+                           # default either way; off by default, not implied by --full
 ./install.sh --cleanup    # remove rustup/cargo (unless --cargo), orphaned binaries/plugins/npm globals
                            # left behind by removed tools, node/ccstatusline if not --claude/--full,
-                           # pwsh + full-only Mason LSPs if not --full, and old Claude Code version
-                           # binaries left by its own self-updater
+                           # pwsh + full-only Mason LSPs if not --full, nu if not --nushell, and old
+                           # Claude Code version binaries left by its own self-updater
 ```
 
 ## Layout
@@ -69,6 +71,7 @@ Each top-level directory is a package. `install.sh` walks it and symlinks every 
 dotfiles/
 ├── zsh/.zshenv, .zshrc          → ~/.zshenv, ~/.zshrc
 ├── zsh/.config/zsh/             → ~/.config/zsh/
+├── nushell/.config/nushell/     → ~/.config/nushell/   (only deployed with --nushell)
 ├── starship/.config/            → ~/.config/
 ├── zellij/.config/zellij/       → ~/.config/zellij/
 ├── nvim/.config/nvim/           → ~/.config/nvim/
@@ -128,7 +131,7 @@ The status bar (bottom, via zjstatus) shows the current mode, open tabs, weather
 
 ### Core tools (binaries downloaded by install.sh)
 
-`starship` · `zellij` · `nvim`
+`starship` · `zellij` · `nvim` · `nu` (only with `--nushell`; optional secondary shell, zsh stays the default)
 
 ### CLI tools
 
@@ -176,6 +179,7 @@ command rm -rf /tmp/x   # /usr/bin/rm
 ## Notes
 
 - **zsh**: must be pre-installed (`apt install zsh` / `brew install zsh`) — `install.sh` checks for it and exits with instructions rather than installing it, since (unlike `mosh` below) it's not treated as an exception to the "no system package installs" rule.
+- **Nushell**: optional, via `--nushell`. zsh is always the default shell; `nu` is just made available to launch manually. Its config package (`~/.config/nushell/`) is only deployed when the flag is passed, so a plain `install.sh` never leaves anything nu-related behind.
 - **mosh**: installed via `apt-get` if available (no GitHub release binaries). Usually pre-installed on servers.
 - **git**: on Ubuntu/Debian with git older than 2.35, `install.sh` upgrades it via the git-core PPA — the only other exception to the "no system package installs" rule, needed for `zdiff3` merge style.
 - **zjstatus-hints**: has no usable upstream release, so `install.sh` builds it from source (requires cargo + the `wasm32-wasip1` target) off a temporary community fork branch rather than upstream `main`. See `install.sh` for details if the hints bar stops building.

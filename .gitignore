@@ -27,6 +27,7 @@ ssh/.ssh/sockets/
 
 # Secret env vars (tokens, API keys — never commit)
 zsh/.config/zsh/secrets.zsh
+nushell/.config/nushell/secrets.nu
 
 # Yazi packages installed by `ya pkg` — managed at runtime, not committed
 yazi/.config/yazi/flavors/
