@@ -149,8 +149,27 @@ y() {
 # with sudo needs no separate helper here — zsh's built-in `!!` history
 # expansion already does that (Nu needed a dedicated `sudo!!` command because
 # it has no history-expansion syntax).
+#
+# sudo's own flags (`-s`, `-u user`, `-i`, ...) must come before the target
+# command, not after it — blindly prepending `env "PATH=$PATH"` to "$@" put
+# it ahead of those flags too, so sudo saw `env` (or `PATH=...`) as the flag's
+# argument instead (e.g. `sudo -s` became `sudo env PATH=... -s`, handing "-s"
+# to env, not sudo). zparseopts splits sudo's leading flags off into `opts`
+# first, so `env PATH=...` only ever gets inserted right before the actual
+# command, and is skipped entirely for a bare `sudo -s`/`sudo -u user`/`sudo -i`
+# with no trailing command. Covers the common short options; an unlisted or
+# long (`--foo`) option just stops the split early and rides through as part
+# of the command args, same as sudo would already reject it.
 sudo() {
-  command sudo env "PATH=$PATH" "$@"
+  local -a opts
+  zparseopts -D -a opts -- \
+    A b B E e H h i K k l n P S s V v \
+    C: D: g: p: R: T: U: u:
+  if (( $# )); then
+    command sudo "${opts[@]}" env "PATH=$PATH" "$@"
+  else
+    command sudo "${opts[@]}"
+  fi
 }
 
 # ── Keybindings ───────────────────────────────────────────────────────────────
