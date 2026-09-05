@@ -86,6 +86,8 @@ git branch -d <branch>
 ```
 Use `-d` (safe delete), never `-D`. Since the branch is verified merged, `-d` should succeed; if git refuses, STOP and investigate rather than forcing it.
 
+This task's session docs folder (`~/.local/.claude/<repo-name>/<worktree-name>/`, set up in `/start-task` Step 4) lives outside the worktree entirely, so removing the worktree above has no effect on it. Leave it in place — don't delete it as part of this or any other cleanup step. It's kept as a durable record of the task, not scratch.
+
 Check whether the remote branch still exists (GitLab often auto-deletes it on merge):
 ```
 git ls-remote --heads origin <branch>
@@ -125,3 +127,4 @@ Only when every check is clean, report **"All clean"** with a short bullet list 
 - Never force-delete branches (`-D`) or force-push.
 - Never stop a process or container unless it's clearly tied to this session's work on this MR.
 - When in doubt about whether a file, process, or container belongs to this cleanup, ask — don't delete or stop it.
+- Never delete the task's session docs folder under `~/.local/.claude/<repo-name>/<worktree-name>/`. It sits outside the repo specifically so cleanup never touches it.

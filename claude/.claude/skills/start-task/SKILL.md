@@ -58,21 +58,29 @@ cd .claude/worktree/<task-branch-name>
 Pick a branch name that clearly reflects the task, and use that same name for the worktree subdirectory so the two stay easy to correlate. If a worktree for this task already seems to exist under `.claude/worktree/`, don't silently reuse or delete it — flag that to the user first. If `.claude/worktree/` isn't already excluded from git tracking in the repo's `.gitignore`, flag that too rather than silently adding it.
 
 ## Step 4 — Set up the session docs folder
-Session artifacts live inside the worktree itself (the same repo checkout that gets committed and pushed for this task), under:
+Session artifacts live outside the repo entirely, so they're never in the way of a commit and never at risk when a worktree gets removed later. They live under:
 ```
-.claude-session/
+~/.local/.claude/<repo-name>/<worktree-name>/
 ```
-Create this folder as the first thing you do once the worktree exists.
+where `<repo-name>` is the main repo's directory name and `<worktree-name>` is the worktree subdirectory name chosen in Step 3.
 
-This session docs folder is **not committed to git**. Nothing in it should appear in any commit, regardless of how many commits happen in the worktree in the meantime. Because the folder lives inside the worktree, this only holds if you stage explicit paths — use `git add <specific-file>` for the files a commit is actually meant to include, and never `git add -A` or `git add .`, which would sweep the session docs folder into the commit silently.
+Compute and create it as the first thing you do once the worktree exists:
+```
+REPO_NAME=$(basename "$(dirname "$(readlink -f "$(git rev-parse --git-common-dir)")")")
+WORKTREE_NAME=$(basename "$(pwd)")
+SESSION_DIR="$HOME/.local/.claude/$REPO_NAME/$WORKTREE_NAME"
+mkdir -p "$SESSION_DIR"
+```
+
+Nothing under `$SESSION_DIR` is ever committed to git, and since it lives outside the worktree entirely there's no way for it to end up in one by accident. Stage explicit paths when committing (`git add <specific-file>`, never `git add -A`/`git add .`); simply because a commit should only ever contain exactly the files the change is meant to include.
 
 ## Step 5 — Write the requirements/grading file
 Before writing any solution code, write a concrete, checkable list of requirements that a correct solution to the restated goal (Step 1) would satisfy, folding in anything clarified in Step 2. This is the yardstick you'll grade your own work against later — write it before you're emotionally invested in a particular implementation, so it doesn't just describe whatever you happened to build.
 
-Save it as `task-requirements.md` in the session docs folder from Step 4 (`.claude-sessions/task-requirements.md`). Each item should be phrased so it's actually possible to check off as met/not-met later, not vague ("handles errors well") — be specific ("returns a 4xx with a descriptive message on malformed input, not a 5xx").
+Save it as `task-requirements.md` in the session docs folder from Step 4 (`$SESSION_DIR/task-requirements.md`). Each item should be phrased so it's actually possible to check off as met/not-met later, not vague ("handles errors well") — be specific ("returns a 4xx with a descriptive message on malformed input, not a 5xx").
 
 ## Step 6 — Plan, then review the plan
-Draft a plan to reach the goal and save it as `task-plan.md` in the same session docs folder (`.claude-sessions/task-plan.md`) — same convention as the requirements file, so it's a durable, referenceable artifact rather than something that only lives in your own working notes. Before starting on it, review the plan yourself for:
+Draft a plan to reach the goal and save it as `task-plan.md` in the same session docs folder (`$SESSION_DIR/task-plan.md`) — same convention as the requirements file, so it's a durable, referenceable artifact rather than something that only lives in your own working notes. Before starting on it, review the plan yourself for:
 - **Efficiency**: is there a more direct path to the same outcome?
 - **Minimalism**: more code is not inherently better — favor the cleanest, smallest solution that actually meets the requirements. Cut planned code that doesn't earn its place (speculative abstractions, unused flexibility, extra layers "just in case"). This is about volume/complexity of code, not about naming — the "never shorten variable/function names" rule in Standing Principles still applies in full.
 - **Reuse**: prefer, in this order: (1) an existing function/utility from a framework or library already imported in the project, (2) existing reusable custom code already in the codebase, (3) new code written to be reusable, (4) new single-use code, only when the first three genuinely don't fit. Don't reinvent something a dependency already does. The goal throughout is easy to read, easy to maintain — not cleverness or novelty for its own sake.
@@ -118,12 +126,12 @@ After the reviews and any resulting fixes, re-read the documentation written dur
 Summarize: what was built, confirmation that every requirement in `task-requirements.md` is met, what tests were run/added, what the code/security reviews found and how it was addressed, and the current state of the worktree/branch. Save this summary as `final-report.md` in the session docs folder (Step 4), in addition to presenting it to the user directly. All commits remain local — do not push to the remote or open an MR unless the user explicitly asks.
 
 ## Step 13 — Opening an MR
-Opening a merge request and pushing the branch is handled by the separate `/open-merge` skill. Don't perform any of that inline here — if the user asks to open an MR, hand off to `/open-merge` rather than duplicating its steps. Everything in this skill up to this point stays local.
+Opening a merge request and pushing the branch is handled by the separate `/open-merge` skill. Don't perform any of that inline here — if the user asks to open an MR, hand off to `/open-merge` rather than duplicating its steps. Everything in this skill up to this point stays local. If the user wants the session docs from Step 4 attached to the MR for reviewers, use `/open-merge-with-log` instead — it commits a copy of them into the repo first, then runs `/open-merge`.
 
 ## Standing principles (quick reference — see the relevant step above for full detail)
 - Local-only commits: never push to the remote or open an MR unless the user explicitly asks, no matter how far along the work is.
-- The session docs folder (`.claude-sessions/`) is created as soon as the worktree exists. The folder stays out of every commit.
-- Stage explicit paths when committing — never `git add -A` or `git add .`, which would silently sweep the session docs folder into a commit.
+- The session docs folder (`~/.local/.claude/<repo-name>/<worktree-name>/`) is created as soon as the worktree exists. It lives outside the repo, so it's never committed and is untouched by `/cleanup` even when the worktree itself is removed.
+- Stage explicit paths when committing — never `git add -A` or `git add .`. A commit should only ever contain exactly the files the change is meant to include.
 - Never shorten variable/function names to save space, even when the rest of the code is being kept deliberately minimal.
 - The plan and requirements files are living documents — keep them current rather than treating them as one-time write-ups.
 - Kill only processes you started, by their exact PID. Never use a broad `pkill -f` pattern — this box runs multiple worktrees at once, so a pattern match can take down another session's process.
