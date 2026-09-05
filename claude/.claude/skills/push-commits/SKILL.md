@@ -32,10 +32,9 @@ git log --reverse --format='%H' <base>..HEAD
 If this list is empty, tell the user there's nothing to push and stop.
 
 ## Step 2 — Review each commit
-Walk the list oldest to newest. For each commit, show its full message and what it touches:
+Walk the list oldest to newest. For each commit, show the whole thing: full message, per-file add/remove counts, and the actual diff, not just a summary of it:
 ```
-git show -s --format='%s%n%n%b' <hash>
-git show --stat <hash>
+git show --stat -p <hash>
 ```
 Then ask the user, via a question with options, whether to keep it as written or replace it. The free-text "Other" answer is where a rewritten message goes:
 - "Keep as-is, review next commit (Recommended)"
