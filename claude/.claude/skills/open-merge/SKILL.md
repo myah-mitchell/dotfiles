@@ -20,10 +20,8 @@ git log <default-branch>..HEAD --oneline
 If there are no commits ahead of the default branch, or there's uncommitted work, flag that to the user rather than proceeding — pushing an empty or incomplete branch isn't useful.
 
 ## Step 2 — Push the branch
-This repo has no CLI or API token, so the MR itself is created through the web UI, not automated here. Push the branch first:
-```
-git push -u origin <task-branch-name>
-```
+This repo has no CLI or API token, so the MR itself is created through the web UI, not automated here. Pushing is handled by the `/push-commits` skill, not run directly here — it walks the user through reviewing every commit message before anything reaches the remote. Invoke it now to push `<task-branch-name>`.
+
 Git's push output typically includes a direct "create a merge request" URL for the branch — surface that URL to the user if it appears. If it doesn't appear, tell the user the branch is pushed and they can open the MR directly.
 
 ## Step 3 — Confirm
