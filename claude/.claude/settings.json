@@ -1,4 +1,10 @@
 {
+  "cleanupPeriodDays": 360,
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "model": "sonnet",
   "hooks": {
     "Notification": [
@@ -12,14 +18,26 @@
       }
     ]
   },
+  "worktree": {
+    "baseRef": "head",
+    "bgIsolation": "worktree"
+  },
   "statusLine": {
     "type": "command",
     "command": "ccstatusline",
     "padding": 0,
     "refreshInterval": 10
   },
-  "theme": "dark",
   "enabledPlugins": {
     "rust-analyzer-lsp@claude-plugins-official": true
-  }
+  },
+  "spellcheck": {
+    "enabled": true,
+    "language": "en_US"
+  },
+  "autoCompactWindow": 250000,
+  "tui": "default",
+  "theme": "dark",
+  "autoCompactEnabled": true,
+  "autoContinueAtUsageLimit": true
 }
