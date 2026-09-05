@@ -11,6 +11,8 @@ Take a task branch that was developed in a worktree under `/start-task` and get 
 
 This skill only runs when the user explicitly asks for it. Nothing earlier in `/start-task` pushes to the remote or opens an MR on its own — this is the one deliberate step where that happens.
 
+If the user wants the task's session docs (requirements, plan, prompt log) attached to the MR for reviewers to see, that's `/open-merge-with-log` instead of this skill — it copies them into the repo and commits that first, then runs this skill. Don't fold that behavior in here.
+
 ## Step 1 — Confirm branch and worktree state
 From inside the task's worktree (`.claude/worktree/<task-branch-name>/`), confirm there's something to open an MR for:
 ```

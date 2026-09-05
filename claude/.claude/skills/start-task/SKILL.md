@@ -126,7 +126,7 @@ After the reviews and any resulting fixes, re-read the documentation written dur
 Summarize: what was built, confirmation that every requirement in `task-requirements.md` is met, what tests were run/added, what the code/security reviews found and how it was addressed, and the current state of the worktree/branch. Save this summary as `final-report.md` in the session docs folder (Step 4), in addition to presenting it to the user directly. All commits remain local — do not push to the remote or open an MR unless the user explicitly asks.
 
 ## Step 13 — Opening an MR
-Opening a merge request and pushing the branch is handled by the separate `/open-merge` skill. Don't perform any of that inline here — if the user asks to open an MR, hand off to `/open-merge` rather than duplicating its steps. Everything in this skill up to this point stays local.
+Opening a merge request and pushing the branch is handled by the separate `/open-merge` skill. Don't perform any of that inline here — if the user asks to open an MR, hand off to `/open-merge` rather than duplicating its steps. Everything in this skill up to this point stays local. If the user wants the session docs from Step 4 attached to the MR for reviewers, use `/open-merge-with-log` instead — it commits a copy of them into the repo first, then runs `/open-merge`.
 
 ## Standing principles (quick reference — see the relevant step above for full detail)
 - Local-only commits: never push to the remote or open an MR unless the user explicitly asks, no matter how far along the work is.
