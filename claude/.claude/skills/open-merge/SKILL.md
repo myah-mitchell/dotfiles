@@ -14,7 +14,7 @@ This skill only runs when the user explicitly asks for it. Nothing earlier in `/
 If the user wants the task's session docs (requirements, plan, prompt log) attached to the MR for reviewers to see, that's `/open-merge-with-log` instead of this skill — it copies them into the repo and commits that first, then runs this skill. Don't fold that behavior in here.
 
 ## Step 1 — Confirm branch and worktree state
-From inside the task's worktree (`.claude/worktree/<task-branch-name>/`), confirm there's something to open an MR for:
+From inside the task's worktree (`<repo-name>-<task-branch-name>/`, a sibling of the main repo checkout), confirm there's something to open an MR for:
 ```
 git status
 git log <default-branch>..HEAD --oneline

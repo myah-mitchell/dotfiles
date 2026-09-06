@@ -48,27 +48,38 @@ cd <path-to-default-branch-worktree>
 git pull origin <default-branch>
 ```
 
-Then create the new worktree for this task off the up-to-date default branch. Worktrees live under `.claude/worktree/` inside the original checked-out repo — create that directory if it doesn't already exist:
+Then create the new worktree for this task off the up-to-date default branch. Worktrees are siblings of the main repo checkout, named `<repo-name>-<task-branch-name>`: a repo at `~/code/myproject` gets its task worktrees at `~/code/myproject-<task-branch-name>`.
+
+Derive the path from the *main* worktree rather than from the current directory, so it lands in the right place even when this runs from inside another worktree (`--git-common-dir` always points at the main checkout's `.git`, unlike `--git-dir`):
 ```
-mkdir -p .claude/worktree
-git worktree add .claude/worktree/<task-branch-name> -b <task-branch-name> <default-branch>
-cd .claude/worktree/<task-branch-name>
+MAIN_WORKTREE=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+REPO_NAME=$(basename "$MAIN_WORKTREE")
+WORKTREE_PATH="$(dirname "$MAIN_WORKTREE")/$REPO_NAME-<task-branch-name>"
+
+git worktree add --relative-paths "$WORKTREE_PATH" -b <task-branch-name> <default-branch>
+cd "$WORKTREE_PATH"
 ```
 
-Pick a branch name that clearly reflects the task, and use that same name for the worktree subdirectory so the two stay easy to correlate. If a worktree for this task already seems to exist under `.claude/worktree/`, don't silently reuse or delete it — flag that to the user first. If `.claude/worktree/` isn't already excluded from git tracking in the repo's `.gitignore`, flag that too rather than silently adding it.
+`--relative-paths` controls how git records the two links that pair a worktree with its repo: the `gitdir:` line inside the worktree's `.git` file (which is a file, not a directory, precisely because it holds this pointer) and the back-pointer at `.git/worktrees/<name>/gitdir`. Git writes both as absolute paths by default, which breaks if anything is moved; relative paths keep the pair working when the whole checkout root is renamed or relocated. Moving only one of the two still breaks the link either way, and `git worktree repair` is the fix when that happens.
+
+The flag needs git 2.48 or newer. On older git it errors out: drop it, carry on with absolute paths, and tell the user rather than trying to work around it.
+
+Pick a branch name that clearly reflects the task; the worktree directory is that same name prefixed with the repo name, so the two stay easy to correlate. If anything already exists at `$WORKTREE_PATH`, don't silently reuse or delete it: flag it to the user first.
+
+Because worktrees sit outside the repo, git never sees them, so they need no `.gitignore` entry. They do create directories in the repo's *parent*, though, so if that parent isn't somewhere you should be writing (a shared checkout root, a directory holding unrelated repos the user may not want cluttered), raise it rather than creating siblings anyway.
 
 ## Step 4 — Set up the session docs folder
 Session artifacts live outside the repo entirely, so they're never in the way of a commit and never at risk when a worktree gets removed later. They live under:
 ```
-~/.local/.claude/<repo-name>/<worktree-name>/
+~/.local/.claude/<repo-name>/<task-branch-name>/
 ```
-where `<repo-name>` is the main repo's directory name and `<worktree-name>` is the worktree subdirectory name chosen in Step 3.
+where `<repo-name>` is the main repo's directory name and `<task-branch-name>` is the branch created in Step 3.
 
-Compute and create it as the first thing you do once the worktree exists:
+Compute and create it as the first thing you do once the worktree exists. Take the task name from the branch, not from `basename "$(pwd)"`: the worktree directory carries a `<repo-name>-` prefix (Step 3), which would otherwise be repeated inside this path.
 ```
-REPO_NAME=$(basename "$(dirname "$(readlink -f "$(git rev-parse --git-common-dir)")")")
-WORKTREE_NAME=$(basename "$(pwd)")
-SESSION_DIR="$HOME/.local/.claude/$REPO_NAME/$WORKTREE_NAME"
+REPO_NAME=$(basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")")
+TASK_NAME=$(git branch --show-current)
+SESSION_DIR="$HOME/.local/.claude/$REPO_NAME/$TASK_NAME"
 mkdir -p "$SESSION_DIR"
 ```
 
@@ -130,7 +141,7 @@ Opening a merge request and pushing the branch is handled by the separate `/open
 
 ## Standing principles (quick reference — see the relevant step above for full detail)
 - Local-only commits: never push to the remote or open an MR unless the user explicitly asks, no matter how far along the work is.
-- The session docs folder (`~/.local/.claude/<repo-name>/<worktree-name>/`) is created as soon as the worktree exists. It lives outside the repo, so it's never committed and is untouched by `/cleanup` even when the worktree itself is removed.
+- The session docs folder (`~/.local/.claude/<repo-name>/<task-branch-name>/`) is created as soon as the worktree exists. It lives outside the repo, so it's never committed and is untouched by `/cleanup` even when the worktree itself is removed.
 - Stage explicit paths when committing — never `git add -A` or `git add .`. A commit should only ever contain exactly the files the change is meant to include.
 - Never shorten variable/function names to save space, even when the rest of the code is being kept deliberately minimal.
 - The plan and requirements files are living documents — keep them current rather than treating them as one-time write-ups.
