@@ -259,7 +259,9 @@ trap 'echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") install.sh exited (status $?) =
 # ZELLIJ_PLUGINS / ZSH_PLUGINS row format: dest|owner/repo|pinned_tag
 ZELLIJ_PLUGINS=(
   "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.2.2"
-  "zjstatus.wasm|dj95/zjstatus|v0.25.0"
+  # TEMPORARY: pointed at myah-mitchell/zjstatus fork instead of dj95/zjstatus.
+  # Revert to "zjstatus.wasm|dj95/zjstatus|v0.25.0" when done testing.
+  "zjstatus.wasm|myah-mitchell/zjstatus|fork-v0.25.1"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
   "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.4.1"
 )
@@ -1315,9 +1317,13 @@ if [[ "$LINK_ONLY" == false ]]; then
     "starship|starship|starship/starship|linux|aarch64|starship-aarch64-unknown-linux-musl.tar.gz|-"
     "starship|starship|starship/starship|darwin|*|starship-*-apple-darwin.tar.gz|-"
 
-    "zellij|zellij|zellij-org/zellij|linux|x86_64|zellij-x86_64-unknown-linux-musl.tar.gz|-"
-    "zellij|zellij|zellij-org/zellij|linux|aarch64|zellij-aarch64-unknown-linux-musl.tar.gz|-"
-    "zellij|zellij|zellij-org/zellij|darwin|*|zellij-*-apple-darwin.tar.gz|-"
+    # TEMPORARY: pointed at myah-mitchell/zellij fork instead of zellij-org/zellij.
+    # Fork only publishes a linux-x86_64 asset so far — aarch64/darwin rows will
+    # 404 on those platforms until it does. Revert to zellij-org/zellij when done
+    # testing (repo field only; asset globs/os/arch below are unchanged).
+    "zellij|zellij|myah-mitchell/zellij|linux|x86_64|zellij-x86_64-unknown-linux-musl.tar.gz|-"
+    "zellij|zellij|myah-mitchell/zellij|linux|aarch64|zellij-aarch64-unknown-linux-musl.tar.gz|-"
+    "zellij|zellij|myah-mitchell/zellij|darwin|*|zellij-*-apple-darwin.tar.gz|-"
   )
   # nu: optional secondary shell, only downloaded under --nushell (see
   # WANT_NUSHELL above). Appended here rather than declared inline above so
