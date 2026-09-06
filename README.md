@@ -162,6 +162,7 @@ The status bar (bottom, via zjstatus) shows the current mode, open tabs, weather
 | [7-Zip (7zz)](https://github.com/ip7z/7zip) | — | Archive tool |
 | [jq](https://github.com/jqlang/jq) | — | JSON processor |
 | [glow](https://github.com/charmbracelet/glow) | — | Markdown renderer in the terminal |
+| [mdcat](https://github.com/BIRSAx2/mdcat) | — | Markdown renderer with inline images and clickable links (x86_64 only) |
 | [carapace](https://github.com/carapace-sh/carapace-bin) | — | Multi-shell argument completions |
 | [atuin](https://github.com/atuinsh/atuin) | — | Shell history (SQLite-backed, per-session isolated) |
 | [tealdeer](https://github.com/tealdeer-rs/tealdeer) | `tldr` | Fast tldr pages |

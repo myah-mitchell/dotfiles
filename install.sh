@@ -1502,6 +1502,24 @@ if [[ "$LINK_ONLY" == false ]]; then
     "glow|-|charmbracelet/glow|linux|aarch64|glow_*_linux_arm64.tar.gz|glow"
     "glow|-|charmbracelet/glow|darwin|*|glow_*_darwin_*.tar.gz|glow"
 
+    # mdcat: markdown renderer that draws inline images and real hyperlinks
+    # via terminal graphics/OSC 8, where glow renders styled text only.
+    #
+    # BIRSAx2/mdcat, not the original swsnr/mdcat: upstream is archived and
+    # its own README names this fork as the maintained continuation. The fork
+    # also publishes the `mdcat` crate now, so the --cargo path below tracks
+    # it too rather than the stale original.
+    #
+    # It releases x86_64 Linux and Windows only, so there is one row here
+    # instead of the usual four; aarch64 and macOS have to come from --cargo.
+    # The glob matches linux-* rather than pinning gnu, since the asset
+    # switched musl -> gnu once already. Unlike most rows here it is not a
+    # self-contained static binary: it dynamically links the system
+    # libssl/libcrypto 3, zlib and zstd, so it needs a distro new enough to
+    # ship OpenSSL 3 (it fails at exec with "libssl.so.3: cannot open shared
+    # object file" on older ones). Build via --cargo there instead.
+    "mdcat|mdcat|BIRSAx2/mdcat|linux|x86_64|mdcat-*-x86_64-unknown-linux-*.tar.gz|-"
+
     "7zz|7zz|ip7z/7zip|linux|x86_64|7z*-linux-x64.tar.xz|7zz"
     "7zz|7zz|ip7z/7zip|linux|aarch64|7z*-linux-arm.tar.xz|7zz"
     "7zz|7zz|ip7z/7zip|darwin|*|7z*-mac.tar.xz|7zz"
