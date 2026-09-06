@@ -787,6 +787,24 @@ if ! command -v zsh &>/dev/null; then
   exit 1
 fi
 
+# nvim/.config/nvim/lua/plugins/treesitter.lua pins CC=gcc (compilers = {gcc,
+# clang}) for compiling treesitter parsers, and telescope-fzf-native.nvim wants
+# make/cmake for its native sorter. Without a compiler, treesitter's
+# ensure_installed retries the failed compile every time a matching filetype is
+# opened — silently, with no indication it's a missing system package rather
+# than a network problem. Like zsh, this is a system package everywhere with no
+# cross-platform prebuilt binary, so it's surfaced here rather than auto-installed
+# via apt (see CLAUDE.md's Deliberate Omissions table) — warn, don't block, since
+# the rest of install.sh doesn't need a compiler.
+if ! command -v gcc &>/dev/null && ! command -v clang &>/dev/null; then
+  warn "No C compiler (gcc/clang) found — nvim's treesitter parsers will fail to build."
+  warn "Every file you open in nvim will silently retry the failed parser compile."
+  warn "  Debian/Ubuntu: sudo apt install build-essential"
+  warn "  Arch:          sudo pacman -S base-devel"
+  warn "  Fedora:        sudo dnf groupinstall \"Development Tools\""
+  warn "  macOS:         xcode-select --install"
+fi
+
 # ── Git (Linux/WSL) ───────────────────────────────────────────────────────────
 # Ubuntu 22.04 ships git 2.34; zdiff3 merge style requires 2.35+.
 # The git-core PPA provides the latest stable git on Ubuntu/Debian.

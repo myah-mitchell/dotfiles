@@ -58,7 +58,10 @@ opt.foldlevel      = 99
 -- Performance
 opt.updatetime     = 200
 opt.timeoutlen     = 300
-opt.ttimeoutlen    = 0
+-- 0 causes split escape sequences (arrow/pgup/pgdn, terminal capability
+-- queries at startup) to be misparsed as separate Normal-mode commands when
+-- bytes arrive with any jitter, which happens easily through Zellij/WSL2.
+opt.ttimeoutlen    = 30
 
 -- Misc
 opt.confirm        = true
