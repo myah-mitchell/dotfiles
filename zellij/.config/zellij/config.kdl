@@ -122,7 +122,7 @@ plugins {
         hide_frame_for_single_pane "false"
 
         // Note: this is necessary or else zjstatus won't render the pipe:
-        pipe_zjstatus_hints_format "{output}"
+        //pipe_zjstatus_hints_format "{output}"
 
         // Format mode pill
         mode_normal        "#[bg=$pill_bg,fg=$pill_normal,bold] NORMAL #[bg=$pill_normal,fg=$pill_icon,bold] 󰌌 #[fg=$pill_normal]"
@@ -151,13 +151,12 @@ plugins {
         tab_floating_indicator   " 󰉈"
 
         // Limit tab display count
-        tab_display_count         "9"  // limit to showing 3 tabs
+        tab_display_count         "9"  // limit to showing tabs
         tab_truncate_start_format "#[fg=$tab_trunk]#[bg=$tab_trunk,fg=$pill_icon,bold]< #[bg=$pill_bg,fg=$tab_trunk,bold] +{count}#[fg=$pill_bg] "
         tab_truncate_end_format   " #[fg=$tab_trunk]#[bg=$tab_trunk,fg=$pill_icon,bold]> #[bg=$pill_bg,fg=$tab_trunk,bold] +{count}#[fg=$pill_bg]"
 
         // Format notifications pill
         notification_format_unread           "#[fg=$pill_notify]#[bg=$pill_notify,fg=$pill_icon,dim] #[bg=$pill_bg,fg=$pill_notify,bold] {message} #[fg=$pill_bg]"
-        //notification_format_no_notifications "#[fg=$overlay0]#[bg=$overlay0,fg=$pill_icon,dim] #[bg=$pill_bg,fg=$overlay2] None #[fg=$pill_bg]"
         notification_format_no_notifications "#[fg=$pill_dim]#[bg=$pill_dim,fg=$pill_icon] #[bg=$pill_bg,fg=$pill_dim] None #[fg=$pill_bg]"
         notification_show_interval           "5"
 
@@ -200,17 +199,37 @@ plugins {
         // Fit the hints to the terminal, dropping trailing hints as it
         // narrows. Reserve columns for whatever shares the bar.
         auto_width true // default
-        reserve_columns 20 // default
+        reserve_columns 0 // default
         // Set to 2 if your terminal draws Nerd Font glyphs double-width.
         ambiguous_width 1 // default
         // Appended when a single hint is too wide to fit even alone
         overflow_str "..." // default
         // Name of the pipe for zjstatus integration
-        pipe_name "zjstatus_hints" // default
+        //pipe_name "zjstatus_hints" // default
         // Hide hints in base mode (a.k.a. default mode)
         // E.g. if you have set default_mode to "locked", then
         // you can hide hints in the locked mode by setting this to true
         hide_in_base_mode false // default
+
+        // Render nothing while this session is nested inside another, so
+        // one shared layout can serve both. See docs/nested-sessions.md.
+        hide_when_nested true // default
+        // Hand this plugin's layout row back to the panes around it while
+        // the bar has nothing to draw, rather than leaving a blank line.
+        // See docs/nested-sessions.md#giving-the-row-back.
+        collapse_when_empty true // default
+        // Dim hints while this session isn't the one receiving input.
+        dim_when_unfocused true // default
+        dim_strength       "0.5" // default, 0.0-1.0 (quoted: Zellij's plugin-config
+                                 // parser only accepts strings, ints, and bools for a
+                                 // node value, so a bare decimal like 0.5 fails to load)
+
+        // Prefix the hints line with the current mode. Useful when this
+        // plugin runs in its own pane rather than piped into zjstatus's
+        // {mode} widget. mode_format_<mode> (e.g. mode_format_normal) gives
+        // a single mode its own icon, the same as zjstatus's mode_normal.
+        // See docs/nested-sessions.md#standing-alone.
+        show_mode true // default false
 
         // Also show every other keybinding your config enables, beyond the
         // curated list. See "Discovered hints".
@@ -239,20 +258,59 @@ plugins {
         label_new_pane_right "split"
         label_select "" //Remove unused "select" action that causes issues.
 
+        // Pill Base
+        color_pill_icon     "#11111b" // crust
+        color_pill_bg       "#45475a" // surface1
+
+        // Hints
+        color_pill_hint    "#cba6f7" // mauve
+
+        // Modes
+        color_pill_normal   "#89dceb" // sky 
+        color_pill_tmux     "#89dceb" // sky 
+        color_pill_locked   "#f38ba8" // red 
+        color_pill_resize   "#89dceb" // sky 
+        color_pill_pane     "#89dceb" // sky 
+        color_pill_tab      "#89dceb" // sky 
+        color_pill_scroll   "#89dceb" // sky 
+        color_pill_entser   "#89dceb" // sky 
+        color_pill_search   "#89dceb" // sky 
+        color_pill_rentab   "#89dceb" // sky 
+        color_pill_renpane  "#89dceb" // sky 
+        color_pill_session  "#89dceb" // sky 
+        color_pill_move     "#89dceb" // sky 
+        color_pill_prompt   "#89dceb" // sky 
+
         // Optionally style the hints using zjstatus-style format strings.
         // When unset, the current Zellij theme palette is used automatically.
         // `{key}` and `{desc}` are replaced with the keybinding and its label.
         // See the "Styling" section below for the full syntax.
-        key_format "#[fg=#cba6f7]#[bg=#cba6f7,fg=#11111b,bold]{key} "
-        desc_format "#[bg=#45475a,fg=#cba6f7,bold] {desc}#[fg=#45475a]"
+        key_format "#[fg=$pill_hint]#[bg=$pill_hint,fg=$pill_icon,bold]{key} "
+        desc_format "#[bg=$pill_bg,fg=$pill_hint,bold] {desc}#[fg=$pill_bg]"
         keys_go_to_tab "1-9"      // instead of 123456789
         // Drawn between hints (never before the first or after the last).
         // Also a format string, so it can be a styled glyph, not just space.
         hint_spacer " "
         // Shown where hints were dropped because the window is too narrow.
-        drop_indicator "#[fg=#cba6f7]#[bg=#cba6f7,fg=#11111b,bold] #[bg=#45475a,fg=#cba6f7,bold]...#[fg=#45475a] "
+        drop_indicator "#[fg=$pill_hint]#[bg=$pill_hint,fg=$pill_icon,bold] #[bg=$pill_bg,fg=$pill_hint,bold]...#[fg=$pill_bg] "
         // Which pinned group outlives the oth
         hint_precedence "tl" //default
+
+        // Format mode pill
+        mode_format_normal        "#[bg=$pill_bg,fg=$pill_normal,bold] NORMAL #[bg=$pill_normal,fg=$pill_icon,bold] 󰌌 #[fg=$pill_normal] "
+        mode_format_tmux          "#[bg=$pill_bg,fg=$pill_tmux,bold]  TMUX  #[bg=$pill_tmux,fg=$pill_icon,bold] 󰘳 #[fg=$pill_tmux] "
+        mode_format_locked        "#[bg=$pill_bg,fg=$pill_locked,bold] LOCKED #[bg=$pill_locked,fg=$pill_icon,bold] 󰌾 #[fg=$pill_locked] "
+        mode_format_resize        "#[bg=$pill_bg,fg=$pill_resize,bold] RESIZE #[bg=$pill_resize,fg=$pill_icon,bold] 󰩨 #[fg=$pill_resize] "
+        mode_format_pane          "#[bg=$pill_bg,fg=$pill_pane,bold]  PANE  #[bg=$pill_pane,fg=$pill_icon,bold] 󰯌 #[fg=$pill_pane] "
+        mode_format_tab           "#[bg=$pill_bg,fg=$pill_tab,bold]  TAB   #[bg=$pill_tab,fg=$pill_icon,bold] 󰓩 #[fg=$pill_tab] "
+        mode_format_scroll        "#[bg=$pill_bg,fg=$pill_scroll,bold] SCROLL #[bg=$pill_scroll,fg=$pill_icon,bold] 󰍽 #[fg=$pill_scroll] "
+        mode_format_enter_search  "#[bg=$pill_bg,fg=$pill_entser,bold] ENTSER #[bg=$pill_entser,fg=$pill_icon,bold] 󰛭 #[fg=$pill_entser] "
+        mode_format_search        "#[bg=$pill_bg,fg=$pill_search,bold] SEARCH #[bg=$pill_search,fg=$pill_icon,bold] 󰍉 #[fg=$pill_search] "
+        mode_format_rename_tab    "#[bg=$pill_bg,fg=$pill_rentab,bold] RENTAB #[bg=$pill_rentab,fg=$pill_icon,bold] 󰑕 #[fg=$pill_rentab] "
+        mode_format_rename_pane   "#[bg=$pill_bg,fg=$pill_renpan,bold] RENPAN #[bg=$pill_renpan,fg=$pill_icon,bold] 󰏫 #[fg=$pill_renpan] "
+        mode_format_session       "#[bg=$pill_bg,fg=$pill_session,bold] SESION #[bg=$pill_session,fg=$pill_icon,bold] 󰍺 #[fg=$pill_session] "
+        mode_format_move          "#[bg=$pill_bg,fg=$pill_move,bold]  MOVE  #[bg=$pill_move,fg=$pill_icon,bold] 󰆾 #[fg=$pill_move] "
+        mode_format_prompt        "#[bg=$pill_bg,fg=$pill_prompt,bold] PROMPT #[bg=$pill_prompt,fg=$pill_icon,bold] 󰞷 #[fg=$pill_prompt] "
 
         // Optionally replace key names with symbols, e.g. show ENTER as ↵.
         // Uses the same per-line alias pattern (see "Key aliases" below).
