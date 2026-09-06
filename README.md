@@ -148,6 +148,8 @@ The status bar (bottom, via zjstatus) shows the current mode, open tabs, weather
 | [lazygit](https://github.com/jesseduffield/lazygit) | `lg` | Git TUI |
 | [serpl](https://github.com/yassinebridi/serpl) | — | TUI search-and-replace across files |
 | [difftastic](https://github.com/Wilfred/difftastic) | `diff` | Structural diff (also `GIT_EXTERNAL_DIFF`) |
+| [delta](https://github.com/dandavison/delta) | `gdd`/`gdds` | Syntax-highlighting pager for unified diffs (`git dd`; difftastic stays the default) |
+| [diffnav](https://github.com/dlvhdr/diffnav) | `gdn`/`gdns` | File-tree diff browser built on delta (`git dn`) |
 | [procs](https://github.com/dalance/procs) | `ps` | Process viewer |
 | [tailspin](https://github.com/bensadeh/tailspin) | `tail` | Syntax-highlighted tail |
 | [viddy](https://github.com/sachaos/viddy) | `watch` | Watch TUI |

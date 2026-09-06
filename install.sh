@@ -1444,6 +1444,24 @@ if [[ "$LINK_ONLY" == false ]]; then
     "difft|difftastic|Wilfred/difftastic|darwin|x86_64|difft-x86_64-apple-darwin.tar.gz|-"
     "difft|difftastic|Wilfred/difftastic|darwin|aarch64|difft-aarch64-apple-darwin.tar.gz|-"
 
+    # delta: syntax-highlighting pager for *unified* diffs, a companion to
+    # difftastic (still the default via GIT_EXTERNAL_DIFF), not a replacement.
+    # Also the engine diffnav shells out to, so it is a hard prerequisite for
+    # the rows below. crate is `git-delta`; the binary it ships is `delta`.
+    # No aarch64 musl and no x86_64 macOS build is published upstream, hence
+    # the gnu/aarch64-only rows.
+    "delta|git-delta|dandavison/delta|linux|x86_64|delta-*-x86_64-unknown-linux-musl.tar.gz|-"
+    "delta|git-delta|dandavison/delta|linux|aarch64|delta-*-aarch64-unknown-linux-gnu.tar.gz|-"
+    "delta|git-delta|dandavison/delta|darwin|aarch64|delta-*-aarch64-apple-darwin.tar.gz|-"
+
+    # diffnav: file-tree diff browser that pipes each file through `delta`
+    # (exec'd by name, so delta must be on PATH; see the rows above). Go, so
+    # no crate for the --cargo path.
+    "diffnav|-|dlvhdr/diffnav|linux|x86_64|diffnav_Linux_x86_64.tar.gz|-"
+    "diffnav|-|dlvhdr/diffnav|linux|aarch64|diffnav_Linux_arm64.tar.gz|-"
+    "diffnav|-|dlvhdr/diffnav|darwin|x86_64|diffnav_Darwin_x86_64.tar.gz|-"
+    "diffnav|-|dlvhdr/diffnav|darwin|aarch64|diffnav_Darwin_arm64.tar.gz|-"
+
     "atuin|atuin|atuinsh/atuin|linux|x86_64|atuin-x86_64-unknown-linux-musl.tar.gz|-"
     "atuin|atuin|atuinsh/atuin|linux|aarch64|atuin-aarch64-unknown-linux-musl.tar.gz|-"
     "atuin|atuin|atuinsh/atuin|darwin|*|atuin-*-apple-darwin.tar.gz|-"

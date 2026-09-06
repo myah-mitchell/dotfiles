@@ -142,11 +142,62 @@ When adding a new tool to `install.sh`, follow the existing `download_release()`
 
 | What | Why not |
 |---|---|
-| **delta** | difftastic is the diff tool everywhere — `git diff`, lazygit, `GIT_EXTERNAL_DIFF`. No delta. |
 | **top replacement** | `btm` (bottom) is a standalone addition, not a `top` alias. |
 | **sed replacement** | `sd` is a standalone tool, not a `sed` alias. The syntax differs enough to break scripts. |
 | **ping replacement** | `gping` is an additional visual tool. It does not replace `ping`. |
 | **system package installs** | Everything goes to `~/.local/` — no `apt install` for user tools. Two narrow exceptions: `mosh` (no release binaries) and upgrading `git` itself via the git-core PPA on Ubuntu when it's older than 2.35 (needed for `zdiff3` merge style). zsh itself is a deliberate *non*-exception: it has no cross-platform prebuilt release binary either, but rather than adding a third `apt install` exception, `install.sh` requires it pre-installed and errors with instructions if it's missing. |
+
+---
+
+## Diff tools: difftastic, delta, diffnav
+
+Three coexisting tools, deliberately layered rather than one replacing another.
+(The omissions table above used to say "no delta". That was reversed when
+diffnav was added, since diffnav is a frontend for delta and can't work without
+it.)
+
+- **difftastic (`difft`)** stays the default everywhere: `GIT_EXTERNAL_DIFF=difft`
+  in `zsh/.zshenv` (and `nushell/env.nu`), aliased over `diff`, plus the `dft*`
+  git aliases. Nothing about the two additions changes plain `git diff`.
+- **delta** is a syntax-highlighting pager for ordinary *unified* diffs, for the
+  cases where difftastic's structural view isn't what you want. Opt-in via the
+  `dd*` git aliases / `gdd`/`gdds` shell aliases.
+- **diffnav** is a GitHub-style file-tree browser over a unified diff. It is not
+  self-contained: it shells out to `delta` by name (`exec.Command("delta", ...)`)
+  for every file it renders, so delta is a hard prerequisite, and it wants a Nerd
+  Font for its tree icons (already installed by `install.sh`). Opt-in via the
+  `dn*` git aliases / `gdn`/`gdns` shell aliases.
+
+Three integration details that are easy to get wrong:
+
+- **`--no-ext-diff`, not `-c diff.external=`.** Both new tools need a real
+  unified diff on stdin, so the `dd*`/`dn*` aliases have to switch difftastic
+  off. `GIT_EXTERNAL_DIFF` takes precedence over the `diff.external` config
+  (documented in `git config`'s own `diff.external` entry), so the `-c
+  diff.external=...` form the `dft*` aliases use cannot unset it; only
+  `--no-ext-diff` does. diffnav fails softly here rather than loudly (its
+  `isUnifiedDiff` check just prints the input back and exits), so a missing
+  `--no-ext-diff` looks like "diffnav did nothing" rather than an error. The
+  same applies to diffnav's `--watch-cmd`, which re-runs `git diff` itself and
+  inherits the env var: pass `--watch-cmd "git diff --no-ext-diff"`.
+- **`color.ui = always` is safe.** `git/.gitconfig` forces color on even when
+  piped, which usually breaks tools that parse a diff. Both handle it: delta
+  reads git's colored output by design, and diffnav runs `ansi.Strip` over
+  stdin before parsing.
+- **The `[delta]` block sets colors only.** No `side-by-side` or `line-numbers`
+  there, on purpose: diffnav re-invokes delta with its own argv and only passes
+  `--side-by-side` when it wants it, never `--side-by-side=false`, so a config
+  default would override its unified view, and line-number columns would eat its
+  viewport width. Syntax highlighting comes from bat's theme cache (delta
+  defaults `--syntax-theme` to `$BAT_THEME`; `install.sh` already runs `bat
+  cache --build` with the Catppuccin tmTheme in place). It is set explicitly in
+  the `[delta]` block so it holds for non-zsh callers too.
+
+**Upstream asset gaps** (relevant if the `CLI_TOOLS` rows ever need revisiting):
+delta publishes no aarch64 musl and no x86_64 macOS build, so its rows are
+`x86_64-unknown-linux-musl`, `aarch64-unknown-linux-gnu`, and
+`aarch64-apple-darwin` only. delta's crate is `git-delta` (binary `delta`) for
+the `--cargo` path; diffnav is Go, so its crate field is `-`.
 
 ---
 
@@ -231,7 +282,7 @@ Load-bearing must-keeps: the catppuccin theme and the Ctrl+hjkl Zellij navigatio
 
 Catppuccin Mocha everywhere. Palette hex values are in:
 - `alacritty/.config/alacritty/themes/catppuccin-mocha.toml` — committed (source of truth for terminal colors)
-- `git/.gitconfig` — inline color values for git diff/status output
+- `git/.gitconfig` — inline color values for git diff/status output, plus the `[delta]` block's own style keys
 - `starship/.config/starship.toml` — full palette defined at the bottom of the file (`[palettes.catppuccin_mocha]`)
 - `ripgrep/.config/ripgrep/ripgreprc` — match/line highlight colors
 - `zellij/.config/zellij/config.kdl` — the `zjstatus` plugin block hardcodes the same hex values inline (no shared palette file with zjstatus)

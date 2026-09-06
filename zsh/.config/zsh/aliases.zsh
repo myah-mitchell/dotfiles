@@ -46,6 +46,13 @@ alias gping='gping'
 # ── Git shortcuts using difftastic ───────────────────────────────────────────
 alias gd='git diff'
 alias gds='git diff --staged'
+
+# delta / diffnav: unified-diff viewers alongside difftastic (see the dd*/dn*
+# git aliases in git/.gitconfig for why these can't just pipe `git diff`).
+alias gdd='git dd'
+alias gdds='git dds'
+alias gdn='git dn'
+alias gdns='git dns'
 alias gsh='git show'
 alias gst='git status -sb'
 alias glog='git log --oneline --graph --decorate --all'

@@ -34,6 +34,33 @@
 	colorMoved  = default
 	colorMovedWS = ignore-all-space
 
+# delta: syntax-highlighting pager for unified diffs. Opt-in via the dd*/dn*
+# aliases below; difftastic stays the default (GIT_EXTERNAL_DIFF in
+# zsh/.zshenv), so nothing here changes plain `git diff`.
+#
+# Colors are Catppuccin Mocha, same palette as [color "diff"] above. Syntax
+# highlighting comes from bat's theme cache (delta defaults --syntax-theme to
+# $BAT_THEME, set in zsh/.zshenv; install.sh runs `bat cache --build` so the
+# Catppuccin tmTheme is in it). It is set explicitly here so it also holds for
+# non-zsh callers, e.g. diffnav.
+#
+# Deliberately no `side-by-side`/`line-numbers` here: diffnav re-invokes delta
+# with its own argv and only passes --side-by-side when it wants it, never
+# --side-by-side=false, so a config default would win in its unified view and
+# the extra columns would eat its viewport width.
+[delta]
+	syntax-theme                  = Catppuccin Mocha
+	minus-style                   = syntax "#45475a"
+	minus-emph-style              = syntax "#663f52"
+	plus-style                    = syntax "#313e3e"
+	plus-emph-style               = syntax "#3f5f4f"
+	line-numbers-minus-style      = "#f38ba8"
+	line-numbers-plus-style       = "#a6e3a1"
+	line-numbers-zero-style       = "#6c7086"
+	hunk-header-style             = "#cba6f7" bold
+	file-style                    = "#89b4fa" bold
+	file-decoration-style         = "#89b4fa" ul
+
 [status]
 	showUntrackedFiles = all
 
@@ -67,6 +94,20 @@
 	dfts  = -c diff.external=difft diff --staged
 	dfth  = -c diff.external=difft show
 	dftl  = -c diff.external=difft log -p --ext-diff
+
+	# Unified-diff viewers: delta (dd*) and diffnav (dn*, a file-tree browser
+	# on top of delta). --no-ext-diff is what actually switches difftastic off
+	# for these: GIT_EXTERNAL_DIFF (zsh/.zshenv) takes precedence over the
+	# diff.external config the dft* aliases set, so `-c diff.external=` alone
+	# cannot unset it, and both tools need a real unified diff to parse.
+	dd    = -c core.pager=delta diff --no-ext-diff
+	dds   = -c core.pager=delta diff --no-ext-diff --staged
+	ddh   = -c core.pager=delta show --no-ext-diff
+	ddl   = -c core.pager=delta log -p --no-ext-diff
+
+	dn    = -c core.pager=diffnav diff --no-ext-diff
+	dns   = -c core.pager=diffnav diff --no-ext-diff --staged
+	dnh   = -c core.pager=diffnav show --no-ext-diff
 
 	# Common shortcuts
 	st    = status -sb
