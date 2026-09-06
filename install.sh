@@ -259,9 +259,9 @@ trap 'echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") install.sh exited (status $?) =
 # ZELLIJ_PLUGINS / ZSH_PLUGINS row format: dest|owner/repo|pinned_tag
 ZELLIJ_PLUGINS=(
   "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.2.2"
-  "zjstatus.wasm|dj95/zjstatus|v0.24.0"
+  "zjstatus.wasm|dj95/zjstatus|v0.25.0"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
-  "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.4.0"
+  "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.4.1"
 )
 ZSH_PLUGINS=(
   "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
@@ -271,7 +271,7 @@ ZSH_PLUGINS=(
 # ccstatusline: npm-pinned rather than always-latest (see install_ccstatusline
 # below for why) — kept as a plain variable, not a local inside that function,
 # so --check-pins/--upgrade=ccstatusline can read/rewrite it the same way.
-CCSTATUSLINE_PINNED_VERSION="2.2.27"
+CCSTATUSLINE_PINNED_VERSION="2.2.29"
 
 # ── Platform detection ────────────────────────────────────────────────────────
 # Refuse to run in Git Bash / MSYS — symlink semantics break on Windows

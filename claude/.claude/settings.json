@@ -39,5 +39,7 @@
   "tui": "default",
   "theme": "dark",
   "autoCompactEnabled": true,
-  "autoContinueAtUsageLimit": true
+  "autoContinueAtUsageLimit": true,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true
 }

@@ -30,3 +30,4 @@ Desktop.ini
 .env.*.local
 
 **/.claude/settings.local.json
+**/.claude/worktree
