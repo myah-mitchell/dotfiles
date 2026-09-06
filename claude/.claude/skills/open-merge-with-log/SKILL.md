@@ -35,7 +35,7 @@ git commit -m "Add session log for $TASK_NAME"
 ```
 
 ## Step 4 — Open the merge request
-Hand off to `/open-merge` for everything from here: pushing (through `/push-commits`, whose review will include this new commit) and reporting the MR link. Don't duplicate any of `/open-merge`'s own steps here.
+Hand off to `/open-merge` for everything from here: pushing (through `/push-changes`, whose review will include this new commit) and reporting the MR link. Don't duplicate any of `/open-merge`'s own steps here.
 
 ## Safety rules
 - Never run this proactively, and never run it alongside a plain `/open-merge` for the same branch.

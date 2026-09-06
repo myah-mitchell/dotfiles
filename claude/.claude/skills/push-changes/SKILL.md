@@ -1,10 +1,10 @@
 ---
-name: push-commits
+name: push-changes
 description: >-
-  Push local commits to the remote, but only after the user has reviewed and approved every commit message first. Trigger on "/push-commits", "push my commits", "push this branch", "let's push", or similar explicit requests to push local commits to the remote. This is the only skill that runs `git push`. Never run it proactively; only on an explicit user request to push.
+  Push local commits to the remote, but only after the user has reviewed and approved every commit message first. Trigger on "/push-changes", "push my commits", "push this branch", "let's push", or similar explicit requests to push local commits to the remote. This is the only skill that runs `git push`. Never run it proactively; only on an explicit user request to push.
 ---
 
-# /push-commits — Reviewed Push
+# /push-changes — Reviewed Push
 
 ## Purpose
 Push local commits to the remote, but only after presenting each one to the user for review first. Modeled on `/open-merge`'s pattern of being the one deliberate, explicit step where a push actually happens, with an added review pass so the user has actually read and approved every commit message before it becomes part of the public history.
@@ -48,7 +48,7 @@ If every commit was kept as-is, skip straight to Step 4. There's nothing to rewr
 
 If any commit was reworded, rebuild the range on top of a safety net:
 ```
-git branch push-commits-backup-<timestamp>
+git branch push-changes-backup-<timestamp>
 git reset --hard <base>
 ```
 Then replay the original commits in order. A kept commit gets cherry-picked unchanged:
@@ -60,11 +60,11 @@ A reworded commit gets applied without committing, so the new message can be sub
 git cherry-pick --no-commit <hash>
 git commit --author="$(git show -s --format='%an <%ae>' <hash>)" --date="$(git show -s --format='%ad' <hash>)" -m "<new subject>" -m "<new body>"
 ```
-After replaying the whole range, show the user the final `git log --reverse --oneline <base>..HEAD` for one last confirmation before pushing. If anything looks wrong, `git reset --hard push-commits-backup-<timestamp>` restores the original commits and stops here.
+After replaying the whole range, show the user the final `git log --reverse --oneline <base>..HEAD` for one last confirmation before pushing. If anything looks wrong, `git reset --hard push-changes-backup-<timestamp>` restores the original commits and stops here.
 
 Once the rewrite is confirmed good, delete the backup branch. It was only a safety net for this step:
 ```
-git branch -D push-commits-backup-<timestamp>
+git branch -D push-changes-backup-<timestamp>
 ```
 
 ## Step 4 — Push

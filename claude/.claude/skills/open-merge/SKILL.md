@@ -22,7 +22,7 @@ git log <default-branch>..HEAD --oneline
 If there are no commits ahead of the default branch, or there's uncommitted work, flag that to the user rather than proceeding — pushing an empty or incomplete branch isn't useful.
 
 ## Step 2 — Push the branch
-Pushing is handled by the `/push-commits` skill, not run directly here — it walks the user through reviewing every commit message before anything reaches the remote. Invoke it now to push `<task-branch-name>`.
+Pushing is handled by the `/push-changes` skill, not run directly here — it walks the user through reviewing every commit message before anything reaches the remote. Invoke it now to push `<task-branch-name>`.
 
 ## Step 3 — Check for a forge CLI
 Look at the remote host and see whether the matching CLI is installed and authenticated:
