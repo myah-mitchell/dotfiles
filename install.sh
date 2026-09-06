@@ -405,6 +405,10 @@ install_zellij_plugin() {
 
   local installed
   installed=$(get_installed_version "$dest")
+  if [[ -n "$installed" && ! -f "${plugin_dir}/${dest}" ]]; then
+    warn "${dest} recorded as ${installed} in .versions but missing from disk. Reinstalling."
+    installed=""
+  fi
   if [[ "$installed" == "$tag" && "$FORCE_UPDATE" == false ]]; then
     ok "${dest} already at ${tag}"
     ln -sf "${plugin_dir}/${dest}" "${deployed_dir}/${dest}"
@@ -443,6 +447,10 @@ install_zsh_plugin() {
 
   local installed
   installed=$(get_installed_version "$dest")
+  if [[ -n "$installed" && ! -d "${plugin_root}/${dest}" ]]; then
+    warn "${dest} recorded as ${installed} in .versions but missing from disk. Reinstalling."
+    installed=""
+  fi
   if [[ "$installed" != "$tag" || "$FORCE_UPDATE" == true ]]; then
     log "Downloading ${dest} ${tag}..."
     local tmp
@@ -849,10 +857,19 @@ fi
 download_release() {
   local repo="$1" glob="$2" dest="$3" bin_in_archive="${4:-$3}"
   local key="${dest}"
+  local dest_path="${BIN_DIR}/${dest}"
   local installed
   installed=$(get_installed_version "$key")
 
   log "Checking ${dest}..."
+
+  # .versions can drift from disk (file deleted/moved after being recorded).
+  # Don't trust a recorded version if the binary it refers to isn't actually
+  # there, or every later check in this function would just skip silently.
+  if [[ -n "$installed" && ! -f "$dest_path" ]]; then
+    warn "${dest} recorded as ${installed} in .versions but missing from disk. Reinstalling."
+    installed=""
+  fi
 
   # Skip the API call entirely when already installed and not forcing update.
   # With 25+ tools and 60 unauthenticated requests/hour, making an API call for
