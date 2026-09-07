@@ -263,10 +263,7 @@ ZELLIJ_PLUGINS=(
   # Revert to "zjstatus.wasm|dj95/zjstatus|v0.25.0" when done testing.
   "zjstatus.wasm|myah-mitchell/zjstatus|fork-v0.25.1"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
-  # TEMPORARY: pointed at the ea-nested-sessions pre-release tag instead of
-  # v0.4.1. Revert to "zjhints.wasm|myah-mitchell/zjstatus-hints|v0.4.1"
-  # when done testing.
-  "zjhints.wasm|myah-mitchell/zjstatus-hints|ea-nested-sessions"
+  "zjhints.wasm|myah-mitchell/zjhints|v0.5.0"
 )
 ZSH_PLUGINS=(
   "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
