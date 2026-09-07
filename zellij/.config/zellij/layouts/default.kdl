@@ -8,38 +8,16 @@ layout {
         pane size=1 borderless=true {
             plugin location="zjstatus" {
                 format_left   "{mode} {tabs}"
-                format_center "{notifications}"
-                format_right  "#[only_when=host]{command_weather} #[]{command_sysinfo} #[only_when=host]{datetime}"
+                format_center "#[only_when=host]{notifications}"
+                format_right  "#[only_when=host]{command_weather} {command_sysinfo} {datetime} #[only_when=nested]{notifications}"
 //                format_right  "{command_weather} {command_sysinfo} {datetime}"
             }
         }
         children
         pane size=1 borderless=true {
-              plugin location="zjstatus-hints" {
-//            plugin location="zjstatus" {
-//                format_left   "{mode}{pipe_zjstatus_hints}"
-//                format_right  "#[fg=#6c7086,italics]{command_user}@{command_host}:{session}"
+            plugin location="zjhints" {
+                show_mode true
             }
         }
     }
-// Example auto loading tabs
-//    tab name="Work" hide_floating_panes=false {
-//        // pane name="Code" cwd="${PROJECTS}"
-//        pane split_direction="vertical" {
-//            pane name="Code" command="nvim"
-//            pane name="Daily Notes" size="20%"
-//        }
-//    }
-//    tab name="Dashboard" {
-//        pane split_direction="vertical" {
-//            pane split_direction="horizontal" {
-//               pane name="Gratitudes"
-//               pane name="ToDos"
-//            }
-//            pane split_direction="horizontal" {
-//               pane name="Achievements"
-//               pane name="Fleeting Notes"
-//            }
-//        }
-//    }
 }

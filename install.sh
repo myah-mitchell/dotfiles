@@ -264,9 +264,9 @@ ZELLIJ_PLUGINS=(
   "zjstatus.wasm|myah-mitchell/zjstatus|fork-v0.25.1"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
   # TEMPORARY: pointed at the ea-nested-sessions pre-release tag instead of
-  # v0.4.1. Revert to "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|v0.4.1"
+  # v0.4.1. Revert to "zjhints.wasm|myah-mitchell/zjstatus-hints|v0.4.1"
   # when done testing.
-  "zjstatus-hints.wasm|myah-mitchell/zjstatus-hints|ea-nested-sessions"
+  "zjhints.wasm|myah-mitchell/zjstatus-hints|ea-nested-sessions"
 )
 ZSH_PLUGINS=(
   "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
@@ -1344,6 +1344,10 @@ if [[ "$LINK_ONLY" == false ]]; then
     "zellij|zellij|myah-mitchell/zellij|linux|x86_64|zellij-x86_64-unknown-linux-musl.tar.gz|-"
     "zellij|zellij|myah-mitchell/zellij|linux|aarch64|zellij-aarch64-unknown-linux-musl.tar.gz|-"
     "zellij|zellij|myah-mitchell/zellij|darwin|*|zellij-*-apple-darwin.tar.gz|-"
+
+    #"zellij|zellij|zellij-org/zellij|linux|x86_64|zellij-x86_64-unknown-linux-musl.tar.gz|-"
+    #"zellij|zellij|zellij-org/zellij|linux|aarch64|zellij-aarch64-unknown-linux-musl.tar.gz|-"
+    #"zellij|zellij|zellij-org/zellij|darwin|*|zellij-*-apple-darwin.tar.gz|-"
   )
   # nu: optional secondary shell, only downloaded under --nushell (see
   # WANT_NUSHELL above). Appended here rather than declared inline above so
@@ -2045,7 +2049,7 @@ done
 ZELLIJ_PLUGIN_PERMISSIONS=(
   "zellij-autolock.wasm|ReadApplicationState ChangeApplicationState"
   "zjstatus.wasm|ReadApplicationState ChangeApplicationState RunCommands"
-  "zjstatus-hints.wasm|ReadApplicationState MessageAndLaunchOtherPlugins"
+  "zjhints.wasm|ReadApplicationState MessageAndLaunchOtherPlugins"
   "zellij-newtab-plus.wasm|RunCommands Reconfigure ReadApplicationState ChangeApplicationState"
 )
 ZELLIJ_PERMISSIONS_FILE="$HOME/.cache/zellij/permissions.kdl"

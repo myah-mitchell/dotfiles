@@ -192,7 +192,7 @@ plugins {
         command_host_interval    "0"
         command_host_rendermode  "static"
     }
-    zjstatus-hints location="file:~/.local/share/zellij/plugins/zjstatus-hints.wasm" {
+    zjhints location="file:~/.local/share/zellij/plugins/zjhints.wasm" {
 
         // Hard cap on the width of the hint line, in columns
         max_length 0 // 0 = unlimited
@@ -340,7 +340,7 @@ plugins {
 
 load_plugins {
     autolock
-    zjstatus-hints
+    zjhints
 }
 
 keybinds clear-defaults=false {
