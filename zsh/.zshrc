@@ -89,10 +89,12 @@ export SSH_AUTH_SOCK="$_ssh_agent_socket"
 unset _ssh_agent_socket
 
 # ── Tool integrations ─────────────────────────────────────────────────────────
-[[ -f ~/.local/share/zoxide/init.zsh ]] && source ~/.local/share/zoxide/init.zsh
-[[ -f ~/.local/share/atuin/init.zsh ]] && source ~/.local/share/atuin/init.zsh
-[[ -f ~/.cache/starship/init.zsh ]] && source ~/.cache/starship/init.zsh
-[[ -f ~/.cache/carapace/init.zsh ]] && source ~/.cache/carapace/init.zsh
+if [[ "$TERM" != "dumb" ]]; then
+  [[ -f ~/.local/share/zoxide/init.zsh ]] && source ~/.local/share/zoxide/init.zsh
+  [[ -f ~/.local/share/atuin/init.zsh ]] && source ~/.local/share/atuin/init.zsh
+  [[ -f ~/.cache/starship/init.zsh ]] && source ~/.cache/starship/init.zsh
+  [[ -f ~/.cache/carapace/init.zsh ]] && source ~/.cache/carapace/init.zsh
+fi
 
 # Carapace bridges ~700 commands — including cp/ls/mv/rm/cat/mkdir/etc — to
 # its own external completion engine, which generates and filters candidates
