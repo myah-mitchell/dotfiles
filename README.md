@@ -199,3 +199,7 @@ nvim
 ```
 
 Plugins include LazyVim base, Catppuccin theme, zellij-nav.nvim (unified navigation), and opencode.nvim (`<leader>ao` to toggle).
+
+## License
+
+Copyright (c) 2026 Myah Mitchell. Licensed under the [MIT License](LICENSE).
