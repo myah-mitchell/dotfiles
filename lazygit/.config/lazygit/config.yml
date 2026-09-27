@@ -32,9 +32,9 @@ gui:
   showRandomTip: false
   commandLogSize: 8
 git:
-  pagers:
+  diffRenderers:
     - colorArg: always
-      pager: "difft --color always"
+      command: "difft --color always"
       externalDiffCommand: "difft"
   commit:
     signOff: false
