@@ -263,7 +263,11 @@ ZELLIJ_PLUGINS=(
   # Revert to "zjstatus.wasm|dj95/zjstatus|v0.25.0" when done testing.
   "zjstatus.wasm|myah-mitchell/zjstatus|fork-v0.25.1"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
-  "zjhints.wasm|myah-mitchell/zjhints|v0.5.0"
+  # TEMPORARY: pinned to the moving nightly tag for the nested-session API port,
+  # which needs zellij fork-v0.46.2 or later. Nightly moves in place, so run
+  # with --update to pick up a newer one. Pin a versioned tag again once
+  # zjhints cuts a release.
+  "zjhints.wasm|myah-mitchell/zjhints|nightly"
 )
 ZSH_PLUGINS=(
   "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
