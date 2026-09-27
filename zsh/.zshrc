@@ -120,9 +120,12 @@ compdef _ln ln
 # Only start Zellij if we're not already inside it and it's an interactive
 # session. The $NVIM guard stops a terminal opened *inside* Neovim
 # (snacks/toggleterm) from spawning a nested Zellij in the terminal buffer,
-# even when nvim runs outside Zellij.
+# even when nvim runs outside Zellij. TERM=dumb means a headless login (e.g. the
+# boot-time `login -- $USER` under WSL2), not a real terminal. Zellij panes
+# inherit the environment of whichever client starts the server, so a dumb
+# client resurrecting the session would give every restored pane TERM=dumb.
 zellij_autostart() {
-  if [[ -z "$ZELLIJ" && -z "$NVIM" ]]; then
+  if [[ -z "$ZELLIJ" && -z "$NVIM" && "$TERM" != "dumb" ]]; then
     if [[ "$ZELLIJ_AUTO_ATTACH" == "true" ]]; then
       zellij attach --create --remember default
     else
