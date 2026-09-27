@@ -5,7 +5,6 @@
     "pr": "",
     "sessionUrl": false
   },
-  "model": "sonnet",
   "hooks": {
     "Notification": [
       {
