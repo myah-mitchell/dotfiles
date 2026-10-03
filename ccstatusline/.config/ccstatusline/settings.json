@@ -28,14 +28,31 @@
         "type": "separator"
       },
       {
+        "id": "ae0c80e7-f2fe-4ce7-9124-8048c773a2af",
+        "type": "current-working-dir",
+        "metadata": {
+          "fishStyle": "true"
+        },
+        "rawValue": true,
+        "color": "yellow"
+      },
+      {
+        "id": "67582829-a841-4fe0-bc6f-4648950d7bdb",
+        "type": "separator",
+        "character": " "
+      },
+      {
         "id": "5",
         "type": "git-branch",
-        "color": "yellow"
+        "color": "yellow",
+        "metadata": {
+          "linkToRepo": "true"
+        }
       },
       {
         "id": "3a2525d4-c2a1-44ed-9e20-c584a3ac9171",
         "type": "separator",
-        "character": " "
+        "character": "|"
       },
       {
         "id": "7",
@@ -51,7 +68,10 @@
         "type": "context-length",
         "color": "brightYellow",
         "dim": "parens",
-        "rawValue": false
+        "rawValue": false,
+        "numberFormat": {
+          "style": "compact"
+        }
       },
       {
         "id": "41585b17-aa75-4f91-b15a-ad5998495330",
@@ -65,7 +85,10 @@
         "type": "context-window",
         "color": "brightYellow",
         "dim": "parens",
-        "rawValue": true
+        "rawValue": true,
+        "numberFormat": {
+          "style": "whole"
+        }
       },
       {
         "id": "4118ef6b-2138-4439-bb93-5bf85673ae56",
@@ -80,6 +103,9 @@
           "showReclaimed": "true",
           "showTriggers": "false",
           "nerdFont": "true"
+        },
+        "numberFormat": {
+          "style": "whole"
         }
       },
       {
@@ -94,7 +120,7 @@
         "rawValue": true,
         "metadata": {
           "display": "time",
-          "compact": "false"
+          "compact": "true"
         }
       },
       {
@@ -112,6 +138,9 @@
         "metadata": {
           "display": "time",
           "invert": "false"
+        },
+        "numberFormat": {
+          "style": "compact"
         }
       },
       {
@@ -126,7 +155,8 @@
         "dim": "parens",
         "rawValue": true,
         "metadata": {
-          "compact": "false"
+          "display": "time",
+          "compact": "true"
         }
       },
       {
@@ -144,7 +174,28 @@
         "rawValue": true,
         "metadata": {
           "display": "time"
+        },
+        "numberFormat": {
+          "style": "compact"
         }
+      },
+      {
+        "id": "fb01b427-bb6c-4355-9149-06d628d98d83",
+        "type": "separator",
+        "character": ","
+      },
+      {
+        "id": "ba9fd1aa-6cc7-40cf-ad74-46288e0b53fb",
+        "type": "fable-weekly-usage",
+        "metadata": {
+          "display": "time",
+          "invert": "false"
+        },
+        "numberFormat": {
+          "style": "compact"
+        },
+        "color": "magenta",
+        "rawValue": true
       }
     ],
     [
@@ -152,7 +203,10 @@
         "id": "bff2502d-7966-4b0b-8705-47e1988b1d27",
         "type": "tokens-input",
         "color": "white",
-        "rawValue": true
+        "rawValue": true,
+        "numberFormat": {
+          "style": "whole"
+        }
       },
       {
         "id": "39f24525-d105-4023-bf70-b1fbe36efd4d",
@@ -166,6 +220,9 @@
         "rawValue": false,
         "metadata": {
           "cacheScopeSession": "false"
+        },
+        "numberFormat": {
+          "style": "whole"
         }
       },
       {
@@ -180,6 +237,9 @@
         "rawValue": true,
         "metadata": {
           "cacheScopeSession": "true"
+        },
+        "numberFormat": {
+          "style": "whole"
         }
       },
       {
@@ -190,7 +250,10 @@
         "id": "b0a4df82-bfdc-4088-9a2a-e31c2b8029a0",
         "type": "tokens-output",
         "color": "white",
-        "rawValue": true
+        "rawValue": true,
+        "numberFormat": {
+          "style": "whole"
+        }
       },
       {
         "id": "966b3374-444b-48fa-ae77-103aee2e1138",
@@ -200,7 +263,10 @@
       {
         "id": "1c31d478-c02c-48f9-94c9-b0c0a6c5befb",
         "type": "cache-write",
-        "color": "white"
+        "color": "white",
+        "numberFormat": {
+          "style": "whole"
+        }
       },
       {
         "id": "adc015e4-bab2-4c3f-83f9-e096a239e6d4",
@@ -214,6 +280,9 @@
         "rawValue": true,
         "metadata": {
           "cacheScopeSession": "true"
+        },
+        "numberFormat": {
+          "style": "whole"
         }
       },
       {
@@ -223,7 +292,10 @@
       {
         "id": "1c7222a1-7a53-42b7-894b-94953c588d17",
         "type": "tokens-total",
-        "color": "white"
+        "color": "white",
+        "numberFormat": {
+          "style": "whole"
+        }
       },
       {
         "id": "34923ff2-9be8-4fed-a430-9e48308ed0d5",
@@ -233,7 +305,10 @@
       {
         "id": "6095f662-f52f-467b-bbb3-001616a799e9",
         "type": "tokens-cached",
-        "color": "white"
+        "color": "white",
+        "numberFormat": {
+          "style": "whole"
+        }
       },
       {
         "id": "3d360695-c9c0-4103-a701-ea6ba7eecdcd",
@@ -244,7 +319,25 @@
         "id": "085fdf10-94d0-4dc4-8b18-7898665e0a35",
         "type": "cache-hit-rate",
         "color": "white",
-        "rawValue": true
+        "rawValue": true,
+        "numberFormat": {
+          "style": "compact"
+        },
+        "metadata": {
+          "cacheScopeSession": "false"
+        }
+      },
+      {
+        "id": "9c21b19c-5b5c-4a1e-8d6d-4d14aa3611be",
+        "type": "separator"
+      },
+      {
+        "id": "51239e69-d1de-4110-a2f6-e5618f49b1ca",
+        "type": "session-cost",
+        "numberFormat": {
+          "style": "compact"
+        },
+        "color": "white"
       }
     ],
     []
