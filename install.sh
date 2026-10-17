@@ -1614,10 +1614,10 @@ if [[ "$LINK_ONLY" == false ]]; then
     "lazygit|-|jesseduffield/lazygit|darwin|x86_64|lazygit_*_Darwin_x86_64.tar.gz|-"
     "lazygit|-|jesseduffield/lazygit|darwin|aarch64|lazygit_*_Darwin_arm64.tar.gz|-"
 
-    "serpl|yassinebridi/serpl|linux|x86_64|serpl-*-linux-x86_64.tar.gz"
-    "serpl|yassinebridi/serpl|linux|aarch64|serpl-*-linux-arm64.tar.gz"
-    "serpl|yassinebridi/serpl|darwin|x86_64|serpl-*-macos-x86_64.tar.gz"
-    "serpl|yassinebridi/serpl|darwin|aarch64|serpl-*-macos-arm64.tar.gz"
+    "serpl|serpl|yassinebridi/serpl|linux|x86_64|serpl-*-linux-x86_64.tar.gz|-"
+    "serpl|serpl|yassinebridi/serpl|linux|aarch64|serpl-*-linux-arm64.tar.gz|-"
+    "serpl|serpl|yassinebridi/serpl|darwin|x86_64|serpl-*-macos-x86_64.tar.gz|-"
+    "serpl|serpl|yassinebridi/serpl|darwin|aarch64|serpl-*-macos-arm64.tar.gz|-"
 
     "gping|gping|orf/gping|linux|x86_64|gping-Linux-musl-x86_64.tar.gz|-"
     "gping|gping|orf/gping|linux|aarch64|gping-Linux-musl-arm64.tar.gz|-"
