@@ -31,7 +31,7 @@ This is a copy, not a move. `$SESSION_DIR` itself is left untouched, so it stays
 Stage exactly this new folder, never `git add -A`/`git add .`:
 ```
 git add ".claude-session/$TASK_NAME"
-git commit -m "Add session log for $TASK_NAME"
+git commit -m "docs: add session log for $TASK_NAME"
 ```
 
 ## Step 4 — Open the merge request

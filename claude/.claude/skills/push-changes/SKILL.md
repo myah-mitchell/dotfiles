@@ -32,12 +32,19 @@ git log --reverse --format='%H' <base>..HEAD
 If this list is empty, tell the user there's nothing to push and stop.
 
 ## Step 2 — Review each commit
-Walk the list oldest to newest. For each commit, show the whole thing: full message, per-file add/remove counts, and the actual diff, not just a summary of it:
+Walk the list oldest to newest. For each commit, gather its full message, per-file counts, and diff:
 ```
 git show --stat -p <hash>
 ```
-Then ask the user, via a question with options, whether to keep it as written or replace it. The free-text "Other" answer is where a rewritten message goes:
+That output reaches you, not reliably the user: Bash output is often collapsed or hidden in their terminal, and the question dialog can cover text printed just before it. The question itself carries the review:
+
+- Put the commit's full message and its `--stat` file list in the `preview` field of every option, identically, so it stays visible whichever option is focused. Use the exact message text, then a blank line, then the file list.
+- Make the question text name the commit's position (`Commit 2 of 3`), its short hash, and its summary line.
+- Before the question, also write a short plain-text summary of the change in the reply: which hunks matter and anything surprising. Keep it under about 15 lines; never paste a long raw diff there.
+
+Options (the free-text "Other" answer is where a rewritten message goes):
 - "Keep as-is, review next commit (Recommended)"
+- "Show the full diff first": print this commit's diff in the reply (in a `diff` fence, split into readable chunks if long), then ask the same question again
 - "Stop reviewing, don't push anything yet"
 - (Other: type a replacement subject/body for this commit)
 

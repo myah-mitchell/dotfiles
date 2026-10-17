@@ -18,7 +18,7 @@ git diff
 git diff --staged
 git log --oneline -10
 ```
-The log sample is there to pick up this repo's existing commit message conventions (prefix style, tense, length) so drafted messages match it. If there's nothing staged or unstaged, tell the user there's nothing to commit and stop.
+Also check whether the repo documents its own commit convention: a `CONTRIBUTING` file, a commitlint config (`commitlint.config.*`, `.commitlintrc*`), or a PR/MR template. If there's nothing staged or unstaged, tell the user there's nothing to commit and stop.
 
 ## Step 2 — Group changes into logical commits
 Read through the diff and decide commit boundaries:
@@ -29,13 +29,21 @@ For each proposed commit, list exactly which files (or hunks) belong to it.
 
 ## Step 3 — Draft each commit message
 For each proposed commit, draft a message that:
+- Follows the repo's documented commit convention if Step 1 found one. Otherwise it follows the Conventional Commits format in the global `CLAUDE.md` (*Git* section), even if the repo's existing history doesn't.
+- Has a summary line of about 50 characters, never over 72. Add a body only when the summary can't carry the change, and then as a few short bullets, not paragraphs.
 - States the change and its intent, not a narration of the diff.
-- Matches this repo's existing tone from Step 1's `git log` sample (conventional-commit prefixes only if the repo already uses them).
 - Never uses em-dashes, never adds a trailer or attribution line.
 
 ## Step 4 — Review each proposed commit
-Walk the proposed commits in order. For each one, show the user the files involved and the actual diff for just those files/hunks, plus the drafted message. Ask via a question with options:
+Walk the proposed commits in order. Bash output (`git diff`, `git show`) is often collapsed or hidden in the user's terminal, and the question dialog can cover text printed just before it, so never rely on either to show the user anything. The question itself carries the review:
+
+- Put the drafted message and a `git diff --stat`-style file list in the `preview` field of every option, identically, so it stays visible whichever option is focused. Use the exact message text, then a blank line, then the file list.
+- Make the question text name the commit's position (`Commit 2 of 3`) and its summary line.
+- Before the question, also write a short plain-text summary of the change in the reply: which hunks matter and anything surprising. Keep it under about 15 lines; never paste a long raw diff there.
+
+Options:
 - "Commit as written, review next (Recommended)"
+- "Show the full diff first": print the diff for just this commit's files in the reply (in a `diff` fence, split into readable chunks if long), then ask the same question again
 - "Skip this one, leave it uncommitted"
 - (Other: type a replacement subject/body for this commit)
 

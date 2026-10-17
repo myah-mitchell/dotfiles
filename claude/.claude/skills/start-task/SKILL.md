@@ -48,25 +48,27 @@ cd <path-to-default-branch-worktree>
 git pull origin <default-branch>
 ```
 
-Then create the new worktree for this task off the up-to-date default branch. Worktrees are siblings of the main repo checkout, named `<repo-name>-<task-branch-name>`: a repo at `~/code/myproject` gets its task worktrees at `~/code/myproject-<task-branch-name>`.
+Then create the new worktree for this task off the up-to-date default branch. Worktrees live under `.claude/worktrees/<task-branch-name>` inside the main repo checkout, the same location Claude Code's own `--worktree` flag uses, so worktrees made either way end up side by side.
 
 Derive the path from the *main* worktree rather than from the current directory, so it lands in the right place even when this runs from inside another worktree (`--git-common-dir` always points at the main checkout's `.git`, unlike `--git-dir`):
 ```
-MAIN_WORKTREE=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-REPO_NAME=$(basename "$MAIN_WORKTREE")
-WORKTREE_PATH="$(dirname "$MAIN_WORKTREE")/$REPO_NAME-<task-branch-name>"
+GIT_COMMON_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+MAIN_WORKTREE=$(dirname "$GIT_COMMON_DIR")
+WORKTREE_PATH="$MAIN_WORKTREE/.claude/worktrees/<task-branch-name>"
 
 git worktree add --relative-paths "$WORKTREE_PATH" -b <task-branch-name> <default-branch>
 cd "$WORKTREE_PATH"
 ```
 
-`--relative-paths` controls how git records the two links that pair a worktree with its repo: the `gitdir:` line inside the worktree's `.git` file (which is a file, not a directory, precisely because it holds this pointer) and the back-pointer at `.git/worktrees/<name>/gitdir`. Git writes both as absolute paths by default, which breaks if anything is moved; relative paths keep the pair working when the whole checkout root is renamed or relocated. Moving only one of the two still breaks the link either way, and `git worktree repair` is the fix when that happens.
+`--relative-paths` controls how git records the two links that pair a worktree with its repo: the `gitdir:` line inside the worktree's `.git` file and the back-pointer at `.git/worktrees/<name>/gitdir`. Git writes both as absolute paths by default; relative paths keep the pair working when the whole checkout is renamed or relocated. The flag needs git 2.48 or newer. On older git it errors out: drop it, carry on with absolute paths, and tell the user rather than trying to work around it.
 
-The flag needs git 2.48 or newer. On older git it errors out: drop it, carry on with absolute paths, and tell the user rather than trying to work around it.
+Pick a branch name that clearly reflects the task, and use that same name for the worktree directory so the two stay easy to correlate. If anything already exists at `$WORKTREE_PATH`, don't silently reuse or delete it: flag it to the user first.
 
-Pick a branch name that clearly reflects the task; the worktree directory is that same name prefixed with the repo name, so the two stay easy to correlate. If anything already exists at `$WORKTREE_PATH`, don't silently reuse or delete it: flag it to the user first.
-
-Because worktrees sit outside the repo, git never sees them, so they need no `.gitignore` entry. They do create directories in the repo's *parent*, though, so if that parent isn't somewhere you should be writing (a shared checkout root, a directory holding unrelated repos the user may not want cluttered), raise it rather than creating siblings anyway.
+A worktree nested inside the repo shows up in the main checkout's `git status` as an untracked directory unless it's ignored. Check before creating it:
+```
+git -C "$MAIN_WORKTREE" check-ignore -q .claude/worktrees/x || echo "not ignored"
+```
+If it isn't ignored, add `.claude/worktrees/` to `$GIT_COMMON_DIR/info/exclude` (a local-only ignore file that is never committed and is shared by every worktree of the repo) and tell the user you did. Don't edit the repo's `.gitignore` for this; that's a committed change the task didn't ask for.
 
 ## Step 4 — Set up the session docs folder
 Session artifacts live outside the repo entirely, so they're never in the way of a commit and never at risk when a worktree gets removed later. They live under:
@@ -75,13 +77,15 @@ Session artifacts live outside the repo entirely, so they're never in the way of
 ```
 where `<repo-name>` is the main repo's directory name and `<task-branch-name>` is the branch created in Step 3.
 
-Compute and create it as the first thing you do once the worktree exists. Take the task name from the branch, not from `basename "$(pwd)"`: the worktree directory carries a `<repo-name>-` prefix (Step 3), which would otherwise be repeated inside this path.
+Compute and create it as the first thing you do once the worktree exists. Take the task name from the branch rather than from `basename "$(pwd)"`, so the path stays correct even if the worktree directory was named differently.
 ```
 REPO_NAME=$(basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")")
 TASK_NAME=$(git branch --show-current)
 SESSION_DIR="$HOME/.local/.claude/$REPO_NAME/$TASK_NAME"
 mkdir -p "$SESSION_DIR"
 ```
+
+Start the prompt log right away as `$SESSION_DIR/task-prompts.md`. Record the original task request verbatim as its first entry, followed by each round of clarifying questions from Step 2 and the answers to them. From then on, append every new prompt from the user as it arrives (Step 7), each under a short timestamped heading, quoted exactly rather than paraphrased, so the log is a faithful record of what was actually asked.
 
 Nothing under `$SESSION_DIR` is ever committed to git, and since it lives outside the worktree entirely there's no way for it to end up in one by accident. Stage explicit paths when committing (`git add <specific-file>`, never `git add -A`/`git add .`); simply because a commit should only ever contain exactly the files the change is meant to include.
 
@@ -100,14 +104,28 @@ Draft a plan to reach the goal and save it as `task-plan.md` in the same session
 
 ## Step 7 — Work the plan
 - Document as you go — inline comments/docstrings where the code needs them, plus higher-level notes (README, ADR, etc.) where the task warrants it. Don't defer all documentation to the end.
+- Before writing or editing any Markdown documentation (README, `docs/` pages, ADRs, runbooks), load the `doc-standards` skill and follow it. It doesn't cover inline comments or docstrings.
 - Write every piece of documentation (inline comments, docstrings, README/ADR updates) as if the reader is seeing this function/module/feature for the first time — explain what it does and why on its own terms. Don't write it as a diff or changelog narrating what it used to do or how it differs from a prior version.
 - Don't reference removed or superseded code in documentation (e.g. "replaces the old X", "unlike the previous approach") unless there's a strong, specific reason the reader needs that history to understand or safely use the current code. Default to omitting it.
-- Commit locally at logical, clean breakpoints — each commit should represent one coherent step, with a message that says what and why. Don't let uncommitted work pile up across multiple unrelated changes. Commits stay local: never push to the remote or open an MR unless the user explicitly asks for that. Stage explicit paths rather than `git add -A`/`git add .`, so the session docs folder (Step 4) stays out of these commits.
+- Commit locally at logical, clean breakpoints, without going through `/create-commits` or asking first: each commit should represent one coherent step. Messages follow the global `CLAUDE.md` *Git* format (or the repo's documented convention), and the user reviews every commit at `/push-changes` before anything is pushed. Don't let uncommitted work pile up across multiple unrelated changes. Commits stay local: never push to the remote or open an MR unless the user explicitly asks for that. Stage explicit paths rather than `git add -A`/`git add .`, so the session docs folder (Step 4) stays out of these commits.
 - Keep the plan (`task-plan.md`) alive and current: check off completed items, and add new items as you discover them. The plan should reflect reality at all times, not just your initial guess.
 - Keep logging every incoming prompt to `task-prompts.md` (Step 4) as the session continues — this doesn't stop once work starts.
 - If you hit a genuine fork in the road with no clearly correct answer (a real design tradeoff, not something you could reasonably decide yourself), ask the user rather than guessing and hoping.
 - Be efficient with your own resource use: don't loop over reasoning you've already settled, and don't let context balloon unmanaged. Watch your own context usage as the session goes, and if it's getting large (roughly 250k tokens or more) run `/compact` proactively rather than waiting to be forced into it — this workflow already externalizes the load-bearing state (`task-plan.md`, `task-requirements.md`) to files specifically so a compaction's lossy summary doesn't lose anything that matters; re-read those files after compacting to confirm you're still working from the current plan.
 - Prefer delegating self-contained side-work — codebase exploration, log/output digging, research that produces a lot of intermediate noise you won't need verbatim — to a sub-agent rather than doing it inline, since each one gets its own separate context window. When you spawn one, note a rough time/effort estimate, and check in on any that runs noticeably longer than estimated — it may be stuck in a loop rather than doing productive work, and should be redirected or stopped rather than left running indefinitely.
+- Size every sub-agent to its job (see "Sub-agent model and effort" below) instead of letting it inherit the main session's model and effort.
+
+### Sub-agent model and effort
+This skill explicitly authorizes choosing a sub-agent's model and reasoning effort per job: pass `model` and `effort` on every Agent call. Left unset, a sub-agent runs on the main session's model, which wastes a top-tier model on grep work. Pick the cheapest tier that can do the job well:
+
+| Job | `model` | `effort` |
+|---|---|---|
+| Mechanical lookups: finding files or symbols, listing call sites, summarizing a log or command output, checking a fact in one known place | `haiku` | `low` |
+| Broad codebase exploration, gathering context across many files, researching a library's docs or API | `sonnet` | `medium` |
+| Implementing a well-specified, self-contained piece of the plan; writing tests to a stated spec; updating docs to match finished code | `sonnet` | `medium` or `high` |
+| Design tradeoffs, debugging a failure whose cause isn't obvious, reviewing a diff for correctness or security, anything where a wrong answer would send the task down the wrong path | `opus` | `high` |
+
+Adjust from there by judgment: bump a tier up when a cheaper agent's first attempt came back wrong or shallow, rather than retrying the same tier. Never use `subagent_type: "fork"` for sized work, since a fork always runs on the main session's model and ignores `model`. Decisions that shape the task (requirements, the plan, self-grading) stay in the main session, not in a sub-agent.
 
 ## Step 8 — Test the code (only if code was written)
 Test the code you wrote. Prefer running the project's existing test suite/tooling over inventing a new one-off method to verify behavior.
@@ -133,6 +151,8 @@ Fix what these reviews turn up, and re-run the Step 9 grading pass if fixes touc
 ## Step 11 — Reconcile documentation
 After the reviews and any resulting fixes, re-read the documentation written during Step 7 and confirm it still accurately reflects what was actually built — implementations drift from the docs written earlier in the process. Update anything that's gone stale, keeping the same first-time-reader framing (Step 7) rather than layering on changelog-style edits about what just changed.
 
+Then run the `doc-standards` skill's review checklist over every Markdown file this task created or edited, and fix what fails. Run the repo's markdownlint config too if it has one, but don't treat a clean lint run as a pass: the checklist covers what lint can't.
+
 ## Step 12 — Final report
 Summarize: what was built, confirmation that every requirement in `task-requirements.md` is met, what tests were run/added, what the code/security reviews found and how it was addressed, and the current state of the worktree/branch. Save this summary as `final-report.md` in the session docs folder (Step 4), in addition to presenting it to the user directly. All commits remain local — do not push to the remote or open an MR unless the user explicitly asks.
 
@@ -147,3 +167,5 @@ Opening a merge request and pushing the branch is handled by the separate `/open
 - The plan and requirements files are living documents — keep them current rather than treating them as one-time write-ups.
 - Kill only processes you started, by their exact PID. Never use a broad `pkill -f` pattern — this box runs multiple worktrees at once, so a pattern match can take down another session's process.
 - Watch context usage; run `/compact` proactively around ~250k tokens rather than waiting for a forced one, and delegate exploration/research side-quests to sub-agents so the main session's context stays reserved for decisions.
+- Set `model` and `effort` on every sub-agent to fit its job, per the table in Step 7. Don't let them all inherit the main session's model.
+- Task worktrees live at `<main-repo>/.claude/worktrees/<task-branch-name>`, kept out of `git status` via `.git/info/exclude` rather than a committed `.gitignore` change.
