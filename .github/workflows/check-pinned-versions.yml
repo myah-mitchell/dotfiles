@@ -23,6 +23,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # An exact-tag TOOL_PINS row gets an entry with kind: tool-release and
+        # name: its dest. A * prefix row has no pin to bump, so it gets none.
         include:
           - name: zellij-autolock
             kind: github-release

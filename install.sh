@@ -65,12 +65,14 @@
 # --check-pins  Read-only: print each deliberately-pinned dependency (Zellij plugins,
 #               Zsh plugins, ccstatusline — see CLAUDE.md's "Zellij status bar &
 #               plugin loading" for why these three are pinned instead of
-#               always-latest like CORE_TOOLS/CLI_TOOLS) alongside its current
+#               always-latest like CORE_TOOLS/CLI_TOOLS; TOOL_PINS rows, per
+#               CLAUDE.md's "Pinning a tool", pin those too) alongside its current
 #               upstream version, and exits — no downloads, no file changes. Ignores
 #               every other flag and runs before the zsh/git/locale prerequisite
 #               checks.
 # --upgrade=<name>  Bump exactly one pinned dependency to its latest upstream version
-#               (edits install.sh's own pin in place), install it right away, and
+#               (edits install.sh's own pin in place), install it right away
+#               (except a TOOL_PINS tool, which the next normal run installs), and
 #               print the same manual-review note the weekly pinned-version-bump
 #               workflow would carry — then exits. <name> is the "NAME" column from
 #               --check-pins (e.g. --upgrade=zjstatus.wasm, --upgrade=ccstatusline).
@@ -146,9 +148,9 @@ ${BOLD}Flags:${RESET}
               unless the matching flag is also passed — --cargo's
               rustup/cargo toolchain, --full's extra Mason LSPs, and
               --nushell's nu binary
-  ${CYAN}--check-pins${RESET}  Read-only: print Zellij plugins, Zsh plugins, and
-              ccstatusline (the three deliberately-pinned deps) next to
-              their current upstream version, then exit. No downloads.
+  ${CYAN}--check-pins${RESET}  Read-only: print Zellij plugins, Zsh plugins,
+              ccstatusline, and TOOL_PINS (the deliberately-pinned deps)
+              next to their current upstream version, then exit. No downloads.
   ${CYAN}--upgrade=${RESET}${BOLD}<name>${RESET}  Bump one pinned dependency to latest, install it, print
               its review note, then exit. <name> is a NAME from
               --check-pins, e.g. --upgrade=ccstatusline
@@ -249,7 +251,7 @@ exec > >(tee >(sed -u 's/\x1b\[[0-9;]*m//g' >>"$LOG_FILE")) 2>&1
 trap 'echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") install.sh exited (status $?) ==="' EXIT
 
 # ── Pinned dependency registry ────────────────────────────────────────────────
-# Single source of truth for the three deliberately-pinned-rather-than-latest
+# Single source of truth for the deliberately-pinned-rather-than-latest
 # dependency groups (see CLAUDE.md's "Zellij status bar & plugin loading" for
 # why these three, unlike CORE_TOOLS/CLI_TOOLS below, don't just resolve
 # /releases/latest at install time). Declared here, at the top of the script,
@@ -278,6 +280,21 @@ ZSH_PLUGINS=(
 # below for why) — kept as a plain variable, not a local inside that function,
 # so --check-pins/--upgrade=ccstatusline can read/rewrite it the same way.
 CCSTATUSLINE_PINNED_VERSION="2.2.32"
+# CORE_TOOLS/CLI_TOOLS (and yazi) install /releases/latest unless their dest
+# has a row here. Applies to every platform row of that dest, and only while
+# the repo matches (so a repo switch can't silently keep a stale pin).
+#
+# TOOL_PINS row format: dest|owner/repo|selector
+# selector: an exact release tag (installed even without --update when it
+#           differs from .versions; bump with --upgrade=<dest>), or a tag
+#           prefix ending in * (the newest release whose tag starts with it,
+#           prereleases included; pick up a newer one with --update).
+TOOL_PINS=(
+  # TEMPORARY: the fork's nightly prereleases (per-build tags such as
+  # nightly-v0.46.0-261017). Nightlies are linux-x86_64 only, so other
+  # platforms find no asset and skip, as they already do for the fork.
+  "zellij|myah-mitchell/zellij|nightly-*"
+)
 
 # ── Platform detection ────────────────────────────────────────────────────────
 # Refuse to run in Git Bash / MSYS — symlink semantics break on Windows
@@ -526,6 +543,43 @@ latest_github_tag() {
   fi
 }
 
+# Newest release (prereleases included) whose tag starts with $2, for
+# TOOL_PINS prefix selectors. Ignores assets, so it's for reporting only;
+# download_release does its own asset-aware lookup.
+latest_github_release_with_prefix() {
+  curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/$1/releases?per_page=30" |
+    grep -oP '"tag_name":\s*"\K[^"]+' |
+    PREFIX="$2" awk 'index($0, ENVIRON["PREFIX"]) == 1 { print; exit }'
+}
+
+# Prints DEST's TOOL_PINS selector, or nothing when it has no row. A row for
+# the same dest but a different repo is ignored with a warning, so switching a
+# tool's repo (like reverting the zellij fork) can't keep a stale pin.
+tool_pin() {
+  local want_dest="$1" want_repo="$2" entry dest repo selector
+  for entry in "${TOOL_PINS[@]}"; do
+    IFS='|' read -r dest repo selector <<<"$entry"
+    [[ "$dest" == "$want_dest" ]] || continue
+    if [[ "$repo" == "$want_repo" ]]; then
+      echo "$selector"
+    else
+      warn "TOOL_PINS pins ${dest} to ${repo}, but it installs from ${want_repo}. Ignoring the pin." >&2
+    fi
+    return
+  done
+}
+
+# Whether an installed version satisfies a TOOL_PINS selector.
+pin_satisfied() {
+  local installed="$1" selector="$2"
+  if [[ "$selector" == *'*' ]]; then
+    [[ "$installed" == "${selector%\*}"* ]]
+  else
+    [[ "$installed" == "$selector" ]]
+  fi
+}
+
 # npm registry "latest" dist-tag (ccstatusline).
 latest_npm_version() {
   curl -sf --connect-timeout 15 "https://registry.npmjs.org/$1/latest" |
@@ -545,8 +599,10 @@ valid_pin_value() {
 }
 
 print_pin_row() {
-  local name="$1" pinned="$2" latest="$3" status
-  if [[ -z "$latest" ]]; then
+  local name="$1" pinned="$2" latest="$3" status="${4:-}"
+  if [[ -n "$status" ]]; then
+    [[ -z "$latest" ]] && status="${YELLOW}could not check${RESET}"
+  elif [[ -z "$latest" ]]; then
     status="${YELLOW}could not check${RESET}"
   elif [[ "$pinned" == "$latest" ]]; then
     status="${GREEN}up to date${RESET}"
@@ -581,6 +637,19 @@ check_pins() {
   echo -e "  ${CYAN}npm-pinned CLIs${RESET}"
   latest=$(latest_npm_version "ccstatusline") || true
   print_pin_row "ccstatusline" "$CCSTATUSLINE_PINNED_VERSION" "$latest"
+  echo
+
+  echo -e "  ${CYAN}Pinned tools${RESET} (TOOL_PINS; a * selector tracks the newest matching tag)"
+  for entry in "${TOOL_PINS[@]}"; do
+    IFS='|' read -r dest repo tag <<<"$entry"
+    if [[ "$tag" == *'*' ]]; then
+      latest=$(latest_github_release_with_prefix "$repo" "${tag%\*}") || true
+      print_pin_row "$dest" "$tag" "$latest" "${GREEN}tracks newest${RESET}"
+    else
+      latest=$(latest_github_release "$repo") || true
+      print_pin_row "$dest" "$tag" "$latest"
+    fi
+  done
   echo
 
   echo "Bump one with: ./install.sh --upgrade=<name>   e.g. ./install.sh --upgrade=zjstatus.wasm"
@@ -673,6 +742,36 @@ upgrade_pin() {
     ok "install.sh's pin is bumped and ccstatusline ${latest} is installed."
     exit 0
   fi
+
+  # Unlike the branches above, this can't install right away: CORE_TOOLS and
+  # CLI_TOOLS (the asset globs) aren't declared until the install section. The
+  # next normal run installs the new pin, since .versions no longer matches it.
+  for entry in "${TOOL_PINS[@]}"; do
+    IFS='|' read -r dest repo tag <<<"$entry"
+    [[ "$dest" == "$name" ]] || continue
+    if [[ "$tag" == *'*' ]]; then
+      ok "${dest} tracks the newest ${tag} release, so there's no pin to bump. Run ./install.sh --update to pick up a newer one."
+      exit 0
+    fi
+    log "Checking upstream for ${dest}..."
+    latest=$(latest_github_release "$repo") || true
+    [[ -z "$latest" ]] && {
+      err "Could not fetch latest release for ${repo}."
+      exit 1
+    }
+    if [[ "$latest" == "$tag" ]]; then
+      ok "${dest} is already pinned at the latest release (${tag})."
+      exit 0
+    fi
+    valid_pin_value "$latest" || {
+      err "Fetched tag '${latest}' has unexpected characters. Refusing to edit install.sh; bump TOOL_PINS by hand instead."
+      exit 1
+    }
+    log "Bumping ${dest}: ${tag} -> ${latest}"
+    sed -i "s#\"${dest}|${repo}|${tag}\"#\"${dest}|${repo}|${latest}\"#" "$DOTFILES/install.sh"
+    ok "install.sh's pin is bumped to ${latest}. Run ./install.sh to install it, then review the upstream release notes before committing."
+    exit 0
+  done
 
   err "Unknown pin name: '${name}'. Run ./install.sh --check-pins to see valid names."
   exit 1
@@ -884,10 +983,13 @@ newest_release_asset() {
 # ASSET_GLOB: shell glob matching the archive filename, e.g. "bat-*-x86_64*linux*musl*.tar.gz"
 # DEST_BIN:   filename to create in BIN_DIR
 # BINARY_IN_ARCHIVE: path inside archive to the binary (default: same as DEST_BIN)
+# Installs /releases/latest, or what DEST_BIN's TOOL_PINS row selects.
 download_release() {
   local repo="$1" glob="$2" dest="$3" bin_in_archive="${4:-$3}"
   local key="${dest}"
   local dest_path="${BIN_DIR}/${dest}"
+  local pin
+  pin=$(tool_pin "$dest" "$repo")
   local installed
   installed=$(get_installed_version "$key")
 
@@ -906,37 +1008,60 @@ download_release() {
   # every tool on every run burns the rate limit and causes tools past ~tool 10
   # to never record their version in .versions (they get "Could not fetch" and
   # return early, leaving installed="" on the next run → re-download loop).
+  # A pin the installed version doesn't satisfy (just bumped, or just added)
+  # still installs, the same way a changed ZELLIJ_PLUGINS tag does.
   if [[ -n "$installed" && "$FORCE_UPDATE" == false ]]; then
-    ok "${dest} already at ${installed}"
-    return
+    if [[ -z "$pin" ]] || pin_satisfied "$installed" "$pin"; then
+      ok "${dest} already at ${installed}"
+      return
+    fi
+    log "${dest} is at ${installed}, but TOOL_PINS selects ${pin}."
   fi
 
   # Convert shell glob wildcards (*) to grep extended-regex (.*) for proper matching
   local regex="${glob//\*/.*}"
 
-  # Single API call — parse both tag_name and asset URLs from one response.
   local latest="" asset_url="" api_response
-  api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
-    "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases/latest") || true
-
-  latest=$(echo "$api_response" | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
-  if [[ -z "$latest" ]]; then
-    warn "Could not fetch latest version for ${repo} — skipping."
-    return
-  fi
-
-  IFS=$'\t' read -r latest asset_url < <(newest_release_asset "$api_response" "$regex") || true
-  if [[ -z "$asset_url" ]]; then
-    # /releases/latest may have no matching asset (some repos attach assets
-    # to an older release). Take the newest release in the list that has
-    # one, recording that release's own tag rather than the list's first.
+  if [[ -n "$pin" && "$pin" != *'*' ]]; then
+    api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases/tags/${pin}") || true
+    IFS=$'\t' read -r latest asset_url < <(newest_release_asset "$api_response" "$regex") || true
+    if [[ -z "$asset_url" ]]; then
+      warn "Pinned ${repo} release ${pin} not found, or has no asset matching ${glob}. Skipping."
+      return
+    fi
+  elif [[ -n "$pin" ]]; then
     api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
       "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases?per_page=30") || true
+    IFS=$'\t' read -r latest asset_url < <(newest_release_asset "$api_response" "$regex" "${pin%\*}") || true
+    if [[ -z "$asset_url" ]]; then
+      warn "No ${repo} release tagged ${pin} has an asset matching ${glob}. Skipping."
+      return
+    fi
+  else
+    # Single API call — parse both tag_name and asset URLs from one response.
+    api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases/latest") || true
+
+    latest=$(echo "$api_response" | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
+    if [[ -z "$latest" ]]; then
+      warn "Could not fetch latest version for ${repo} — skipping."
+      return
+    fi
+
     IFS=$'\t' read -r latest asset_url < <(newest_release_asset "$api_response" "$regex") || true
-  fi
-  if [[ -z "$asset_url" ]]; then
-    warn "No matching asset found for ${dest} (pattern: ${glob}) — skipping."
-    return
+    if [[ -z "$asset_url" ]]; then
+      # /releases/latest may have no matching asset (some repos attach assets
+      # to an older release). Take the newest release in the list that has
+      # one, recording that release's own tag rather than the list's first.
+      api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+        "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases?per_page=30") || true
+      IFS=$'\t' read -r latest asset_url < <(newest_release_asset "$api_response" "$regex") || true
+    fi
+    if [[ -z "$asset_url" ]]; then
+      warn "No matching asset found for ${dest} (pattern: ${glob}) — skipping."
+      return
+    fi
   fi
 
   if [[ "$installed" == "$latest" && "$FORCE_UPDATE" == false ]]; then
@@ -1214,8 +1339,11 @@ install_powershell() {
 # Usage: cargo_install CRATE DEST_BIN
 # Installs to dotfiles bin dir via cargo (symlinked to ~/.local/bin by link_package).
 # Checks crates.io for the latest version to avoid unnecessary recompiles.
+# PIN is the dest's TOOL_PINS selector, if any. Only an exact X.Y.Z tag (with
+# or without a leading v) maps onto a crates.io version; anything else (a fork
+# tag, a * prefix) builds the newest crate, with a warning.
 cargo_install() {
-  local crate="$1" dest="$2"
+  local crate="$1" dest="$2" pin="${3:-}"
   local cargo_bin="$HOME/.cargo/bin/cargo"
   log "Checking ${dest} (cargo)..."
   if [[ ! -x "$cargo_bin" ]]; then
@@ -1223,10 +1351,17 @@ cargo_install() {
     return
   fi
   local latest
-  latest=$(curl -sf --connect-timeout 15 \
-    -H "User-Agent: dotfiles-install/1.0" \
-    "https://crates.io/api/v1/crates/${crate}" |
-    grep -oP '"newest_version"\s*:\s*"\K[^"]+' | head -1) || true
+  local -a version_flag=()
+  if [[ "$pin" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    latest="${pin#v}"
+    version_flag=(--version "$latest")
+  else
+    [[ -n "$pin" ]] && warn "${dest}: TOOL_PINS selector ${pin} isn't a crates.io version, so --cargo builds the newest crate instead."
+    latest=$(curl -sf --connect-timeout 15 \
+      -H "User-Agent: dotfiles-install/1.0" \
+      "https://crates.io/api/v1/crates/${crate}" |
+      grep -oP '"newest_version"\s*:\s*"\K[^"]+' | head -1) || true
+  fi
   if [[ -z "$latest" ]]; then
     warn "Could not fetch latest version for ${crate} — skipping"
     return
@@ -1243,7 +1378,7 @@ cargo_install() {
     return
   fi
   log "Installing ${dest} ${latest} via cargo (compiling from source)..."
-  local -a flags=(--root "$DOTFILES/bin/.local" --force)
+  local -a flags=(--root "$DOTFILES/bin/.local" --force "${version_flag[@]}")
   # Try --locked first: if the crate published a Cargo.lock it pins transitive
   # deps (e.g. interprocess 1.x) that may otherwise resolve to a breaking version.
   local install_ok=false
@@ -1279,7 +1414,7 @@ install_tool() {
 
   if [[ "$USE_CARGO" == true && "$crate" != "-" ]]; then
     if [[ -z "${_cargo_done[$dest]+x}" ]]; then
-      cargo_install "$crate" "$dest"
+      cargo_install "$crate" "$dest" "$(tool_pin "$dest" "$repo")"
       _cargo_done[$dest]=1
     fi
     return
@@ -1349,6 +1484,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     # Fork only publishes a linux-x86_64 asset so far — aarch64/darwin rows will
     # 404 on those platforms until it does. Revert to zellij-org/zellij when done
     # testing (repo field only; asset globs/os/arch below are unchanged).
+    # Tracks the fork's nightlies through TOOL_PINS at the top of this file.
     "zellij|zellij|myah-mitchell/zellij|linux|x86_64|zellij-x86_64-unknown-linux-musl.tar.gz|-"
     "zellij|zellij|myah-mitchell/zellij|linux|aarch64|zellij-aarch64-unknown-linux-musl.tar.gz|-"
     "zellij|zellij|myah-mitchell/zellij|darwin|*|zellij-*-apple-darwin.tar.gz|-"
@@ -1598,11 +1734,11 @@ if [[ "$LINK_ONLY" == false ]]; then
     download_release "sxyazi/yazi" "yazi-x86_64-unknown-linux-musl.zip" "yazi" "yazi"
     log "Extracting ya companion binary..."
     tmpdir=$(mktemp -d)
-    latest_yazi=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
-      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/sxyazi/yazi/releases/latest" |
-      grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
+    # Match whatever download_release just installed (latest, or a TOOL_PINS
+    # pin), so yazi and ya never come from different releases.
+    latest_yazi=$(get_installed_version "yazi")
     if [[ -z "$latest_yazi" ]]; then
-      warn "Could not fetch latest version for sxyazi/yazi — skipping ya companion binary."
+      warn "yazi has no recorded version, so there's no release to take ya from. Skipping the ya companion binary."
     elif ! curl -sfL --connect-timeout 30 --max-time 600 --retry 2 \
       "https://github.com/sxyazi/yazi/releases/download/${latest_yazi}/yazi-x86_64-unknown-linux-musl.zip" \
       -o "$tmpdir/yazi.zip"; then

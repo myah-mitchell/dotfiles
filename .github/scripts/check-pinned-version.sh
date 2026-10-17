@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Checks one pinned dependency (a Zellij plugin release tag, or an npm-pinned
-# CLI) against upstream and, if it's behind, rewrites install.sh (and for
+# Checks one pinned dependency (a Zellij plugin release tag, an exact
+# TOOL_PINS release tag, or an npm-pinned CLI) against upstream and, if it's behind, rewrites install.sh (and for
 # ccstatusline, the mirrored settings.json) in place. Driven entirely by env
 # vars set per matrix entry in check-pinned-versions.yml, which lists every
 # tracked name and kind.
@@ -76,13 +76,20 @@ release_notes() {
 }
 
 case "$KIND" in
-  github-release)
+  github-release | tool-release)
     : "${REPO:?}"
-    dest="${NAME}.wasm"
+    # Both pin formats are dest|owner/repo|tag; only the dest differs.
+    if [[ "$KIND" == "tool-release" ]]; then
+      dest="$NAME"
+    else
+      dest="${NAME}.wasm"
+    fi
 
+    # Anchored on the opening quote: "zellij|<repo>|" also occurs inside the
+    # CORE_TOOLS rows ("zellij|zellij|<repo>|linux|...").
     old_version=$(DEST_ENV="$dest" REPO_ENV="$REPO" perl -ne '
       my ($dest, $repo) = ($ENV{DEST_ENV}, $ENV{REPO_ENV});
-      print $1 if /\Q$dest|$repo|\E([^"]+)"/;
+      print $1 if /"\Q$dest|$repo|\E([^"]+)"/;
     ' "$INSTALL_SH")
 
     new_version=$(api_curl "https://api.github.com/repos/${REPO}/releases/latest" \
@@ -96,12 +103,16 @@ case "$KIND" in
       DEST_ENV="$dest" REPO_ENV="$REPO" OLD_ENV="$old_version" NEW_ENV="$new_version" \
         perl -0777 -pi -e '
           my ($dest, $repo, $old, $new) = ($ENV{DEST_ENV}, $ENV{REPO_ENV}, $ENV{OLD_ENV}, $ENV{NEW_ENV});
-          s/\Q$dest|$repo|$old\E/$dest|$repo|$new/;
+          s/"\Q$dest|$repo|$old\E"/"$dest|$repo|$new"/;
         ' "$INSTALL_SH"
     fi
 
     notes_repo="$REPO"
-    review_note="Zellij plugin release. Re-check the plugin's request_permission() call against ZELLIJ_PLUGIN_PERMISSIONS in install.sh. If the new release requests new scopes, that array needs updating too."
+    if [[ "$KIND" == "tool-release" ]]; then
+      review_note="TOOL_PINS release. Check the new release still publishes an asset matching each of the tool's CORE_TOOLS/CLI_TOOLS rows in install.sh, or those platforms will skip it."
+    else
+      review_note="Zellij plugin release. Re-check the plugin's request_permission() call against ZELLIJ_PLUGIN_PERMISSIONS in install.sh. If the new release requests new scopes, that array needs updating too."
+    fi
     ;;
 
   npm)
