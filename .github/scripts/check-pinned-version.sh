@@ -24,10 +24,13 @@ api_curl() {
 # Builds the PR's changelog section from the upstream GitHub Releases between
 # the old pin (exclusive) and the new one (inclusive), newest first. Tags match
 # with or without a leading "v", since npm versions carry no prefix. Releases
-# in between are skipped when they're pre-releases or aliases (non-version tags). Release
-# notes are untrusted: @mentions become code spans so the PR doesn't notify
-# upstream people, and bare #123 refs are qualified so they don't link to
-# this repo's issues. Prints nothing if upstream has no matching release.
+# in between are skipped when they're pre-releases or aliases (non-version
+# tags). Prints nothing if upstream has no matching release.
+#
+# Release notes are untrusted, and this repo is public, so the PR body must not
+# touch upstream: @mentions become code spans (no notification), and every
+# GitHub link and #123 / owner/repo#123 ref goes through redirect.github.com,
+# which GitHub doesn't record as a cross-reference on the upstream issue.
 release_notes() {
   local repo="$1" old="$2" new="$3" releases notes compare=""
   releases=$(api_curl "https://api.github.com/repos/${repo}/releases?per_page=100") || return 0
@@ -46,8 +49,11 @@ release_notes() {
 
   notes=$(REPO_ENV="$repo" perl -pe '
     my $repo = $ENV{REPO_ENV};
+    my $r = "https://redirect.github.com";
+    s{https?://(?:www\.)?github\.com/}{$r/}g;
     s/(?<![\w`\/.])@([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))\b/`\@$1`/g;
-    s/(?<![\w&\/#])#(\d+)\b/$repo#$1/g;
+    s{(?<![\w\/.\[-])([\w.-]+/[\w.-]+)#(\d+)\b}{[$1#$2]($r/$1/issues/$2)}g;
+    s{(?<![\w&/#\[-])#(\d+)\b}{[#$1]($r/$repo/issues/$1)}g;
   ' <<< "$notes")
 
   # GitHub caps a PR body at 65536 characters; leave room for the rest.
