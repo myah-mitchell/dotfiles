@@ -63,6 +63,8 @@ jobs:
             Automated bump of the pinned `${{ matrix.name }}` version from `${{ env.OLD_VERSION }}` to `${{ env.NEW_VERSION }}`, opened by the `check-pinned-versions` workflow.
 
             ${{ env.REVIEW_NOTE }}
+
+            ${{ env.CHANGELOG }}
           branch: bump/${{ matrix.name }}-${{ env.NEW_VERSION }}
           delete-branch: true
           labels: dependencies
