@@ -277,7 +277,7 @@ ZSH_PLUGINS=(
 # ccstatusline: npm-pinned rather than always-latest (see install_ccstatusline
 # below for why) — kept as a plain variable, not a local inside that function,
 # so --check-pins/--upgrade=ccstatusline can read/rewrite it the same way.
-CCSTATUSLINE_PINNED_VERSION="2.2.29"
+CCSTATUSLINE_PINNED_VERSION="2.2.32"
 
 # ── Platform detection ────────────────────────────────────────────────────────
 # Refuse to run in Git Bash / MSYS — symlink semantics break on Windows
