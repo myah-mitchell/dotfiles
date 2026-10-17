@@ -258,7 +258,7 @@ trap 'echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") install.sh exited (status $?) =
 #
 # ZELLIJ_PLUGINS / ZSH_PLUGINS row format: dest|owner/repo|pinned_tag
 ZELLIJ_PLUGINS=(
-  "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.2.2"
+  "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.3.0"
   # TEMPORARY: pointed at myah-mitchell/zjstatus fork instead of dj95/zjstatus.
   # Revert to "zjstatus.wasm|dj95/zjstatus|v0.25.0" when done testing.
   "zjstatus.wasm|myah-mitchell/zjstatus|fork-v0.25.1"
