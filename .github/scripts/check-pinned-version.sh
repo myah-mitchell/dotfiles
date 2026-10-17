@@ -2,8 +2,8 @@
 # Checks one pinned dependency (a Zellij plugin release tag, or an npm-pinned
 # CLI) against upstream and, if it's behind, rewrites install.sh (and for
 # ccstatusline, the mirrored settings.json) in place. Driven entirely by env
-# vars set per matrix entry in check-pinned-versions.yml — see that file for
-# the full list of tracked names/kinds.
+# vars set per matrix entry in check-pinned-versions.yml, which lists every
+# tracked name and kind.
 #
 # Values fetched from upstream (release tags, npm versions) are treated as
 # untrusted and passed to Perl via %ENV rather than interpolated into -e
@@ -46,15 +46,19 @@ case "$KIND" in
         ' "$INSTALL_SH"
     fi
 
-    review_note="Zellij plugin release. Re-check the plugin's request_permission() call against ZELLIJ_PLUGIN_PERMISSIONS in install.sh — if the new release requests new scopes, that array needs updating too."
+    review_note="Zellij plugin release. Re-check the plugin's request_permission() call against ZELLIJ_PLUGIN_PERMISSIONS in install.sh. If the new release requests new scopes, that array needs updating too."
     ;;
 
   npm)
     : "${PACKAGE:?}"
 
-    old_version=$(PKG_ENV="$PACKAGE" perl -0777 -ne '
-      my $pkg = $ENV{PKG_ENV};
-      print $1 if /install_\Q$pkg\E\(\)\s*\{.*?local pinned_version="([^"]+)"/s;
+    # The pin is a top-level <PACKAGE>_PINNED_VERSION="..." assignment,
+    # shared with install.sh's own --check-pins/--upgrade.
+    pin_var="$(tr 'a-z-' 'A-Z_' <<< "$PACKAGE")_PINNED_VERSION"
+
+    old_version=$(VAR_ENV="$pin_var" perl -ne '
+      my $var = $ENV{VAR_ENV};
+      print $1 if /^\Q$var\E="([^"]+)"/;
     ' "$INSTALL_SH")
 
     new_version=$(api_curl "https://registry.npmjs.org/${PACKAGE}/latest" | jq -r '.version')
@@ -64,9 +68,9 @@ case "$KIND" in
     fi
 
     if [[ "$old_version" != "$new_version" ]]; then
-      PKG_ENV="$PACKAGE" NEW_ENV="$new_version" perl -0777 -pi -e '
-        my ($pkg, $new) = ($ENV{PKG_ENV}, $ENV{NEW_ENV});
-        s/(install_\Q$pkg\E\(\)\s*\{.*?local pinned_version=")[^"]+(")/$1$new$2/s;
+      VAR_ENV="$pin_var" NEW_ENV="$new_version" perl -pi -e '
+        my ($var, $new) = ($ENV{VAR_ENV}, $ENV{NEW_ENV});
+        s/^(\Q$var\E=")[^"]+(")/$1$new$2/;
       ' "$INSTALL_SH"
     fi
 
@@ -85,6 +89,13 @@ case "$KIND" in
     exit 1
     ;;
 esac
+
+# An empty old_version means the matrix entry no longer matches install.sh
+# (a renamed plugin or a changed repo). Fail instead of reporting a bogus bump.
+if [[ -z "$old_version" ]]; then
+  echo "No pin for ${NAME} found in ${INSTALL_SH}; update the workflow matrix to match" >&2
+  exit 1
+fi
 
 echo "${NAME}: ${old_version} -> ${new_version}"
 
