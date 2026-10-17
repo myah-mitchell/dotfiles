@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -42,7 +42,7 @@ jobs:
             kind: npm
             package: ccstatusline
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check ${{ matrix.name }}
         env:
@@ -55,7 +55,7 @@ jobs:
 
       - name: Open pull request
         if: env.VERSION_CHANGED == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore(install): bump ${{ matrix.name }} to ${{ env.NEW_VERSION }}"
           title: "chore(install): bump ${{ matrix.name }} from ${{ env.OLD_VERSION }} to ${{ env.NEW_VERSION }}"
