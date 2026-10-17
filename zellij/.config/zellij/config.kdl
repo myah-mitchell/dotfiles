@@ -44,9 +44,20 @@ ui {
 // zjstatus: themed tab/status bar used by layouts/default.kdl.
 plugins {
     autolock location="file:~/.local/share/zellij/plugins/zellij-autolock.wasm" {
-        triggers         "nvim|hx|fzf|zoxide|atuin|tmux"
-        //watch_interval   "2"
-        reload_config    "true"
+        // Start enabled? (default: true)
+        is_enabled true
+        // Lock when the running command matches this regex.
+        // (default: ".*", as shown: lock for everything)
+        // Each regex is tested against both the full command line and the
+        // bare executable name (e.g. `/usr/bin/nvim foo.txt` and `nvim`).
+        lock_regex "nvim|hx|fzf|zoxide|atuin|tmux"
+        // ...but never lock when the command matches this regex.
+        // (default: common shells and prompt tooling, as shown)
+        // A pane idle at its prompt reports the shell itself (e.g. `/bin/zsh`),
+        // so shells must be listed here.
+        ignore_regex "^(zellij|sh|ash|dash|bash|zsh|fish|ksh|mksh|csh|tcsh|nu|xonsh|elvish|pwsh|powershell|cmd|ls|lsd|eza|starship|direnv|\\(atuin\\)|atuin history start.*)(\\.exe)?$"
+        // Zellij log verbosity: trace, debug, info, warn, error, or critical. (default: "info")
+        log_level "info"
     }
 
     zjstatus location="file:~/.local/share/zellij/plugins/zjstatus.wasm" {
@@ -396,12 +407,17 @@ keybinds clear-defaults=false {
     locked {
         bind "Ctrl g" { 
             // Enable the autolock plugin.
-            MessagePlugin "autolock" {payload "enable";};
+            MessagePlugin "autolock" {payload "toggle";};
             // Unlock Zellij.
             SwitchToMode "Normal"; 
         }
     }
     shared {
+        bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
+        bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
+        bind "Alt j" "Alt Down" { MoveFocus "Down"; }
+        bind "Alt k" "Alt Up" { MoveFocus "Up"; }
+
         bind "Ctrl y" { Copy; }
     }
     shared_except "locked" {
@@ -414,7 +430,7 @@ keybinds clear-defaults=false {
         bind "Ctrl l" { MoveFocus "Right"; }
         bind "Ctrl g" {
             // Disable the autolock plugin.
-            MessagePlugin "autolock" {payload "disable";};
+            MessagePlugin "autolock" {payload "toggle";};
             // Lock Zellij.
             SwitchToMode "Locked";
         }
@@ -423,10 +439,6 @@ keybinds clear-defaults=false {
         unbind "Alt n" //{ NewPane; }
         unbind "Alt i" //{ MoveTab "Left"; }
         unbind "Alt o" //{ MoveTab "Right"; }
-        unbind "Alt h" "Alt Left" //{ MoveFocusOrTab "Left"; }
-        unbind "Alt l" "Alt Right" //{ MoveFocusOrTab "Right"; }
-        unbind "Alt j" "Alt Down" //{ MoveFocus "Down"; }
-        unbind "Alt k" "Alt Up" //{ MoveFocus "Up"; }
         unbind "Alt =" "Alt +" //{ Resize "Increase"; }
         unbind "Alt -" //{ Resize "Decrease"; }
     }
