@@ -966,7 +966,7 @@ newest_release_asset() {
   echo "$response" |
     grep -oP '"(tag_name|browser_download_url)":\s*"[^"]+"' |
     RE="$2" PREFIX="${3:-}" \
-      EXCL='\.sha256|\.sha512|\.asc|\.sig|checksums|\.deb|\.rpm|\.msi|\.dmg|\.pkg|-apple-darwin|windows|\.exe|android' \
+      EXCL='\.sha256|\.sha512|\.asc|\.sig|checksums|\.deb|\.rpm|\.msi|\.dmg|\.pkg|windows|\.exe|android' \
       awk -F'"' '
         $2 == "tag_name" { tag = $4; next }
         ENVIRON["PREFIX"] != "" && index(tag, ENVIRON["PREFIX"]) != 1 { next }
@@ -1478,7 +1478,8 @@ if [[ "$LINK_ONLY" == false ]]; then
   CORE_TOOLS=(
     "starship|starship|starship/starship|linux|x86_64|starship-x86_64-unknown-linux-musl.tar.gz|-"
     "starship|starship|starship/starship|linux|aarch64|starship-aarch64-unknown-linux-musl.tar.gz|-"
-    "starship|starship|starship/starship|darwin|*|starship-*-apple-darwin.tar.gz|-"
+    "starship|starship|starship/starship|darwin|x86_64|starship-x86_64-apple-darwin.tar.gz|-"
+    "starship|starship|starship/starship|darwin|aarch64|starship-aarch64-apple-darwin.tar.gz|-"
 
     # TEMPORARY: pointed at myah-mitchell/zellij fork instead of zellij-org/zellij.
     # Fork only publishes a linux-x86_64 asset so far — aarch64/darwin rows will
@@ -1487,11 +1488,13 @@ if [[ "$LINK_ONLY" == false ]]; then
     # Tracks the fork's nightlies through TOOL_PINS at the top of this file.
     "zellij|zellij|myah-mitchell/zellij|linux|x86_64|zellij-x86_64-unknown-linux-musl.tar.gz|-"
     "zellij|zellij|myah-mitchell/zellij|linux|aarch64|zellij-aarch64-unknown-linux-musl.tar.gz|-"
-    "zellij|zellij|myah-mitchell/zellij|darwin|*|zellij-*-apple-darwin.tar.gz|-"
+    "zellij|zellij|myah-mitchell/zellij|darwin|x86_64|zellij-x86_64-apple-darwin.tar.gz|-"
+    "zellij|zellij|myah-mitchell/zellij|darwin|aarch64|zellij-aarch64-apple-darwin.tar.gz|-"
 
     #"zellij|zellij|zellij-org/zellij|linux|x86_64|zellij-x86_64-unknown-linux-musl.tar.gz|-"
     #"zellij|zellij|zellij-org/zellij|linux|aarch64|zellij-aarch64-unknown-linux-musl.tar.gz|-"
-    #"zellij|zellij|zellij-org/zellij|darwin|*|zellij-*-apple-darwin.tar.gz|-"
+    #"zellij|zellij|zellij-org/zellij|darwin|x86_64|zellij-x86_64-apple-darwin.tar.gz|-"
+    #"zellij|zellij|zellij-org/zellij|darwin|aarch64|zellij-aarch64-apple-darwin.tar.gz|-"
   )
   # nu: optional secondary shell, only downloaded under --nushell (see
   # WANT_NUSHELL above). Appended here rather than declared inline above so
@@ -1558,18 +1561,22 @@ if [[ "$LINK_ONLY" == false ]]; then
   CLI_TOOLS=(
     "bat|bat|sharkdp/bat|linux|x86_64|bat-*-x86_64*linux*musl*.tar.gz|-"
     "bat|bat|sharkdp/bat|linux|aarch64|bat-*-aarch64*linux*musl*.tar.gz|-"
-    "bat|bat|sharkdp/bat|darwin|*|bat-*-*apple*darwin*.tar.gz|-"
+    "bat|bat|sharkdp/bat|darwin|x86_64|bat-*-x86_64-apple-darwin.tar.gz|-"
+    "bat|bat|sharkdp/bat|darwin|aarch64|bat-*-aarch64-apple-darwin.tar.gz|-"
 
     "fd|fd-find|sharkdp/fd|linux|x86_64|fd-*-x86_64*linux*musl*.tar.gz|-"
     "fd|fd-find|sharkdp/fd|linux|aarch64|fd-*-aarch64*linux*musl*.tar.gz|-"
-    "fd|fd-find|sharkdp/fd|darwin|*|fd-*-*apple*darwin*.tar.gz|-"
+    "fd|fd-find|sharkdp/fd|darwin|x86_64|fd-*-x86_64-apple-darwin.tar.gz|-"
+    "fd|fd-find|sharkdp/fd|darwin|aarch64|fd-*-aarch64-apple-darwin.tar.gz|-"
 
     "rg|ripgrep|BurntSushi/ripgrep|linux|x86_64|ripgrep-*-x86_64*linux*musl*.tar.gz|rg"
     "rg|ripgrep|BurntSushi/ripgrep|linux|aarch64|ripgrep-*-aarch64*linux*.tar.gz|rg"
-    "rg|ripgrep|BurntSushi/ripgrep|darwin|*|ripgrep-*-*apple*darwin*.tar.gz|rg"
+    "rg|ripgrep|BurntSushi/ripgrep|darwin|x86_64|ripgrep-*-x86_64-apple-darwin.tar.gz|rg"
+    "rg|ripgrep|BurntSushi/ripgrep|darwin|aarch64|ripgrep-*-aarch64-apple-darwin.tar.gz|rg"
 
     "rga|ripgrep_all|phiresky/ripgrep-all|linux|x86_64|ripgrep_all-*-x86_64*linux*musl*.tar.gz|rga"
-    "rga|ripgrep_all|phiresky/ripgrep-all|darwin|*|ripgrep_all-*-*apple*darwin*.tar.gz|rga"
+    "rga|ripgrep_all|phiresky/ripgrep-all|darwin|x86_64|ripgrep_all-*-x86_64-apple-darwin.tar.gz|rga"
+    "rga|ripgrep_all|phiresky/ripgrep-all|darwin|aarch64|ripgrep_all-*-aarch64-apple-darwin.tar.gz|rga"
 
     "eza|eza|eza-community/eza|linux|x86_64|eza_x86_64*linux*musl*.tar.gz|-"
     "eza|eza|eza-community/eza|linux|aarch64|eza_aarch64*linux*musl*.tar.gz|-"
@@ -1582,7 +1589,8 @@ if [[ "$LINK_ONLY" == false ]]; then
 
     "zoxide|zoxide|ajeetdsouza/zoxide|linux|x86_64|zoxide-*-x86_64*linux*musl*.tar.gz|-"
     "zoxide|zoxide|ajeetdsouza/zoxide|linux|aarch64|zoxide-*-aarch64*linux*musl*.tar.gz|-"
-    "zoxide|zoxide|ajeetdsouza/zoxide|darwin|*|zoxide-*-*apple*darwin*.tar.gz|-"
+    "zoxide|zoxide|ajeetdsouza/zoxide|darwin|x86_64|zoxide-*-x86_64-apple-darwin.tar.gz|-"
+    "zoxide|zoxide|ajeetdsouza/zoxide|darwin|aarch64|zoxide-*-aarch64-apple-darwin.tar.gz|-"
 
     # ruff: Python linter/formatter (+ built-in `ruff server` LSP). Standalone
     # binary, so it works without pip — Mason's ruff is pip-based and can't
@@ -1603,7 +1611,8 @@ if [[ "$LINK_ONLY" == false ]]; then
 
     "lazygit|-|jesseduffield/lazygit|linux|x86_64|lazygit_*_Linux_x86_64.tar.gz|-"
     "lazygit|-|jesseduffield/lazygit|linux|aarch64|lazygit_*_Linux_arm64.tar.gz|-"
-    "lazygit|-|jesseduffield/lazygit|darwin|*|lazygit_*_Darwin_*.tar.gz|-"
+    "lazygit|-|jesseduffield/lazygit|darwin|x86_64|lazygit_*_Darwin_x86_64.tar.gz|-"
+    "lazygit|-|jesseduffield/lazygit|darwin|aarch64|lazygit_*_Darwin_arm64.tar.gz|-"
 
     "serpl|yassinebridi/serpl|linux|x86_64|serpl-*-linux-x86_64.tar.gz"
     "serpl|yassinebridi/serpl|linux|aarch64|serpl-*-linux-arm64.tar.gz"
@@ -1622,14 +1631,16 @@ if [[ "$LINK_ONLY" == false ]]; then
 
     "tldr|tealdeer|tealdeer-rs/tealdeer|linux|x86_64|tealdeer-linux-x86_64-musl|-"
     "tldr|tealdeer|tealdeer-rs/tealdeer|linux|aarch64|tealdeer-linux-aarch64-musl|-"
-    "tldr|tealdeer|tealdeer-rs/tealdeer|darwin|*|tealdeer-macos|-"
+    "tldr|tealdeer|tealdeer-rs/tealdeer|darwin|x86_64|tealdeer-macos-x86_64|-"
+    "tldr|tealdeer|tealdeer-rs/tealdeer|darwin|aarch64|tealdeer-macos-aarch64|-"
 
     "tspin|tailspin|bensadeh/tailspin|linux|x86_64|tailspin-x86_64-unknown-linux-musl.tar.gz|-"
     "tspin|tailspin|bensadeh/tailspin|linux|aarch64|tailspin-aarch64-unknown-linux-musl.tar.gz|-"
-    "tspin|tailspin|bensadeh/tailspin|darwin|*|tailspin-*-apple-darwin.tar.gz|-"
+    "tspin|tailspin|bensadeh/tailspin|darwin|x86_64|tailspin-x86_64-apple-darwin.tar.gz|-"
+    "tspin|tailspin|bensadeh/tailspin|darwin|aarch64|tailspin-aarch64-apple-darwin.tar.gz|-"
 
     "choose|choose|theryangeary/choose|linux|x86_64|choose-x86_64-unknown-linux-musl|-"
-    "choose|choose|theryangeary/choose|darwin|*|choose-*-apple-darwin|-"
+    "choose|choose|theryangeary/choose|darwin|aarch64|choose-aarch64-apple-darwin|-"
 
     "difft|difftastic|Wilfred/difftastic|linux|x86_64|difft-x86_64-unknown-linux-gnu.tar.gz|-"
     "difft|difftastic|Wilfred/difftastic|linux|aarch64|difft-aarch64-unknown-linux-gnu.tar.gz|-"
@@ -1656,13 +1667,16 @@ if [[ "$LINK_ONLY" == false ]]; then
 
     "atuin|atuin|atuinsh/atuin|linux|x86_64|atuin-x86_64-unknown-linux-musl.tar.gz|-"
     "atuin|atuin|atuinsh/atuin|linux|aarch64|atuin-aarch64-unknown-linux-musl.tar.gz|-"
-    "atuin|atuin|atuinsh/atuin|darwin|*|atuin-*-apple-darwin.tar.gz|-"
+    "atuin|atuin|atuinsh/atuin|darwin|x86_64|atuin-x86_64-apple-darwin.tar.gz|-"
+    "atuin|atuin|atuinsh/atuin|darwin|aarch64|atuin-aarch64-apple-darwin.tar.gz|-"
 
     "procs|procs|dalance/procs|linux|x86_64|procs-v*-x86_64*linux*.zip|-"
-    "procs|procs|dalance/procs|darwin|*|procs-v*-*apple*darwin*.zip|-"
+    "procs|procs|dalance/procs|darwin|x86_64|procs-v*-x86_64-mac.zip|-"
+    "procs|procs|dalance/procs|darwin|aarch64|procs-v*-aarch64-mac.zip|-"
 
     "sd|sd|chmln/sd|linux|x86_64|sd-v*-x86_64*linux*musl*.tar.gz|-"
-    "sd|sd|chmln/sd|darwin|*|sd-v*-*apple*darwin*.tar.gz|-"
+    "sd|sd|chmln/sd|darwin|x86_64|sd-v*-x86_64-apple-darwin.tar.gz|-"
+    "sd|sd|chmln/sd|darwin|aarch64|sd-v*-aarch64-apple-darwin.tar.gz|-"
 
     "viddy|-|sachaos/viddy|linux|x86_64|viddy-*-linux-x86_64.tar.gz|-"
     "viddy|-|sachaos/viddy|linux|aarch64|viddy-*-linux-arm64.tar.gz|-"
@@ -1671,10 +1685,12 @@ if [[ "$LINK_ONLY" == false ]]; then
 
     "ouch|ouch|ouch-org/ouch|linux|x86_64|ouch-x86_64-unknown-linux-musl.tar.gz|-"
     "ouch|ouch|ouch-org/ouch|linux|aarch64|ouch-aarch64-unknown-linux-musl.tar.gz|-"
-    "ouch|ouch|ouch-org/ouch|darwin|*|ouch-*-apple-darwin.tar.gz|-"
+    "ouch|ouch|ouch-org/ouch|darwin|x86_64|ouch-x86_64-apple-darwin.tar.gz|-"
+    "ouch|ouch|ouch-org/ouch|darwin|aarch64|ouch-aarch64-apple-darwin.tar.gz|-"
 
     "presenterm|presenterm|mfontanini/presenterm|linux|x86_64|presenterm-*-x86_64*linux*musl*.tar.gz|-"
-    "presenterm|presenterm|mfontanini/presenterm|darwin|*|presenterm-*-*apple*darwin*.tar.gz|-"
+    "presenterm|presenterm|mfontanini/presenterm|darwin|x86_64|presenterm-*-x86_64-apple-darwin.tar.gz|-"
+    "presenterm|presenterm|mfontanini/presenterm|darwin|aarch64|presenterm-*-aarch64-apple-darwin.tar.gz|-"
 
     "asciinema|-|asciinema/asciinema|linux|x86_64|asciinema-x86_64-unknown-linux-musl|-"
     "asciinema|-|asciinema/asciinema|linux|aarch64|asciinema-aarch64-unknown-linux-gnu|-"
@@ -1683,7 +1699,8 @@ if [[ "$LINK_ONLY" == false ]]; then
 
     "btm|bottom|ClementTsang/bottom|linux|x86_64|bottom_x86_64-unknown-linux-musl.tar.gz|btm"
     "btm|bottom|ClementTsang/bottom|linux|aarch64|bottom_aarch64-unknown-linux-musl.tar.gz|btm"
-    "btm|bottom|ClementTsang/bottom|darwin|*|bottom_*-apple-darwin.tar.gz|btm"
+    "btm|bottom|ClementTsang/bottom|darwin|x86_64|bottom_x86_64-apple-darwin.tar.gz|btm"
+    "btm|bottom|ClementTsang/bottom|darwin|aarch64|bottom_aarch64-apple-darwin.tar.gz|btm"
 
     "carapace|-|carapace-sh/carapace-bin|linux|x86_64|carapace-bin_*_linux_amd64.tar.gz|carapace"
     "carapace|-|carapace-sh/carapace-bin|linux|aarch64|carapace-bin_*_linux_arm64.tar.gz|carapace"
@@ -1692,7 +1709,8 @@ if [[ "$LINK_ONLY" == false ]]; then
 
     "glow|-|charmbracelet/glow|linux|x86_64|glow_*_linux_x86_64.tar.gz|glow"
     "glow|-|charmbracelet/glow|linux|aarch64|glow_*_linux_arm64.tar.gz|glow"
-    "glow|-|charmbracelet/glow|darwin|*|glow_*_darwin_*.tar.gz|glow"
+    "glow|-|charmbracelet/glow|darwin|x86_64|glow_*_Darwin_x86_64.tar.gz|glow"
+    "glow|-|charmbracelet/glow|darwin|aarch64|glow_*_Darwin_arm64.tar.gz|glow"
 
     # mdcat: markdown renderer that draws inline images and real hyperlinks
     # via terminal graphics/OSC 8, where glow renders styled text only.
@@ -1724,7 +1742,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "tree-sitter-cli|-|tree-sitter/tree-sitter|linux|x86_64|tree-sitter-cli-linux-x64|tree-sitter"
     "tree-sitter-cli|-|tree-sitter/tree-sitter|linux|aarch64|tree-sitter-cli-linux-arm64|tree-sitter"
     "tree-sitter-cli|-|tree-sitter/tree-sitter|darwin|x86_64|tree-sitter-cli-macos-x64|tree-sitter"
-    "tree-sitter-cli|-|tree-sitter/tree-sitter|darwin|aarch64|tree-sitte-clir-macos-arm64|tree-sitter"
+    "tree-sitter-cli|-|tree-sitter/tree-sitter|darwin|aarch64|tree-sitter-cli-macos-arm64|tree-sitter"
   )
   for t in "${CLI_TOOLS[@]}"; do install_tool "$t"; done
 
@@ -1753,7 +1771,7 @@ if [[ "$LINK_ONLY" == false ]]; then
   elif [[ "$OS" == "linux" && "$ARCH" == "aarch64" ]]; then
     download_release "sxyazi/yazi" "yazi-aarch64-unknown-linux-musl.zip" "yazi" "yazi"
   elif [[ "$OS" == "darwin" ]]; then
-    download_release "sxyazi/yazi" "yazi-*-apple-darwin.zip" "yazi" "yazi"
+    download_release "sxyazi/yazi" "yazi-${ARCH}-apple-darwin.zip" "yazi" "yazi"
   fi
 
   # mosh — no pre-built release binaries, use system package manager

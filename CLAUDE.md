@@ -234,7 +234,7 @@ Every invocation appends its full output to `~/.local/state/dotfiles/install.log
 
 ### Adding a tool
 
-Follow the `download_release()` pattern in the `CORE_TOOLS` and `CLI_TOOLS` arrays: `dest|crate|repo|os|arch|asset-glob|binary-name-in-archive`, fetched through the GitHub releases API and compared against `.versions`. Set `GITHUB_TOKEN` before a fresh install: unauthenticated GitHub API calls are capped at 60 an hour, and installing 25 or more tools from scratch can hit that.
+Follow the `download_release()` pattern in the `CORE_TOOLS` and `CLI_TOOLS` arrays: `dest|crate|repo|os|arch|asset-glob|binary-name-in-archive`, fetched through the GitHub releases API and compared against `.versions`. Each platform gets its own row: use `darwin|*` only when the asset is a universal macOS build, since `*` takes whichever architecture's asset matches first. Set `GITHUB_TOKEN` before a fresh install: unauthenticated GitHub API calls are capped at 60 an hour, and installing 25 or more tools from scratch can hit that.
 
 ### Pinning a tool
 
