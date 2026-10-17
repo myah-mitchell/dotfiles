@@ -854,6 +854,32 @@ if [[ "$OS" == "linux" ]] && command -v locale-gen &>/dev/null; then
 fi
 
 # ── GitHub release downloader ─────────────────────────────────────────────────
+# Usage: newest_release_asset RELEASES_JSON ASSET_REGEX [TAG_PREFIX]
+# Prints "<tag>\t<asset-url>" for the first release in a GitHub releases API
+# response (a /releases list, or a single release object) that
+# has an asset matching ASSET_REGEX (case-insensitive) and, if TAG_PREFIX is
+# set, a tag starting with it. Relies on the API listing each release's
+# tag_name before its assets array, so the tag printed is always the one the
+# asset belongs to. Values go through ENVIRON rather than awk -v, which would
+# eat the backslashes in the regexes.
+newest_release_asset() {
+  local response="$1"
+  echo "$response" |
+    grep -oP '"(tag_name|browser_download_url)":\s*"[^"]+"' |
+    RE="$2" PREFIX="${3:-}" \
+      EXCL='\.sha256|\.sha512|\.asc|\.sig|checksums|\.deb|\.rpm|\.msi|\.dmg|\.pkg|-apple-darwin|windows|\.exe|android' \
+      awk -F'"' '
+        $2 == "tag_name" { tag = $4; next }
+        ENVIRON["PREFIX"] != "" && index(tag, ENVIRON["PREFIX"]) != 1 { next }
+        {
+          url = tolower($4)
+          if (url ~ ENVIRON["EXCL"] || url !~ tolower(ENVIRON["RE"])) next
+          print tag "\t" $4
+          exit
+        }
+      ' || true
+}
+
 # Usage: download_release REPO ASSET_GLOB DEST_BIN [BINARY_IN_ARCHIVE]
 # ASSET_GLOB: shell glob matching the archive filename, e.g. "bat-*-x86_64*linux*musl*.tar.gz"
 # DEST_BIN:   filename to create in BIN_DIR
@@ -885,15 +911,31 @@ download_release() {
     return
   fi
 
+  # Convert shell glob wildcards (*) to grep extended-regex (.*) for proper matching
+  local regex="${glob//\*/.*}"
+
   # Single API call — parse both tag_name and asset URLs from one response.
-  local api_response
+  local latest="" asset_url="" api_response
   api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
     "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases/latest") || true
 
-  local latest
   latest=$(echo "$api_response" | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
   if [[ -z "$latest" ]]; then
     warn "Could not fetch latest version for ${repo} — skipping."
+    return
+  fi
+
+  IFS=$'\t' read -r latest asset_url < <(newest_release_asset "$api_response" "$regex") || true
+  if [[ -z "$asset_url" ]]; then
+    # /releases/latest may have no matching asset (some repos attach assets
+    # to an older release). Take the newest release in the list that has
+    # one, recording that release's own tag rather than the list's first.
+    api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases?per_page=30") || true
+    IFS=$'\t' read -r latest asset_url < <(newest_release_asset "$api_response" "$regex") || true
+  fi
+  if [[ -z "$asset_url" ]]; then
+    warn "No matching asset found for ${dest} (pattern: ${glob}) — skipping."
     return
   fi
 
@@ -903,41 +945,6 @@ download_release() {
   fi
 
   log "Downloading ${dest} ${latest}..."
-
-  # Convert shell glob wildcards (*) to grep extended-regex (.*) for proper matching
-  local regex="${glob//\*/.*}"
-
-  # Find the matching asset URL from the cached API response
-  local asset_url
-  asset_url=$(echo "$api_response" |
-    grep '"browser_download_url"' |
-    grep -v '\.sha256\|\.sha512\|\.asc\|\.sig\|checksums\|\.deb\|\.rpm\|\.msi\|\.dmg\|\.pkg\|-apple-darwin\|windows\|\.exe\|android' |
-    grep -iE "$regex" |
-    head -1 |
-    cut -d'"' -f4) || true
-
-  if [[ -z "$asset_url" ]]; then
-    # Fallback: /releases/latest may have no assets on some repos. Try the
-    # releases list and take the newest release that has a matching asset.
-    local releases_response
-    releases_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
-      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases?per_page=5") || true
-    asset_url=$(echo "$releases_response" |
-      grep '"browser_download_url"' |
-      grep -v '\.sha256\|\.sha512\|\.asc\|\.sig\|checksums\|\.deb\|\.rpm\|\.msi\|\.dmg\|\.pkg\|-apple-darwin\|windows\|\.exe\|android' |
-      grep -iE "$regex" |
-      head -1 |
-      cut -d'"' -f4) || true
-    if [[ -n "$asset_url" ]]; then
-      # Extract version from the URL for tracking
-      latest=$(echo "$releases_response" | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
-    fi
-  fi
-
-  if [[ -z "$asset_url" ]]; then
-    warn "No matching asset found for ${dest} (pattern: ${glob}) — skipping."
-    return
-  fi
 
   local tmpdir
   tmpdir=$(mktemp -d)
