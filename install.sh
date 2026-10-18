@@ -265,10 +265,10 @@ ZELLIJ_PLUGINS=(
   # Revert to "zjstatus.wasm|dj95/zjstatus|v0.25.0" when done testing.
   "zjstatus.wasm|myah-mitchell/zjstatus|fork-v0.25.1"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
-  # TEMPORARY: pinned to the moving nightly tag for the nested-session API port,
-  # which needs zellij fork-v0.46.2 or later. Nightly moves in place, so run
-  # with --update to pick up a newer one. Pin a versioned tag again once
-  # zjhints cuts a release.
+  # TEMPORARY: pinned to the ea-mouse-support prerelease for clickable hints,
+  # which needs zellij fork-v0.46.2 or later. A tag rebuilt in place is only
+  # picked up with --update. Pin a versioned tag again once zjhints cuts a
+  # release.
   "zjhints.wasm|myah-mitchell/zjhints|ea-mouse-support"
 )
 ZSH_PLUGINS=(
@@ -2211,7 +2211,8 @@ done
 ZELLIJ_PLUGIN_PERMISSIONS=(
   "zellij-autolock.wasm|ReadApplicationState ChangeApplicationState"
   "zjstatus.wasm|ReadApplicationState ChangeApplicationState RunCommands"
-  "zjhints.wasm|ReadApplicationState MessageAndLaunchOtherPlugins"
+  # zjhints asks for the last three only when its mouse option is on.
+  "zjhints.wasm|ReadApplicationState MessageAndLaunchOtherPlugins RunActionsAsUser ChangeApplicationState OpenTerminalsOrPlugins"
   "zellij-newtab-plus.wasm|RunCommands Reconfigure ReadApplicationState ChangeApplicationState"
 )
 ZELLIJ_PERMISSIONS_FILE="$HOME/.cache/zellij/permissions.kdl"

@@ -72,7 +72,7 @@ Versions are pinned in the `ZELLIJ_PLUGINS` array in `install.sh` and must stay 
 | `zellij-autolock.wasm` | `fresh2dev/zellij-autolock` | Tagged release |
 | `zjstatus.wasm` | `myah-mitchell/zjstatus` fork | Temporary; see the comment in `ZELLIJ_PLUGINS` for the upstream pin to restore |
 | `zellij-newtab-plus.wasm` | `AlexZasorin/zellij-newtab-plus` | Tagged release; powers the `c` binding |
-| `zjhints.wasm` | `myah-mitchell/zjhints` | Own repo; temporarily pinned to the moving `nightly` tag, so `--update` picks up new builds |
+| `zjhints.wasm` | `myah-mitchell/zjhints` | Own repo; temporarily pinned to the `ea-mouse-support` prerelease, and `--update` picks up a rebuilt tag |
 
 zellij itself is also temporarily installed from the `myah-mitchell/zellij` fork (see the `TEMPORARY` comment on its `CORE_TOOLS` rows). That fork publishes only a linux-x86_64 asset, so aarch64 and macOS installs fail until it publishes more. Its `TOOL_PINS` entry pins the exact tag `fork-v0.46.4`, because the fork's nightlies are built from plain upstream main without the fork's patches; switch it to `nightly-*` once they include them (see [Pinning a tool](#pinning-a-tool)). zjhints needs that fork at `fork-v0.46.2` or later.
 
