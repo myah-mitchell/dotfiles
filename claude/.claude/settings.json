@@ -1,8 +1,6 @@
 {
   "cleanupPeriodDays": 360,
-  "env": {
-    "ENABLE_CLAUDEAI_MCP_SERVERS": "false"
-  },
+  "disableClaudeAiConnectors": true,
   "attribution": {
     "commit": "",
     "pr": "",
