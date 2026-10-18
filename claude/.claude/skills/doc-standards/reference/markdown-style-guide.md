@@ -58,7 +58,7 @@ Because bold means this and nothing else, a reader can scan a page, read only th
 
 Italic marks text the interface displays: field labels, tab names, section titles, dialog titles, column headers, page names, the wording of a message the reader will see. It answers "where am I?" and "what is this called?".
 
-Quote the label exactly as it appears on screen, including its capitalisation. If the UI says *E-mail address*, write *E-mail address*, not *Email*.
+Quote the label exactly as it appears on screen, including its capitalization. If the UI says *E-mail address*, write *E-mail address*, not *Email*.
 
 Navigation paths are locations, so they are italic, with `>` between the levels and no code formatting inside them:
 
@@ -140,7 +140,7 @@ Three consequences come up constantly and are worth spelling out.
 
 #### Role beats type
 
-A button is a labelled thing on the page, but when the reader is told to press it the action wins and it is bold. The same element is italic when you are only locating it:
+A button is a labeled thing on the page, but when the reader is told to press it the action wins and it is bold. The same element is italic when you are only locating it:
 
 ```markdown
 Click **Sign Up**.
@@ -199,7 +199,7 @@ Good: ### A shared operational tip
 
 ### Keep the units small
 
-Emphasis marks a target the reader can point at, so it is one to four words. Never bold or italicise a whole sentence, a whole list item, or any clause containing a verb.
+Emphasis marks a target the reader can point at, so it is one to four words. Never bold or italicize a whole sentence, a whole list item, or any clause containing a verb.
 
 ```markdown
 Bad:  **Registering other hosts and deploying stacks to them through Komodo** is covered elsewhere.
@@ -534,7 +534,7 @@ qm create <km-vmid> --name km01 --cores 2 --memory 4096 \
 - A document with more than two placeholders opens with a table naming each one and where its value comes from, so the reader can gather them before starting rather than stopping mid-procedure. Every placeholder the page uses goes in that table, including the ones that only appear once.
 - Never paste a real IP address, key, token, password, or certificate, even an expired one.
 - Take example IPv4 addresses and subnets from `172.16.0.0/16`, that is `172.16.0.x` through `172.16.255.x`, and IPv6 ones from `2001:db8::/32`. The examples use `172.16.1.0/24` for the Proxmox hosts, `172.16.7.0/24` for the internal network on VLAN 7, and `172.16.8.0/24` for the DMZ on VLAN 8, so the third part of an address is its VLAN. A private range looks like the network the reader really has, and the fleet's own addresses are outside it.
-- Where a repo ships a sanitised example inventory or config, the docs use those same values, so the commands run as written.
+- Where a repo ships a sanitized example inventory or config, the docs use those same values, so the commands run as written.
 
 ### Use the real domain, not example.com
 
@@ -620,7 +620,7 @@ flowchart LR
 - Use `flowchart` for structure and flow, and `sequenceDiagram` when the order of messages between actors is the point.
 - Keep it to about twelve nodes. A bigger picture is two diagrams, or an overview and a detail.
 - Label a node with the name the text uses for it. Label an arrow with what travels along it or what triggers it, in a few words.
-- Set no colours, fonts, or styles. The theme supplies them, and a hand-picked colour fails in one of the two modes.
+- Set no colors, fonts, or styles. The theme supplies them, and a hand-picked color fails in one of the two modes.
 - Put a diagram in an explanatory section or a [background block](#background-blocks), never between two steps of a procedure.
 - No emphasis markers and no code spans inside a diagram. A label is plain text.
 
@@ -646,12 +646,13 @@ Draw an SVG only when Mermaid cannot lay the picture out legibly, which in pract
 
 ## Punctuation and characters
 
-- No em-dashes, and no hyphen standing in for one. Recast with a full stop, comma, colon, semicolon, or parentheses. Two clauses joined by a dash are almost always two sentences.
+- No em-dashes, and no hyphen standing in for one. Recast with a period, comma, colon, semicolon, or parentheses. Two clauses joined by a dash are almost always two sentences.
 - Straight quotes and apostrophes, not typographic ones, so copied text behaves.
 - ASCII over decorative Unicode: `>` in navigation paths rather than an arrow, `->` in prose rather than an arrow glyph.
 - No AI-attribution markers of any kind: no generated-with footers, no co-authored trailers, no watermark comments, no badges.
 - Quotation marks are for actual quoted text and message strings. UI labels take italic and literal values take code, so quotes rarely appear.
 - Spell out an abbreviation on first use in a page unless it is universal in the domain.
+- American spelling: *color*, *organize*, *canceled*, *license* as a noun. Identifiers, config keys, file names, and quoted UI text keep their exact spelling, since they have to match what the reader sees or types.
 - Ranges use "to" in prose ("2 to 4 hours") and a plain hyphen in code and tables.
 
 ## Before and after
@@ -699,7 +700,7 @@ What changed:
 - The action moved to the top. Before, the reader had to get through six lines of architecture to find out they were opening a URL.
 - The URL is inline code in the instruction, not an untagged block the reader has to reassemble.
 - `Sign Up` is a button the reader presses, so it became bold. It was code, which claimed it was a string to type.
-- *central* was italicised for stress, which is what italic never means. The sentence it was carrying was cut instead.
+- *central* was italicized for stress, which is what italic never means. The sentence it was carrying was cut instead.
 - The nested parenthetical about system-agent, traefik-bootstrap, pk01, and id01 came out entirely. It answers a question nobody has at this step, and the page it points to says it better.
 - The four host names left in the closing paragraph are plain. The reader is being told where the retrofit sits in the plan, not asked to type any of them. The URL two lines above stays code, because they open it.
 - Two em-dashes and a mid-sentence "see" reference went away with it.
@@ -741,7 +742,7 @@ Emphasis:
 - [ ] Every code span is a string the reader copies, types, runs, or matches exactly
 - [ ] Names being described rather than reproduced are plain
 - [ ] No sentence carries more than about three code spans
-- [ ] No nested or stacked markers, no emphasised sentences
+- [ ] No nested or stacked markers, no emphasized sentences
 - [ ] No bold or italic used for stress or for warnings
 
 Density:
@@ -766,7 +767,7 @@ Explanation:
 
 - [ ] Every tool and fleet term is explained or linked where the page first uses it
 - [ ] Each diagram is introduced by a sentence, and the text is complete without it
-- [ ] Diagrams set no colours and stay near twelve nodes
+- [ ] Diagrams set no colors and stay near twelve nodes
 
 Code:
 
@@ -780,6 +781,7 @@ Prose:
 - [ ] Second person, present tense, active voice
 - [ ] Consistent terminology throughout the repo
 - [ ] No em-dashes, no filler openers, no AI-attribution markers
+- [ ] American spelling, except in identifiers and quoted text
 - [ ] No references to earlier versions of the page or the code, except history in a *Background* section that passes the [history](#history) tests
 - [ ] Version and dependency claims specific and current
 

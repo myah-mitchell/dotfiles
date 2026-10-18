@@ -45,6 +45,8 @@ Before writing or editing any Markdown documentation (READMEs, `docs/` pages, ru
 
 Never use em-dashes (the `—` character) anywhere: code comments, commit messages, PR/MR descriptions, documentation, READMEs, chat responses. Don't swap one for a spaced hyphen either (`word - word` still reads as a dash joining two clauses). Reword with a period, comma, colon, semicolon, or parentheses, whichever fits.
 
+Use American spelling everywhere: "color", "behavior", "organize", "canceled", "license" as a noun. Identifiers, config keys, file names, and quoted text keep their exact spelling, so `parse_colour` stays as it is.
+
 Never add AI-attribution markers anywhere: "Generated with Claude Code" footers, co-author trailers, watermark comments, badges, or similar self-referential credit, in commits, PRs, files, or artifacts.
 
 More generally, avoid anything commonly recognized as AI-generated writing: excessive emoji, listicle-heavy structure where prose would do, stock transitional phrases ("It's worth noting that...", "In conclusion..."), and needless hedging. Write plainly, the way a competent engineer would.

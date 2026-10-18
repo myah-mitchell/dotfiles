@@ -45,7 +45,7 @@ Rules that keep the system intact:
 - Never nest markers: no bold code, no code inside an italic navigation path.
 - Emphasis covers one to four words. Never a whole sentence or a clause with a verb.
 - Navigation paths are italic, with `>` between levels: *Settings > Variables*.
-- Quote UI labels exactly as displayed, capitalisation included.
+- Quote UI labels exactly as displayed, capitalization included.
 - In CLI, API, or config reference docs there's often nothing to click, so bold barely appears and code carries the page. Don't manufacture bold. The exception is a value the reader must supply: "Export **your API token** as `API_TOKEN`."
 
 ## Density
@@ -111,7 +111,7 @@ Everything else stays in the commit history. Write the section about the subject
 - More than two placeholders on a page means a table near the top naming each one and where its value comes from.
 - Never paste a real address, key, token, password, or certificate, even an expired one.
 - Example domains use `example.com` and its sub-domains (`git.example.com`). Example addresses come from the documentation ranges: `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24` for IPv4 and `2001:db8::/32` for IPv6.
-- Where a repo ships a sanitised example config or inventory, use its values so commands run as written.
+- Where a repo ships a sanitized example config or inventory, use its values so commands run as written.
 
 ## Links
 
@@ -123,14 +123,14 @@ Everything else stays in the commit history. Write the section about the subject
 
 ## Lists, tables, and callouts
 
-- Bullets use `-`; ordered lists are numbered properly. Parallel grammar within a list; full stops only when items are full sentences, then on all of them. Nest at most two levels.
+- Bullets use `-`; ordered lists are numbered properly. Parallel grammar within a list; periods only when items are full sentences, then on all of them. Nest at most two levels.
 - "Name, then what it is" is a table, not a bullet list. Tables stay at four columns or fewer, cells a phrase each, units in the header.
 - Callouts use GitHub/GitLab alert syntax: `> [!NOTE]`, `> [!IMPORTANT]`, `> [!WARNING]`. One to three lines, at most one per screen. `[!WARNING]` is only for real consequences: data loss, an outage, an exposed secret.
 
 ## Images and diagrams
 
 - Screenshot only what words can't carry. Alt text describes what the image shows. Store images in an `img/` folder beside the doc, kebab-case names, cropped and redacted. The text stays complete without them.
-- Relations between several things (who talks to whom, message order, network layout) get a Mermaid diagram in a `mermaid` fence, introduced by a sentence, about twelve nodes at most, no colours or styles set. A straight sequence is a numbered list instead. See the full guide's *Diagrams* section before drawing one.
+- Relations between several things (who talks to whom, message order, network layout) get a Mermaid diagram in a `mermaid` fence, introduced by a sentence, about twelve nodes at most, no colors or styles set. A straight sequence is a numbered list instead. See the full guide's *Diagrams* section before drawing one.
 
 ## Files and layout
 
@@ -146,6 +146,7 @@ Everything else stays in the commit history. Write the section about the subject
 - Straight quotes and apostrophes. ASCII `>` and `->`, not arrow glyphs.
 - No AI-attribution markers of any kind.
 - Spell out an abbreviation on first use unless it's universal in the domain.
+- American spelling ("color", "organize", "canceled"), except in identifiers, config keys, and quoted UI text, which keep their exact spelling.
 
 ## Editing existing docs
 
@@ -173,4 +174,4 @@ Run this on every page written or edited before calling the work done. Lint catc
 
 ## Source
 
-Condensed from `content/standards/markdown-style-guide.md` in the fleet-docs repo (`/opt/fleet-docs`) at commit `2e51d29` (2026-10-17). `reference/markdown-style-guide.md` is an unmodified copy of that file. When the guide changes upstream, re-copy the reference file, update this file to match, and update the commit named here.
+Condensed from `content/standards/markdown-style-guide.md` in the fleet-docs repo (`/opt/fleet-docs`) at commit `e5045e6` (2026-10-17). `reference/markdown-style-guide.md` is an unmodified copy of that file. When the guide changes upstream, re-copy the reference file, update this file to match, and update the commit named here.
