@@ -43,20 +43,22 @@ For each proposed commit, draft a message that:
 
 ## Step 4: Review each proposed commit
 
-Walk the proposed commits in order. Bash output (`git diff`, `git show`) is often collapsed or hidden in the user's terminal, and the question dialog can cover text printed just before it, so never rely on either to show the user anything. The question itself carries the review:
+Review the proposed commits in batches: one AskUserQuestion call with one question per commit, up to four (the tool's limit), so each commit gets its own tab and the user answers the whole batch at once. More than four commits take more than one batch, in order. Bash output (`git diff`, `git show`) is often collapsed or hidden in the user's terminal, and the question dialog can cover text printed just before it, so never rely on either to show the user anything. The questions themselves carry the review:
 
-- Put the drafted message and a `git diff --stat`-style file list in the `preview` field of every option, identically, so it stays visible whichever option is focused. Use the exact message text, then a blank line, then the file list.
-- Make the question text name the commit's position (`Commit 2 of 3`) and its summary line.
-- Before the question, also write a short plain-text summary of the change in the reply: which hunks matter and anything surprising. Keep it under about 15 lines; never paste a long raw diff there.
+- In each question, put that commit's drafted message and a `git diff --stat`-style file list in the `preview` field of every option, identically, so it stays visible whichever option is focused. Use the exact message text, then a blank line, then the file list.
+- Make each question's text name the commit's position (`Commit 2 of 3`) and its summary line, and its `header` the position (`Commit 2/3`).
+- Before the call, write a short plain-text summary of each commit in the batch in the reply: which hunks matter and anything surprising. Keep it under about 15 lines per commit; never paste a long raw diff there.
 
-Options:
+Options for each question:
 
-- "Commit as written, review next (Recommended)"
-- "Show the full diff first": print the diff for just this commit's files in the reply (in a `diff` fence, split into readable chunks if long), then ask the same question again
+- "Commit as written (Recommended)"
+- "Show the full diff first": after the batch, print the diff for just this commit's files in the reply (in a `diff` fence, split into readable chunks if long), then ask about this commit again
 - "Skip this one, leave it uncommitted"
 - (Other: type a replacement subject/body for this commit)
 
-Record the outcome for each proposed commit before moving to the next one.
+Record the outcome for every commit in the batch, then re-ask any marked "Show the full diff first" (batched the same way) before moving to the next batch. Since commits are staged by file, a commit that's re-asked or skipped doesn't block committing the approved ones around it.
+
+Remember which commits were approved here, as written or reworded. `/push-changes` treats them as already reviewed if it runs later in this conversation (its Step 2), so the user isn't asked about the same commit twice.
 
 ## Step 5: Stage and commit
 

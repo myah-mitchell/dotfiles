@@ -42,26 +42,34 @@ If the repo has an `upstream` remote that differs from `origin` (a fork headed f
 
 ## Step 2: Review each commit
 
-Walk the list oldest to newest. For each commit, gather its full message, per-file counts, and diff:
+### Skip commits already reviewed
+
+A commit counts as already reviewed when `/create-commits` created it earlier in this conversation, the user approved its message there (as written or reworded), and its hash is unchanged, which means it wasn't amended or rebased since. List those in the reply as already reviewed and leave them out of the questions below. If every commit qualifies, go straight to Step 4.
+
+When unsure whether a commit qualifies (the conversation was compacted, the hash changed, or it was made some other way, such as by `/start-task`), review it. A second look is cheap; an unreviewed push isn't.
+
+### Review the rest
+
+Walk the remaining commits oldest to newest. For each, gather its full message, per-file counts, and diff:
 
 ```bash
 git show --stat -p <hash>
 ```
 
-That output reaches you, not reliably the user: Bash output is often collapsed or hidden in their terminal, and the question dialog can cover text printed just before it. The question itself carries the review:
+That output reaches you, not reliably the user: Bash output is often collapsed or hidden in their terminal, and the question dialog can cover text printed just before it. Ask in batches: one AskUserQuestion call with one question per commit, up to four (the tool's limit), so each commit gets its own tab and the user answers the whole batch at once. More than four commits take more than one batch, oldest first. The questions themselves carry the review:
 
-- Put the commit's full message and its `--stat` file list in the `preview` field of every option, identically, so it stays visible whichever option is focused. Use the exact message text, then a blank line, then the file list.
-- Make the question text name the commit's position (`Commit 2 of 3`), its short hash, and its summary line.
-- Before the question, also write a short plain-text summary of the change in the reply: which hunks matter and anything surprising. Keep it under about 15 lines; never paste a long raw diff there.
+- In each question, put that commit's full message and its `--stat` file list in the `preview` field of every option, identically, so it stays visible whichever option is focused. Use the exact message text, then a blank line, then the file list.
+- Make each question's text name the commit's position (`Commit 2 of 3`), its short hash, and its summary line, and its `header` the position (`Push 2/3`).
+- Before the call, write a short plain-text summary of each commit in the batch in the reply: which hunks matter and anything surprising. Keep it under about 15 lines per commit; never paste a long raw diff there.
 
-Options (the free-text "Other" answer is where a rewritten message goes):
+Options for each question (the free-text "Other" answer is where a rewritten message goes):
 
-- "Keep as-is, review next commit (Recommended)"
-- "Show the full diff first": print this commit's diff in the reply (in a `diff` fence, split into readable chunks if long), then ask the same question again
+- "Keep as-is (Recommended)"
+- "Show the full diff first": after the batch, print this commit's diff in the reply (in a `diff` fence, split into readable chunks if long), then ask about this commit again
 - "Stop reviewing, don't push anything yet"
 - (Other: type a replacement subject/body for this commit)
 
-Record the outcome for each commit (kept, reworded with new text, or review stopped) before moving to the next one. If the user stops reviewing, leave everything untouched and end here without pushing.
+Record the outcome for every commit in the batch (kept, reworded with new text, or review stopped), then re-ask any marked "Show the full diff first" before moving to the next batch. If the user stops reviewing on any tab, leave everything untouched and end here without pushing, even if other tabs in the batch were kept.
 
 ## Step 3: Rewrite history only if something was reworded
 
@@ -108,6 +116,6 @@ Report back what got pushed: branch, commit count, the remote URL or MR/PR link 
 ## Safety rules
 
 - Never push without an explicit user request to do so, and never as a side effect of any other skill.
-- Never skip Step 2's review, even for a single commit or a trivial-looking change.
+- Never skip Step 2's review, even for a single commit or a trivial-looking change. The only exception is a commit already approved through `/create-commits` in this conversation with its hash unchanged.
 - Never force-push without calling it out first. Rewriting history that's already on the remote is worth a second look even when the user asked for the push.
 - The backup branch from Step 3 is a plain local branch, not a tag. Delete it once the rewrite is confirmed good; don't leave stale backup branches accumulating.
