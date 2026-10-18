@@ -1,7 +1,7 @@
 ---
 name: start-task
 description: >-
-  Kick off a new long-running task on a Git repo managed with git worktrees. Trigger on "/start-task", "start a new task", "kick off a long-running task", "begin work on [a stated goal]", or similar requests to begin substantial multi-step work. Covers - critically restating the goal and asking clarifying questions upfront, pulling upstream and creating a fresh worktree, a per-session docs folder (requirements file, plan file, running prompt log), working with local-only commits and a living plan, testing new code for git-runner CI, self-grading against requirements, and - if code was written - a high-depth /code-review and a /security-review, each saved to the session folder, plus a doc-accuracy pass and a saved final report. Never pushes to the remote or opens an MR itself; hands that off to the separate /open-merge skill only when explicitly requested. Use whenever the user wants a nontrivial task handled end-to-end rather than a quick one-off answer.
+  Kick off a new long-running task on a Git repo managed with git worktrees. Trigger on "/start-task", "start a new task", "kick off a long-running task", "begin work on [a stated goal]", or similar requests to begin substantial multi-step work. Covers - critically restating the goal and asking clarifying questions upfront, pulling upstream and creating a fresh worktree, a per-session docs folder (requirements file, plan file, running prompt log), working with local-only commits and a living plan, testing new code for the repo's CI (GitHub Actions or GitLab CI), self-grading against requirements, and - if code was written - a high-depth /code-review and a /security-review, each saved to the session folder, plus a doc-accuracy pass and a saved final report. Never pushes to the remote or opens an MR itself; hands that off to the separate /open-merge skill only when explicitly requested. Use whenever the user wants a nontrivial task handled end-to-end rather than a quick one-off answer.
 ---
 
 # /start-task — Long-Running Task Kickoff
@@ -34,7 +34,7 @@ If you have no real open questions after genuinely looking, say so explicitly ra
 Wait for answers before proceeding to Step 3.
 
 ## Step 3 — Sync and create the worktree
-This repo uses git worktrees with a `.git-credentials` file for HTTPS auth (no API token). Don't hardcode "main" — find the actual default branch.
+This repo uses git worktrees. Git authenticates however the repo is set up (a `.git-credentials` file, SSH); nothing here needs `gh` or `glab`. Don't hardcode "main"; find the actual default branch.
 
 ```
 git remote show origin | grep 'HEAD branch'
@@ -132,7 +132,7 @@ Test the code you wrote. Prefer running the project's existing test suite/toolin
 
 If testing requires running a dev server or other long-lived process, start it in a way that captures its exact PID (e.g. `command & echo $!`, or record the PID from the job control output), and stop it afterward with `kill <pid>` targeted at that exact PID. Never use a broad pattern-matching kill like `pkill -f <pattern>` — this is a multi-worktree box, so a broad pattern can match and kill processes belonging to other worktrees or sessions, not just the one you started.
 
-Where appropriate, write new automated tests for the new code — targeted at the actual behavior added, not padding for coverage's sake — so this repo's `git-runner` CI picks them up and future changes that break this feature get caught automatically. Follow the same reuse and minimalism principles from Step 6 when writing tests: reuse existing test helpers/fixtures/frameworks already in the project rather than writing new ones.
+Where appropriate, write new automated tests for the new code, targeted at the actual behavior added rather than padding for coverage's sake, so the repo's CI (GitHub Actions, GitLab CI) picks them up and future changes that break this feature get caught automatically. Follow the same reuse and minimalism principles from Step 6 when writing tests: reuse existing test helpers/fixtures/frameworks already in the project rather than writing new ones.
 
 If the project has no CI test job wired up yet for this kind of code, flag that to the user rather than silently skipping automated coverage or silently building CI configuration that wasn't asked for.
 

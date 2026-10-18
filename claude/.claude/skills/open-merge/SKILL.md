@@ -29,8 +29,8 @@ Look at the remote host and see whether the matching CLI is installed and authen
 ```
 git remote get-url origin
 ```
-- `github.com` → `gh auth status`
-- `gitlab.com` or a self-hosted GitLab → `glab auth status`
+- `github.com` or a GitHub Enterprise host: `gh auth status --hostname <host>`
+- `gitlab.com` or a self-hosted GitLab: `glab auth status --hostname <host>`
 
 If the matching CLI is missing or not authenticated, skip to Step 5 (manual fallback) — don't try to install or authenticate one on the user's behalf.
 
