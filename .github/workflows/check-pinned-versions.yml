@@ -40,6 +40,9 @@ jobs:
           - name: zjhints
             kind: github-release
             repo: myah-mitchell/zjhints
+          - name: zellij
+            kind: tool-release
+            repo: myah-mitchell/zellij
           - name: ccstatusline
             kind: npm
             package: ccstatusline

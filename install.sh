@@ -290,10 +290,10 @@ CCSTATUSLINE_PINNED_VERSION="2.2.32"
 #           prefix ending in * (the newest release whose tag starts with it,
 #           prereleases included; pick up a newer one with --update).
 TOOL_PINS=(
-  # TEMPORARY: the fork's nightly prereleases (per-build tags such as
-  # nightly-v0.46.0-261017). Nightlies are linux-x86_64 only, so other
-  # platforms find no asset and skip, as they already do for the fork.
-  "zellij|myah-mitchell/zellij|nightly-*"
+  # TEMPORARY: the fork's nightlies are built from plain upstream main without
+  # the fork's patches, so stay on the fork release that has them. Switch to
+  # "nightly-*" once nightlies stack the fork patches.
+  "zellij|myah-mitchell/zellij|fork-v0.46.4"
 )
 
 # ── Platform detection ────────────────────────────────────────────────────────
