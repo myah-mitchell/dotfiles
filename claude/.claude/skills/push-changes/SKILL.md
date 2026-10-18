@@ -31,6 +31,8 @@ git log --reverse --format='%H' <base>..HEAD
 ```
 If this list is empty, tell the user there's nothing to push and stop.
 
+If the repo has an `upstream` remote that differs from `origin` (a fork headed for a third-party PR), ask whether to run `/upstream-check` first, unless it already ran on these commits in this session. Recommend running it. If it reports failures the user wants fixed, stop here and let them fix and recommit before pushing.
+
 ## Step 2 — Review each commit
 Walk the list oldest to newest. For each commit, gather its full message, per-file counts, and diff:
 ```
