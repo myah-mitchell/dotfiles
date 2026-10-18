@@ -50,7 +50,7 @@ git diff --stat upstream/<default>...HEAD
 
 Derive `<owner>-<repo>` from the upstream's project path by turning every `/` into `-` (`zellij-org/zellij` becomes `zellij-org-zellij`, and a GitLab subgroup path `group/sub/repo` becomes `group-sub-repo`) and read `references/<owner>-<repo>.md` if it exists. Also read the repo's own `CONTRIBUTING*`, PR template, commitlint config, and CI workflow files, since those change and the reference file may lag. When the reference file and the repo's current docs disagree, follow the repo and note the drift for the user.
 
-If there is no reference file, say so, run the generic checks, and offer to create one from what this run found.
+If there is no reference file, say so, run the generic checks, and offer to create one from what this run found, in the location *Where reference files live* gives.
 
 ### Step 3: run the checks
 
@@ -147,7 +147,7 @@ For each change, decide:
 
 ### Step 4: propose reference-file updates
 
-Show the user the proposed additions and edits to `references/<owner>-<repo>.md` as a diff, plus a short summary of what the maintainer changed and why. Apply only after approval. Then add a row to the file's *Reviewed PRs* table so the same PR isn't learned twice.
+Show the user the proposed additions and edits to `references/<owner>-<repo>.md` as a diff, plus a short summary of what the maintainer changed and why. Apply only after approval, to the source copy described in *Where reference files live*. Then add a row to the file's *Reviewed PRs* table so the same PR isn't learned twice.
 
 If a lesson is general rather than repo-specific, propose it as an edit to this `SKILL.md` instead.
 
@@ -160,6 +160,20 @@ Each reference file is named `references/<owner>-<repo>.md` and has these sectio
 3. *Checklist*: repo-specific checks, grouped under the Step 3 headings they extend. Each item is one checkable line, specific enough to verify from the diff or the codebase.
 4. *Maintainer preferences*: judgment calls and style notes that aren't hard checks.
 5. *Reviewed PRs*: a table of PR number, merge date, and the lessons it added, so `learn` mode knows what's already covered.
+
+### Where reference files live
+
+This skill is deployed from a dotfiles repo, which links each file into `~/.claude/skills/` one at a time. `~/.claude/skills/upstream-check/references/` is a real directory holding a symlink per file, so a new file written there is a plain file outside the repo: never committed, and missing on every other machine. Always read and write the source copy instead. Find it from this skill's own symlink:
+
+```bash
+SKILL_SRC=$(dirname "$(readlink -f ~/.claude/skills/upstream-check/SKILL.md)")
+REF_DIR="$SKILL_SRC/references"
+```
+
+- **`SKILL.md` is a symlink**: edit or create files under `$REF_DIR`. After creating a new file, link it by running `install.sh --link` from the root of the repo holding `$SKILL_SRC` (`git -C "$SKILL_SRC" rev-parse --show-toplevel`), then check that `~/.claude/skills/upstream-check/references/<owner>-<repo>.md` is a symlink. Edits to an existing file need no relink.
+- **`SKILL.md` is a plain file** (deployed with `install.sh --copy`, or installed some other way): the deployed copies aren't the source, and the next deploy overwrites them. Ask the user where the source repo is rather than writing to `~/.claude`.
+
+Writing a reference file never commits it. Tell the user the file changed so it goes through `/create-commits`.
 
 ## Safety rules
 
