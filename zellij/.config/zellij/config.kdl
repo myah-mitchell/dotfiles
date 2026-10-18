@@ -299,32 +299,32 @@ plugins {
         // When unset, the current Zellij theme palette is used automatically.
         // `{key}` and `{desc}` are replaced with the keybinding and its label.
         // See the "Styling" section below for the full syntax.
-        key_format "#[fg=$pill_hint]#[bg=$pill_hint,fg=$pill_icon,bold]{key}"
+        key_format "#[fg=$pill_hint]#[bg=$pill_hint,fg=$pill_icon,bold]{key} "
         desc_format "#[bg=$pill_bg,fg=$pill_hint,bold] {desc}#[fg=$pill_bg]"
         keys_go_to_tab "1-9"      // instead of 123456789
         // Drawn between hints (never before the first or after the last).
         // Also a format string, so it can be a styled glyph, not just space.
-        hint_spacer ""
+        hint_spacer " "
         // Shown where hints were dropped because the window is too narrow.
-        drop_indicator "#[fg=$pill_hint]#[bg=$pill_hint,fg=$pill_icon,bold] #[bg=$pill_bg,fg=$pill_hint,bold]...#[fg=$pill_bg]"
+        drop_indicator "#[fg=$pill_hint]#[bg=$pill_hint,fg=$pill_icon,bold] #[bg=$pill_bg,fg=$pill_hint,bold]...#[fg=$pill_bg] "
         // Which pinned group outlives the oth
         hint_precedence "tl" //default
 
         // Format mode pill
-        mode_format_normal        "#[bg=$pill_bg,fg=$pill_normal,bold] NORMAL #[bg=$pill_normal,fg=$pill_icon,bold] 󰌌 #[fg=$pill_normal]"
-        mode_format_tmux          "#[bg=$pill_bg,fg=$pill_tmux,bold]  TMUX  #[bg=$pill_tmux,fg=$pill_icon,bold] 󰘳 #[fg=$pill_tmux]"
-        mode_format_locked        "#[bg=$pill_bg,fg=$pill_locked,bold] LOCKED #[bg=$pill_locked,fg=$pill_icon,bold] 󰌾 #[fg=$pill_locked]"
-        mode_format_resize        "#[bg=$pill_bg,fg=$pill_resize,bold] RESIZE #[bg=$pill_resize,fg=$pill_icon,bold] 󰩨 #[fg=$pill_resize]"
-        mode_format_pane          "#[bg=$pill_bg,fg=$pill_pane,bold]  PANE  #[bg=$pill_pane,fg=$pill_icon,bold] 󰯌 #[fg=$pill_pane]"
-        mode_format_tab           "#[bg=$pill_bg,fg=$pill_tab,bold]  TAB   #[bg=$pill_tab,fg=$pill_icon,bold] 󰓩 #[fg=$pill_tab]"
-        mode_format_scroll        "#[bg=$pill_bg,fg=$pill_scroll,bold] SCROLL #[bg=$pill_scroll,fg=$pill_icon,bold] 󰍽 #[fg=$pill_scroll]"
-        mode_format_enter_search  "#[bg=$pill_bg,fg=$pill_entser,bold] ENTSER #[bg=$pill_entser,fg=$pill_icon,bold] 󰛭 #[fg=$pill_entser]"
-        mode_format_search        "#[bg=$pill_bg,fg=$pill_search,bold] SEARCH #[bg=$pill_search,fg=$pill_icon,bold] 󰍉 #[fg=$pill_search]"
-        mode_format_rename_tab    "#[bg=$pill_bg,fg=$pill_rentab,bold] RENTAB #[bg=$pill_rentab,fg=$pill_icon,bold] 󰑕 #[fg=$pill_rentab]"
-        mode_format_rename_pane   "#[bg=$pill_bg,fg=$pill_renpan,bold] RENPAN #[bg=$pill_renpan,fg=$pill_icon,bold] 󰏫 #[fg=$pill_renpan]"
-        mode_format_session       "#[bg=$pill_bg,fg=$pill_session,bold] SESION #[bg=$pill_session,fg=$pill_icon,bold] 󰍺 #[fg=$pill_session]"
-        mode_format_move          "#[bg=$pill_bg,fg=$pill_move,bold]  MOVE  #[bg=$pill_move,fg=$pill_icon,bold] 󰆾 #[fg=$pill_move]"
-        mode_format_prompt        "#[bg=$pill_bg,fg=$pill_prompt,bold] PROMPT #[bg=$pill_prompt,fg=$pill_icon,bold] 󰞷 #[fg=$pill_prompt]"
+        mode_format_normal        "#[bg=$pill_bg,fg=$pill_normal,bold] NORMAL #[bg=$pill_normal,fg=$pill_icon,bold] 󰌌 #[fg=$pill_normal] "
+        mode_format_tmux          "#[bg=$pill_bg,fg=$pill_tmux,bold]  TMUX  #[bg=$pill_tmux,fg=$pill_icon,bold] 󰘳 #[fg=$pill_tmux] "
+        mode_format_locked        "#[bg=$pill_bg,fg=$pill_locked,bold] LOCKED #[bg=$pill_locked,fg=$pill_icon,bold] 󰌾 #[fg=$pill_locked] "
+        mode_format_resize        "#[bg=$pill_bg,fg=$pill_resize,bold] RESIZE #[bg=$pill_resize,fg=$pill_icon,bold] 󰩨 #[fg=$pill_resize] "
+        mode_format_pane          "#[bg=$pill_bg,fg=$pill_pane,bold]  PANE  #[bg=$pill_pane,fg=$pill_icon,bold] 󰯌 #[fg=$pill_pane] "
+        mode_format_tab           "#[bg=$pill_bg,fg=$pill_tab,bold]  TAB   #[bg=$pill_tab,fg=$pill_icon,bold] 󰓩 #[fg=$pill_tab] "
+        mode_format_scroll        "#[bg=$pill_bg,fg=$pill_scroll,bold] SCROLL #[bg=$pill_scroll,fg=$pill_icon,bold] 󰍽 #[fg=$pill_scroll] "
+        mode_format_enter_search  "#[bg=$pill_bg,fg=$pill_entser,bold] ENTSER #[bg=$pill_entser,fg=$pill_icon,bold] 󰛭 #[fg=$pill_entser] "
+        mode_format_search        "#[bg=$pill_bg,fg=$pill_search,bold] SEARCH #[bg=$pill_search,fg=$pill_icon,bold] 󰍉 #[fg=$pill_search] "
+        mode_format_rename_tab    "#[bg=$pill_bg,fg=$pill_rentab,bold] RENTAB #[bg=$pill_rentab,fg=$pill_icon,bold] 󰑕 #[fg=$pill_rentab] "
+        mode_format_rename_pane   "#[bg=$pill_bg,fg=$pill_renpan,bold] RENPAN #[bg=$pill_renpan,fg=$pill_icon,bold] 󰏫 #[fg=$pill_renpan] "
+        mode_format_session       "#[bg=$pill_bg,fg=$pill_session,bold] SESION #[bg=$pill_session,fg=$pill_icon,bold] 󰍺 #[fg=$pill_session] "
+        mode_format_move          "#[bg=$pill_bg,fg=$pill_move,bold]  MOVE  #[bg=$pill_move,fg=$pill_icon,bold] 󰆾 #[fg=$pill_move] "
+        mode_format_prompt        "#[bg=$pill_bg,fg=$pill_prompt,bold] PROMPT #[bg=$pill_prompt,fg=$pill_icon,bold] 󰞷 #[fg=$pill_prompt] "
 
         // Optionally replace key names with symbols, e.g. show ENTER as ↵.
         // Uses the same per-line alias pattern (see "Key aliases" below).
