@@ -269,7 +269,7 @@ ZELLIJ_PLUGINS=(
   # which needs zellij fork-v0.46.2 or later. A tag rebuilt in place is only
   # picked up with --update. Pin a versioned tag again once zjhints cuts a
   # release.
-  "zjhints.wasm|myah-mitchell/zjhints|ea-mouse-support"
+  "zjhints.wasm|myah-mitchell/zjhints|v0.5.1"
 )
 ZSH_PLUGINS=(
   "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
