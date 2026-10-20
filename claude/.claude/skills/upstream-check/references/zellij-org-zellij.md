@@ -97,6 +97,9 @@ Test at the tiers the analog uses. For server and plugin API work that usually m
 - He takes counter-arguments seriously when they come with concrete examples: on #5590 he dropped his `suppressed_panes` suggestion for the contributor's approach after examples, then proposed the `PanesToHide` structure.
 - He favors short CHANGELOG lines and trims explanation from them.
 - Small, self-contained fixes with tests (like #5680) merge unchanged.
+- Several small fixes to the same screen or code path can share one PR, one commit each, with a note offering to split them. #5729 bundled three and merged unchanged.
+- A `CHANGELOG.md` conflict from other PRs landing in `## [Unreleased]` is expected; he resolves it with a merge of `main` before squashing. It isn't a reason to rebase on its own.
+- He merges past CI failures he recognizes as unrelated flaky tests, and fixes those separately.
 
 ## Reviewed PRs
 
@@ -105,3 +108,4 @@ Test at the tiers the analog uses. For server and plugin API work that usually m
 | [#5589](https://github.com/zellij-org/zellij/pull/5589) | 2026-09-24 | Rebase before review; protobuf number collisions; blocking plugin command with typed errors; any-depth nesting; request ids and failure arms; screen, plugin, and fixture tests; terse comments; American spelling; short CHANGELOG |
 | [#5590](https://github.com/zellij-org/zellij/pull/5590) | 2026-10-06 | Pane-state integration audit (serialization, hit-testing, focus, close, `PaneInfo`); tab tests per integration point; allow maintainer edits; wasm rebuild is his step |
 | [#5680](https://github.com/zellij-org/zellij/pull/5680) | 2026-10-05 | None; merged unchanged, CHANGELOG line kept as written |
+| [#5729](https://github.com/zellij-org/zellij/pull/5729) | 2026-10-19 | None to the checklist; merged unchanged. Preferences: related fixes may share a PR, CHANGELOG conflicts are his to merge, unrelated flaky CI doesn't block |
