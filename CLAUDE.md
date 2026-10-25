@@ -174,7 +174,7 @@ The pre-migration setup also ran three plugins (`nu_plugin_skim`, `nu_plugin_dns
 | `--copy` | Copy instead of symlink, for NTFS or shared servers |
 | `--remove` | Remove all deployed symlinks and exit; binaries stay |
 | `--windows` | Install Windows-side integration under WSL2 |
-| `--cargo` | Build Rust tools from source instead of downloading releases; also the only thing that bootstraps rustup and cargo |
+| `--cargo` | Build Rust tools from source instead of downloading releases; also the only thing that bootstraps rustup and cargo, and installs cargo-clean-all (see [`--cargo`](#--cargo)) |
 | `--claude` | Install the Claude Code stack |
 | `--full` | Implies `--claude` and `--windows`; adds PowerShell and nvim's heavier Mason LSPs |
 | `--nushell` | Install `nu` and its config (see [Nushell](#nushell-optional-secondary-shell)) |
@@ -188,6 +188,19 @@ The pre-migration setup also ran three plugins (`nu_plugin_skim`, `nu_plugin_dns
 
 Only meaningful under WSL2: `WANT_WINDOWS_SETUP`, computed right after `IS_WSL` detection, is false on native Linux and macOS regardless of the flag. It gates the [WSL2](#wsl2) block: installing Alacritty with winget, installing the JetBrainsMono Nerd Font on the Windows side, and creating the Alacritty config symlink. It's opt-in because a WSL box isn't necessarily used through Windows Alacritty at all (a dev container, a CI runner, a headless instance reached over SSH), and those have no business running winget or PowerShell.
 
+#### `--cargo`
+
+Besides building Rust tools from source, `--cargo` installs `dnlmlr/cargo-clean-all` through `install_cargo_clean_all()` and schedules it with a weekly systemd user timer. The timer runs it non-interactively over `$HOME` and deletes the `target/` directory of every Cargo project not compiled in the last 30 days (`CARGO_CLEAN_ALL_KEEP_DAYS`). It's gated on `--cargo` because cargo-clean-all ships no release binaries, and a machine without a Rust toolchain has no `target/` directories to clean.
+
+- `~/.local` is skipped, along with `~/.cache`, `~/.cargo`, and `~/.rustup`. Neovim plugins such as blink.cmp keep prebuilt native libraries in their own `target/` directory under `~/.local/share/nvim`, and deleting it breaks them.
+- `install.sh` writes the `.service` and `.timer` files straight into `~/.config/systemd/user/` instead of deploying them from a package, because `systemctl enable` refuses unit files that are symlinks pointing outside its search path. Edits to those files are overwritten on the next `--cargo` run; change the heredocs in `install_cargo_clean_all()` instead.
+- Without a systemd user session (macOS, or a WSL distro with systemd off), the timer is skipped with a warning that prints the equivalent manual command.
+- Check the schedule with `systemctl --user list-timers cargo-clean-all.timer`, and read past runs with `journalctl --user -u cargo-clean-all.service`.
+
+##### Background: why not cargo-sweep
+
+cargo-sweep is the better-known tool, but its README marks it unmaintained and recommends cargo-clean-all instead.
+
 #### `--claude` and `--full`
 
 - `WANT_CLAUDE_STACK` (computed right after argument parsing as `--claude || --full`) gates `install_claude()`, `install_node()`, `install_ccstatusline()`, and `install_claude_swap()`. The last three are useless without Claude Code. See [Claude Code integration](#claude-code-integration).
@@ -199,9 +212,9 @@ Only meaningful under WSL2: `WANT_WINDOWS_SETUP`, computed right after `IS_WSL` 
 
 `install.sh`'s downloaders all overwrite in place, so nothing notices when a tool is removed from the install arrays entirely: its binary and `.versions` entry stay forever. `cleanup_orphans()` handles that:
 
-- It diffs `.versions` against the `CORE_TOOLS`, `CLI_TOOLS`, `ZELLIJ_PLUGINS`, and `ZSH_PLUGINS` arrays, plus a static `known_dest` list for bespoke installers that don't use them (`nvim`, `yazi`, `jetbrainsmono-nf` always; `node` and `ccstatusline` when `WANT_CLAUDE_STACK`; `pwsh` with `--full`). It removes the leftovers: `$BIN_DIR` binaries, Zellij `.wasm` files, zsh plugin directories, and orphaned `npm install -g` packages (checked against `~/.local/lib/node_modules/<key>`, which is how an orphaned `ccstatusline` gets uninstalled).
+- It diffs `.versions` against the `CORE_TOOLS`, `CLI_TOOLS`, `ZELLIJ_PLUGINS`, and `ZSH_PLUGINS` arrays, plus a static `known_dest` list for bespoke installers that don't use them (`nvim`, `yazi`, `jetbrainsmono-nf` always; `node` and `ccstatusline` when `WANT_CLAUDE_STACK`; `pwsh` with `--full`; `cargo-clean-all` with `--cargo`). It removes the leftovers: `$BIN_DIR` binaries, Zellij `.wasm` files, zsh plugin directories, and orphaned `npm install -g` packages (checked against `~/.local/lib/node_modules/<key>`, which is how an orphaned `ccstatusline` gets uninstalled).
 - `node` is never auto-removed; an orphaned one gets a warning instead. `install_node()`'s `cp -a` merges node's `bin`, `lib`, `include`, and `share` trees into the same `~/.local` directories that dotfiles symlinks and other npm globals use, so unlike `pwsh` in its own `~/.local/lib/powershell`, there's no single path that's safe to delete as "node and nothing else".
-- It removes `~/.rustup` and `~/.cargo` when the run isn't `--cargo` (the next `--cargo` run recreates them).
+- It removes `~/.rustup` and `~/.cargo` when the run isn't `--cargo` (the next `--cargo` run recreates them), and disables and deletes the cargo-clean-all timer and service.
 - When the run isn't `--full`, it uninstalls any of the full-only Mason LSP packages (the list under `--full` above) with `nvim --headless -c "MasonUninstall ..."`. Mason downloads aren't installed by `install.sh`, so the `.versions` diff can't catch them.
 - It removes old Claude Code versions regardless of `WANT_CLAUDE_STACK`. The native updater puts each version in `~/.local/share/claude/versions/<version>` (300 to 350MB each) and repoints `~/.local/bin/claude`, but never deletes old ones. `cleanup_orphans()` resolves that symlink and deletes every other entry in `versions/`.
 - Combined with `--link` it does nothing: the arrays are never populated on a link-only run, so `install.sh` warns and skips rather than judge orphans against an empty set.

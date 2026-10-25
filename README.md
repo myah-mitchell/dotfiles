@@ -46,7 +46,8 @@ Re-run at any time to apply config changes:
 ./install.sh --link       # skip binary downloads, only re-link configs (fast)
 ./install.sh --copy       # copy configs instead of symlinking (useful on NTFS or shared servers)
 ./install.sh --remove     # remove all deployed symlinks from $HOME and exit (binaries untouched)
-./install.sh --cargo      # build Rust tools from source via cargo instead of downloading (slow)
+./install.sh --cargo      # build Rust tools from source via cargo instead of downloading (slow); also
+                           # installs cargo-clean-all with a weekly target/ cleanup timer
 ./install.sh --windows    # install Windows-side integration under WSL2: Alacritty, the font, and the
                            # config symlink — off by default, no-op outside WSL2; implied by --full
 ./install.sh --claude     # install the Claude Code stack: Claude Code itself, Node.js, ccstatusline,
@@ -57,7 +58,7 @@ Re-run at any time to apply config changes:
                            # Mason packages) — off by default; skip on servers that just need the shell
 ./install.sh --nushell    # install Nushell (nu) as an optional secondary shell; zsh stays the
                            # default either way; off by default, not implied by --full
-./install.sh --cleanup    # remove rustup/cargo (unless --cargo), orphaned binaries/plugins/npm globals
+./install.sh --cleanup    # remove rustup/cargo and the cargo-clean-all timer (unless --cargo), orphaned binaries/plugins/npm globals
                            # left behind by removed tools, node/ccstatusline if not --claude/--full,
                            # pwsh + full-only Mason LSPs if not --full, nu if not --nushell, and old
                            # Claude Code version binaries left by its own self-updater

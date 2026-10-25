@@ -15,6 +15,9 @@
 # --cargo       Build ALL Rust tools from source via cargo (slow, disk-heavy; Go/C tools
 #               still download). Without this flag, prebuilt releases are used wherever
 #               available; cargo/rustup are only bootstrapped when this flag is passed.
+#               Also installs cargo-clean-all plus a weekly systemd user timer that
+#               deletes target/ dirs of projects idle for 30+ days (see
+#               install_cargo_clean_all).
 # --claude      Install the Claude Code stack: Claude Code itself (native installer),
 #               Node.js (only needed here to npm-install ccstatusline), ccstatusline
 #               (renders its statusLine), and claude-swap (multi-account switcher for
@@ -129,7 +132,9 @@ ${BOLD}Flags:${RESET}
               Nerd Font, and the Alacritty config symlink. Off by default,
               no-op outside WSL2. Implied by --full.
   ${CYAN}--cargo${RESET}     Build Rust tools from source via cargo instead of downloading
-              prebuilt releases (slow, disk-heavy)
+              prebuilt releases (slow, disk-heavy). Also installs
+              cargo-clean-all with a weekly systemd timer that clears
+              target/ dirs of projects idle for 30+ days.
   ${CYAN}--claude${RESET}    Install the Claude Code stack: Claude Code CLI, Node.js (only
               needed to npm-install ccstatusline), ccstatusline, and
               claude-swap. None install without this flag or --full.
@@ -1398,6 +1403,70 @@ cargo_install() {
   fi
 }
 
+# ── cargo-clean-all (scheduled target/ cleanup) ───────────────────────────────
+# Only installed under --cargo: it ships no release binaries, and on a machine
+# without a Rust toolchain there are no target/ dirs worth sweeping. Picked
+# over cargo-sweep, whose README marks it unmaintained and points here.
+#
+# A weekly systemd user timer runs it non-interactively over $HOME, deleting
+# target/ dirs of projects not compiled in CARGO_CLEAN_ALL_KEEP_DAYS days.
+# ~/.local is skipped because nvim plugins (blink.cmp) keep their prebuilt
+# native libs in their own target/ dir. The units are written as real files,
+# not deployed through a package: `systemctl enable` refuses unit files that
+# are symlinks pointing outside its search path. cleanup_orphans() disables
+# and removes them on a non --cargo --cleanup run.
+CARGO_CLEAN_ALL_UNIT="cargo-clean-all"
+CARGO_CLEAN_ALL_UNIT_DIR="$HOME/.config/systemd/user"
+CARGO_CLEAN_ALL_KEEP_DAYS=30
+install_cargo_clean_all() {
+  cargo_install cargo-clean-all cargo-clean-all
+  if [[ ! -x "$BIN_DIR/cargo-clean-all" ]]; then
+    warn "cargo-clean-all isn't installed, so its cleanup timer is skipped."
+    return
+  fi
+
+  local manual="cargo clean-all --keep-days ${CARGO_CLEAN_ALL_KEEP_DAYS} --skip ~/.local ~"
+  if [[ "$OS" != "linux" ]] || ! systemctl --user show-environment &>/dev/null; then
+    warn "No systemd user session, so cargo-clean-all isn't scheduled. Run it by hand: ${manual}"
+    return
+  fi
+
+  local service="$CARGO_CLEAN_ALL_UNIT_DIR/${CARGO_CLEAN_ALL_UNIT}.service"
+  local timer="$CARGO_CLEAN_ALL_UNIT_DIR/${CARGO_CLEAN_ALL_UNIT}.timer"
+  mkdir -p "$CARGO_CLEAN_ALL_UNIT_DIR"
+  cat >"$service" <<EOF
+# Written by dotfiles install.sh --cargo; edits are overwritten on the next run.
+[Unit]
+Description=Delete target/ dirs of Cargo projects idle for ${CARGO_CLEAN_ALL_KEEP_DAYS}+ days
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=%h/.local/bin/cargo-clean-all --yes --keep-days ${CARGO_CLEAN_ALL_KEEP_DAYS} --skip %h/.local --skip %h/.cache --skip %h/.cargo --skip %h/.rustup %h
+EOF
+  cat >"$timer" <<EOF
+# Written by dotfiles install.sh --cargo; edits are overwritten on the next run.
+[Unit]
+Description=Weekly cargo-clean-all sweep of \$HOME
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  if systemctl --user daemon-reload &>/dev/null &&
+    systemctl --user enable --now "${CARGO_CLEAN_ALL_UNIT}.timer" &>/dev/null; then
+    ok "cargo-clean-all scheduled weekly (systemctl --user list-timers ${CARGO_CLEAN_ALL_UNIT}.timer)"
+  else
+    warn "Could not enable ${CARGO_CLEAN_ALL_UNIT}.timer. Run it by hand instead: ${manual}"
+  fi
+}
+
 # ── Generic tool installer ────────────────────────────────────────────────────
 # Row format (pipe-separated):
 #   dest | crate | repo | os | arch | glob | bin
@@ -1785,6 +1854,8 @@ if [[ "$LINK_ONLY" == false ]]; then
       warn "mosh: please install manually (e.g. apt install mosh)"
     fi
   fi
+
+  [[ "$USE_CARGO" == true ]] && install_cargo_clean_all
 
   # ── Post-download: bat theme cache ────────────────────────────────────────
   log "=== Post-download setup ==="
@@ -2405,6 +2476,14 @@ cleanup_orphans() {
       cleaned_toolchain=true
     fi
     [[ "$cleaned_toolchain" == false ]] && ok "No rustup/cargo toolchain to clean up"
+    # cargo-clean-all's binary goes with the orphan scan below; its timer
+    # (see install_cargo_clean_all) has to go here.
+    if [[ -f "$CARGO_CLEAN_ALL_UNIT_DIR/${CARGO_CLEAN_ALL_UNIT}.timer" ]]; then
+      systemctl --user disable --now "${CARGO_CLEAN_ALL_UNIT}.timer" &>/dev/null || true
+      rm -f "$CARGO_CLEAN_ALL_UNIT_DIR/${CARGO_CLEAN_ALL_UNIT}".{service,timer}
+      systemctl --user daemon-reload &>/dev/null || true
+      ok "Removed the ${CARGO_CLEAN_ALL_UNIT} systemd timer"
+    fi
   else
     ok "Skipping rustup/cargo cleanup (this run used --cargo)"
   fi
@@ -2428,6 +2507,7 @@ cleanup_orphans() {
     known_dest["ccstatusline"]=1
   fi
   [[ "$FULL_INSTALL" == true ]] && known_dest["pwsh"]=1
+  [[ "$USE_CARGO" == true ]] && known_dest["cargo-clean-all"]=1
 
   local -A known_zellij=() known_zsh=()
   for t in "${ZELLIJ_PLUGINS[@]}"; do
