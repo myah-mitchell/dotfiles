@@ -298,7 +298,7 @@ TOOL_PINS=(
   # TEMPORARY: the fork's nightlies are built from plain upstream main without
   # the fork's patches, so stay on the fork release that has them. Switch to
   # "nightly-*" once nightlies stack the fork patches.
-  "zellij|myah-mitchell/zellij|fork-v0.46.4"
+  "zellij|myah-mitchell/zellij|fork-v0.46.5"
 )
 
 # ── Platform detection ────────────────────────────────────────────────────────
