@@ -22,7 +22,10 @@ cargo xtask test --no-web
 cargo xtask integration-test
 cargo test -p xtask
 cargo xtask assets --check
+cargo xtask ci e2e --test   # e2e.yml; also runs the #[ignore] plugin system tests
 ```
+
+`cargo xtask test` skips every `#[ignore]` test, and that includes all of `plugins/unit/plugin_tests.rs` and `shared_plugin_tests.rs`. The e2e job runs them with `cargo test -- --ignored` from `zellij-server/`. Run that locally for any plugin API change (it needs `target/e2e-data/plugins`, see the local notes), filtered to the plugin tests, and check the new tests appear in the output as passed.
 
 Regenerate protobuf output with `cargo x proto` after any `.proto` change.
 
@@ -69,6 +72,13 @@ When adding or changing a pane state (hidden, collapsed, suppressed, fullscreen,
 - Every existing reader of any set or flag whose meaning the change widens (for example `panes_to_hide.contains`).
 - Plugin event delivery for panes in the state (mode, tab, and pane updates still reach them).
 
+When adding server state owned by a plugin (a registration, an entry, a subscription, a pending request), clear it on every way a plugin ends. Legacy and shared plugins end differently, and a shared plugin's state is keyed by its instance id, not its slot ids:
+
+- Unload: `WasmBridge::unload_plugin` and the shared-instance unload path.
+- Reload: put the cleanup inside `reload_shared_instance`, which several reload paths call (by plugin id, by URL), not at one caller.
+- Crash: `handle_plugin_crash` (called once per pane, so it gets slot ids), `report_panic` in `zellij_exports.rs` (with `env.shared` set, `env.plugin_id` is the instance id), and the job error paths in `shared.rs` (`report_instance_error`).
+- Copy from what the existing cleanups already cover: grep every caller of `prompt_requests.plugin_unloaded` and of the settings-entry unregister.
+
 When changing how config is written back (`zellij-utils/src/input/config_file_edit.rs`), check every producer of the `ConfigEdit` variant, every reader of the written file, and the read-back verification.
 
 ### Tests
@@ -78,6 +88,8 @@ Test at the tiers the analog uses. For server and plugin API work that usually m
 - `zellij-server/src/unit/screen_tests.rs` for screen instructions, including each error arm.
 - `zellij-server/src/tab/unit/tab_tests.rs` for pane and layout behavior, one test per integration point above.
 - `zellij-server/src/plugins/unit/plugin_tests.rs` with support added to `default-plugins/fixture-plugin-for-tests` for a new plugin command or event.
+- `zellij-server/src/plugins/unit/shared_plugin_tests.rs` with support added to `fixture-shared-plugin-for-tests` (`default-plugins/fixture-plugin-for-tests/src/bin/`) when a shared plugin can use the command too: at least one test per lifecycle end (crash, reload by URL) from the integration audit.
+- These plugin test files are `#[ignore]` like their neighbors; see *Commands* for running them.
 - `zellij-integration-tests` for whole-app and nested-session behavior, including depth three for nesting.
 
 ### Style
@@ -109,3 +121,4 @@ Test at the tiers the analog uses. For server and plugin API work that usually m
 | [#5590](https://github.com/zellij-org/zellij/pull/5590) | 2026-10-06 | Pane-state integration audit (serialization, hit-testing, focus, close, `PaneInfo`); tab tests per integration point; allow maintainer edits; wasm rebuild is his step |
 | [#5680](https://github.com/zellij-org/zellij/pull/5680) | 2026-10-05 | None; merged unchanged, CHANGELOG line kept as written |
 | [#5729](https://github.com/zellij-org/zellij/pull/5729) | 2026-10-19 | None to the checklist; merged unchanged. Preferences: related fixes may share a PR, CHANGELOG conflicts are his to merge, unrelated flaky CI doesn't block |
+| [#5779](https://github.com/zellij-org/zellij/pull/5779) | 2026-10-30 | Plugin-owned server state cleared on every lifecycle end, shared plugins included (`shared.rs` job errors, `report_panic`, `reload_shared_instance`); shared-plugin tests and fixture; `#[ignore]` plugin tests only run under `--ignored` |
