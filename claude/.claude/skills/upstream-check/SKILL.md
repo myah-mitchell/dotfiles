@@ -67,6 +67,7 @@ Work through every section below plus every item in the reference file's checkli
 #### 3b. Build, format, and tests
 
 - Run the repo's formatter in check mode and the same test commands its CI runs. Report exact failures.
+- Confirm the branch's new tests actually ran: find each one by name in the output as passed. A test that is ignored, filtered out, or in a binary the command skips passes silently, and a summary with zero failures says nothing about it.
 - Generated files the repo commits (protobuf output, schemas, lockfiles, snapshots) are regenerated when their inputs changed, and untouched when they didn't. The reference file says which ones the maintainer prefers to regenerate himself.
 
 #### 3c. Follow the existing pattern
