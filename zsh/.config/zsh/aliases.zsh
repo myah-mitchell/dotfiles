@@ -29,7 +29,8 @@ alias watch='viddy'
 alias btm='btm'
 
 # eza (ls) — Catppuccin Mocha theme via $EZA_CONFIG_DIR/theme.yml (zsh/.zshenv)
-alias ls='eza --icons=auto --group-directories-first'
+# Only when eza is installed, so a missing eza never leaves `ls` broken.
+(( $+commands[eza] )) && alias ls='eza --icons=auto --group-directories-first'
 
 # sd — standalone, no alias override
 # (use `sd` directly; does not replace sed)
@@ -64,4 +65,9 @@ alias glog='git log --oneline --graph --decorate --all'
 # for. Adding --reverse here would flip it to newest-first instead.
 # -g/--group adds the Group column (eza's -l shows owner but not group by
 # default, unlike GNU ls -l); --header labels every column.
-alias l='ls -alg --header --sort=modified'
+# Without eza, `ls` is GNU ls, so fall back to its equivalent.
+if (( $+commands[eza] )); then
+  alias l='ls -alg --header --sort=modified'
+else
+  alias l='ls -altr'
+fi

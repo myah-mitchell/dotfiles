@@ -309,9 +309,16 @@ if [[ "${OSTYPE:-}" == "msys" || "${OSTYPE:-}" == "cygwin" || "$(uname -s)" == M
   exit 1
 fi
 
+# macOS isn't supported for now: the script needs bash 4+ and GNU grep, sed,
+# and find. The darwin rows and branches below are kept dormant so support can
+# be restored.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  err "macOS isn't supported; this script runs on Linux (including WSL2) only."
+  exit 1
+fi
+
 OS="linux"
 ARCH="x86_64"
-[[ "$(uname -s)" == "Darwin" ]] && OS="darwin"
 [[ "$(uname -m)" == "aarch64" || "$(uname -m)" == "arm64" ]] && ARCH="aarch64"
 
 IS_WSL=false
@@ -320,7 +327,7 @@ if grep -qi microsoft /proc/version 2>/dev/null; then
 fi
 
 # Opt-in (like --claude/--full above) and only meaningful under WSL2 in the
-# first place — --windows on native Linux/macOS would have nothing to do,
+# first place: --windows on native Linux would have nothing to do,
 # since there's no Windows side to set up.
 WANT_WINDOWS_SETUP=false
 [[ "$IS_WSL" == true && ("$INSTALL_WINDOWS" == true || "$FULL_INSTALL" == true) ]] && WANT_WINDOWS_SETUP=true
@@ -368,13 +375,21 @@ fi
 # ── Version tracking ──────────────────────────────────────────────────────────
 get_installed_version() { grep "^$1=" "$VERSIONS_FILE" 2>/dev/null | cut -d= -f2 || echo ""; }
 set_installed_version() {
-  local key="$1" ver="$2"
-  if grep -q "^${key}=" "$VERSIONS_FILE" 2>/dev/null; then
-    sed -i "s|^${key}=.*|${key}=${ver}|" "$VERSIONS_FILE"
+  local key="$1" ver="$2" file="${3:-$VERSIONS_FILE}"
+  if grep -q "^${key}=" "$file" 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${ver}|" "$file"
   else
-    echo "${key}=${ver}" >>"$VERSIONS_FILE"
+    echo "${key}=${ver}" >>"$file"
   fi
 }
+# Which repo each download_release() tool came from, kept beside .versions
+# rather than in it so nothing else that reads .versions has to change. Lets a
+# row moved to another repo (reverting the zellij fork, say) reinstall instead
+# of reporting "already at" the other repo's tag.
+VERSIONS_REPOS_FILE="$LOCAL_BIN/.versions-repos"
+touch "$VERSIONS_REPOS_FILE"
+get_installed_repo() { grep "^$1=" "$VERSIONS_REPOS_FILE" 2>/dev/null | cut -d= -f2 || echo ""; }
+set_installed_repo() { set_installed_version "$1" "$2" "$VERSIONS_REPOS_FILE"; }
 
 # ── Pinned installers (dest/repo/tag or npm-pinned — shared by the normal
 # install flow below and --check-pins/--upgrade=<name>) ───────────────────────
@@ -442,13 +457,18 @@ install_zellij_plugin() {
   fi
 
   log "Downloading ${dest} ${tag}..."
+  # Download beside the live file and swap it in only on success: a partial
+  # download over the live .wasm would break every new terminal, and with
+  # .versions still on the old tag, later runs would never repair it.
   if curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
     "https://github.com/${repo}/releases/download/${tag}/${dest}" \
-    -o "${plugin_dir}/${dest}"; then
+    -o "${plugin_dir}/${dest}.tmp" &&
+    mv "${plugin_dir}/${dest}.tmp" "${plugin_dir}/${dest}"; then
     set_installed_version "$dest" "$tag"
     ln -sf "${plugin_dir}/${dest}" "${deployed_dir}/${dest}"
     ok "${dest} installed at ${tag}"
   else
+    rm -f "${plugin_dir}/${dest}.tmp"
     warn "Download failed for ${dest} — zjstatus/autolock won't load until this succeeds (re-run install.sh)"
     return 1
   fi
@@ -988,9 +1008,12 @@ newest_release_asset() {
 # ASSET_GLOB: shell glob matching the archive filename, e.g. "bat-*-x86_64*linux*musl*.tar.gz"
 # DEST_BIN:   filename to create in BIN_DIR
 # BINARY_IN_ARCHIVE: path inside archive to the binary (default: same as DEST_BIN)
+# EXTRA_BINS: optional space-separated companion binaries installed into BIN_DIR
+#             from the same archive (yazi's ya). One missing from disk counts
+#             as DEST_BIN not being installed.
 # Installs /releases/latest, or what DEST_BIN's TOOL_PINS row selects.
 download_release() {
-  local repo="$1" glob="$2" dest="$3" bin_in_archive="${4:-$3}"
+  local repo="$1" glob="$2" dest="$3" bin_in_archive="${4:-$3}" extra_bins="${5:-}"
   local key="${dest}"
   local dest_path="${BIN_DIR}/${dest}"
   local pin
@@ -1007,6 +1030,20 @@ download_release() {
     warn "${dest} recorded as ${installed} in .versions but missing from disk. Reinstalling."
     installed=""
   fi
+  local extra
+  for extra in $extra_bins; do
+    if [[ -n "$installed" && ! -f "${BIN_DIR}/${extra}" ]]; then
+      warn "${extra}, which ships with ${dest}, is missing from disk. Reinstalling ${dest}."
+      installed=""
+    fi
+  done
+
+  local installed_repo
+  installed_repo=$(get_installed_repo "$key")
+  if [[ -n "$installed" && -n "$installed_repo" && "$installed_repo" != "$repo" ]]; then
+    log "${dest} ${installed} came from ${installed_repo}, but its row now uses ${repo}. Reinstalling."
+    installed=""
+  fi
 
   # Skip the API call entirely when already installed and not forcing update.
   # With 25+ tools and 60 unauthenticated requests/hour, making an API call for
@@ -1018,6 +1055,8 @@ download_release() {
   if [[ -n "$installed" && "$FORCE_UPDATE" == false ]]; then
     if [[ -z "$pin" ]] || pin_satisfied "$installed" "$pin"; then
       ok "${dest} already at ${installed}"
+      # Entries from before the repo was tracked: assume the row's repo.
+      if [[ -z "$installed_repo" ]]; then set_installed_repo "$key" "$repo"; fi
       return
     fi
     log "${dest} is at ${installed}, but TOOL_PINS selects ${pin}."
@@ -1086,29 +1125,47 @@ download_release() {
     return
   fi
 
-  # Detect archive type and extract
-  local extracted_binary
+  # Detect archive type and extract. A corrupt or truncated archive skips
+  # this tool instead of letting `set -e` end the whole run.
+  local extracted_binary extract_ok=true
   if [[ "$asset_url" == *.tar.gz || "$asset_url" == *.tgz ]]; then
-    tar -xzf "$archive" -C "$tmpdir"
+    tar -xzf "$archive" -C "$tmpdir" || extract_ok=false
     extracted_binary=$(find "$tmpdir" -name "$bin_in_archive" -not -name "*.gz" | head -1)
   elif [[ "$asset_url" == *.tar.xz ]]; then
-    tar -xJf "$archive" -C "$tmpdir"
+    tar -xJf "$archive" -C "$tmpdir" || extract_ok=false
     extracted_binary=$(find "$tmpdir" -name "$bin_in_archive" | head -1)
   elif [[ "$asset_url" == *.zip ]]; then
-    unzip -q "$archive" -d "$tmpdir"
+    unzip -q "$archive" -d "$tmpdir" || extract_ok=false
     extracted_binary=$(find "$tmpdir" -name "$bin_in_archive" | head -1)
   else
     # Plain binary
     extracted_binary="$archive"
   fi
 
+  if [[ "$extract_ok" == false ]]; then
+    warn "Couldn't extract the ${dest} archive (corrupt or truncated download?). Skipping."
+    return
+  fi
   if [[ -z "$extracted_binary" || ! -f "$extracted_binary" ]]; then
     warn "Could not find '${bin_in_archive}' in archive for ${dest} — skipping."
     return
   fi
 
-  install -m 755 "$extracted_binary" "$BIN_DIR/$dest"
+  if ! install -m 755 "$extracted_binary" "$BIN_DIR/$dest"; then
+    warn "Couldn't install ${dest} into ${BIN_DIR}. Skipping."
+    return
+  fi
+  local extra_path
+  for extra in $extra_bins; do
+    extra_path=$(find "$tmpdir" -name "$extra" -type f | head -1)
+    if [[ -n "$extra_path" ]] && install -m 755 "$extra_path" "$BIN_DIR/$extra"; then
+      ok "${extra} installed from the ${dest} ${latest} archive"
+    else
+      warn "Couldn't install ${extra} from the ${dest} archive."
+    fi
+  done
   set_installed_version "$key" "$latest"
+  set_installed_repo "$key" "$repo"
   ok "${dest} installed at ${latest}"
 }
 
@@ -1602,23 +1659,30 @@ if [[ "$LINK_ONLY" == false ]]; then
       else
         NVIM_ASSET="nvim-macos-x86_64.tar.gz"
       fi
-      curl -fL --connect-timeout 30 --max-time 600 --retry 2 \
+      # A failed download or corrupt archive skips nvim instead of letting
+      # `set -e` end the whole run.
+      if ! curl -fL --connect-timeout 30 --max-time 600 --retry 2 \
         "https://github.com/neovim/neovim/releases/download/${latest}/${NVIM_ASSET}" \
-        -o "$tmpdir/nvim.tar.gz"
-      tar -xzf "$tmpdir/nvim.tar.gz" -C "$tmpdir"
-      NVIM_DIR=$(find "$tmpdir" -maxdepth 1 -name "nvim-*" -type d | head -1)
-      install -m 755 "$NVIM_DIR/bin/nvim" "$BIN_DIR/nvim"
-      # Runtime: syntax files, treesitter queries, ftplugins, etc.
-      mkdir -p "$HOME/.local/share/nvim/runtime"
-      cp -r "$NVIM_DIR/share/nvim/runtime/." "$HOME/.local/share/nvim/runtime/"
-      # Bundled treesitter parsers (present since nvim 0.10)
-      if [[ -d "$NVIM_DIR/lib/nvim" ]]; then
-        mkdir -p "$HOME/.local/lib/nvim"
-        cp -r "$NVIM_DIR/lib/nvim/." "$HOME/.local/lib/nvim/"
+        -o "$tmpdir/nvim.tar.gz"; then
+        warn "Download failed for nvim ${latest}. Skipping."
+      elif ! tar -xzf "$tmpdir/nvim.tar.gz" -C "$tmpdir"; then
+        warn "Couldn't extract the nvim ${latest} archive. Skipping."
+      elif ! NVIM_DIR=$(find "$tmpdir" -maxdepth 1 -name "nvim-*" -type d | head -1) ||
+        [[ ! -f "$NVIM_DIR/bin/nvim" ]] || ! install -m 755 "$NVIM_DIR/bin/nvim" "$BIN_DIR/nvim"; then
+        warn "Couldn't install nvim from the ${latest} archive. Skipping."
+      else
+        # Runtime: syntax files, treesitter queries, ftplugins, etc.
+        mkdir -p "$HOME/.local/share/nvim/runtime"
+        cp -r "$NVIM_DIR/share/nvim/runtime/." "$HOME/.local/share/nvim/runtime/"
+        # Bundled treesitter parsers (present since nvim 0.10)
+        if [[ -d "$NVIM_DIR/lib/nvim" ]]; then
+          mkdir -p "$HOME/.local/lib/nvim"
+          cp -r "$NVIM_DIR/lib/nvim/." "$HOME/.local/lib/nvim/"
+        fi
+        set_installed_version "nvim" "$latest"
+        ok "nvim installed at ${latest}"
       fi
       rm -rf "$tmpdir"
-      set_installed_version "nvim" "$latest"
-      ok "nvim installed at ${latest}"
     else
       ok "nvim already at ${latest}"
     fi
@@ -1648,7 +1712,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "rga|ripgrep_all|phiresky/ripgrep-all|darwin|aarch64|ripgrep_all-*-aarch64-apple-darwin.tar.gz|rga"
 
     "eza|eza|eza-community/eza|linux|x86_64|eza_x86_64*linux*musl*.tar.gz|-"
-    "eza|eza|eza-community/eza|linux|aarch64|eza_aarch64*linux*musl*.tar.gz|-"
+    "eza|eza|eza-community/eza|linux|aarch64|eza_aarch64-unknown-linux-gnu.tar.gz|-"
     "eza|eza|eza-community/eza|darwin|*|eza_*apple*darwin*.tar.gz|-"
 
     "fzf|-|junegunn/fzf|linux|x86_64|fzf-*-linux_amd64.tar.gz|-"
@@ -1800,7 +1864,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "mdcat|mdcat|BIRSAx2/mdcat|linux|x86_64|mdcat-*-x86_64-unknown-linux-*.tar.gz|-"
 
     "7zz|7zz|ip7z/7zip|linux|x86_64|7z*-linux-x64.tar.xz|7zz"
-    "7zz|7zz|ip7z/7zip|linux|aarch64|7z*-linux-arm.tar.xz|7zz"
+    "7zz|7zz|ip7z/7zip|linux|aarch64|7z*-linux-arm64.tar.xz|7zz"
     "7zz|7zz|ip7z/7zip|darwin|*|7z*-mac.tar.xz|7zz"
 
     "jq|-|jqlang/jq|linux|x86_64|jq-linux-amd64|jq"
@@ -1815,33 +1879,10 @@ if [[ "$LINK_ONLY" == false ]]; then
   )
   for t in "${CLI_TOOLS[@]}"; do install_tool "$t"; done
 
-  # yazi (includes ya companion binary) — two binaries from the same archive
+  # yazi, plus its ya companion binary from the same archive, so the two
+  # always come from the same release.
   # Always use binary releases: crates.io requires a yazi-build workaround that's unreliable
-  if [[ "$OS" == "linux" && "$ARCH" == "x86_64" ]]; then
-    download_release "sxyazi/yazi" "yazi-x86_64-unknown-linux-musl.zip" "yazi" "yazi"
-    log "Extracting ya companion binary..."
-    tmpdir=$(mktemp -d)
-    # Match whatever download_release just installed (latest, or a TOOL_PINS
-    # pin), so yazi and ya never come from different releases.
-    latest_yazi=$(get_installed_version "yazi")
-    if [[ -z "$latest_yazi" ]]; then
-      warn "yazi has no recorded version, so there's no release to take ya from. Skipping the ya companion binary."
-    elif ! curl -sfL --connect-timeout 30 --max-time 600 --retry 2 \
-      "https://github.com/sxyazi/yazi/releases/download/${latest_yazi}/yazi-x86_64-unknown-linux-musl.zip" \
-      -o "$tmpdir/yazi.zip"; then
-      warn "Download failed for ya companion binary — skipping."
-    elif ! unzip -q "$tmpdir/yazi.zip" -d "$tmpdir"; then
-      warn "Could not extract ya companion binary archive — skipping."
-    else
-      ya_bin=$(find "$tmpdir" -name "ya" | head -1)
-      [[ -f "$ya_bin" ]] && install -m 755 "$ya_bin" "$BIN_DIR/ya"
-    fi
-    rm -rf "$tmpdir"
-  elif [[ "$OS" == "linux" && "$ARCH" == "aarch64" ]]; then
-    download_release "sxyazi/yazi" "yazi-aarch64-unknown-linux-musl.zip" "yazi" "yazi"
-  elif [[ "$OS" == "darwin" ]]; then
-    download_release "sxyazi/yazi" "yazi-${ARCH}-apple-darwin.zip" "yazi" "yazi"
-  fi
+  download_release "sxyazi/yazi" "yazi-${ARCH}-unknown-linux-musl.zip" "yazi" "yazi" "ya"
 
   # mosh — no pre-built release binaries, use system package manager
   if ! command -v mosh &>/dev/null; then
@@ -1864,10 +1905,18 @@ if [[ "$LINK_ONLY" == false ]]; then
     log "Installing Catppuccin bat theme..."
     BAT_CONFIG_DIR="$HOME/.config/bat"
     mkdir -p "$BAT_CONFIG_DIR/themes"
-    if [[ ! -f "$BAT_CONFIG_DIR/themes/Catppuccin Mocha.tmTheme" ]]; then
-      curl -sfL \
+    bat_theme="$BAT_CONFIG_DIR/themes/Catppuccin Mocha.tmTheme"
+    if [[ ! -f "$bat_theme" ]]; then
+      # Through a temp file, so a failed download neither ends the run under
+      # `set -e` nor leaves a partial theme that the check above would keep.
+      if curl -sfL \
         "https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme" \
-        -o "$BAT_CONFIG_DIR/themes/Catppuccin Mocha.tmTheme"
+        -o "${bat_theme}.tmp"; then
+        mv "${bat_theme}.tmp" "$bat_theme"
+      else
+        rm -f "${bat_theme}.tmp"
+        warn "Download failed for the Catppuccin bat theme. Re-run install.sh to retry."
+      fi
     fi
     "$BIN_DIR/bat" cache --build &>/dev/null && ok "bat theme cache built"
   fi
@@ -1995,7 +2044,8 @@ remove_package() {
   while IFS= read -r -d '' src; do
     local rel="${src#$pkg_dir/}"
     local target="$HOME/$rel"
-    if [[ -L "$target" ]]; then
+    # Only links this repo created: one pointing elsewhere is the user's own.
+    if [[ -L "$target" && "$target" -ef "$src" ]]; then
       rm "$target"
       ok "Removed $target"
     fi
@@ -2072,11 +2122,21 @@ link_package() {
     [[ "$skip" == true ]] && continue
     local target="$HOME/$rel"
     mkdir -p "$(dirname "$target")"
+    # A parent directory that's itself a symlink into the repo (a leftover GNU
+    # stow folded link, say) makes $target the repo file: backing it up would
+    # rename the repo file and the link would point at itself.
+    if [[ ! -L "$target" && "$target" -ef "$src" ]]; then
+      warn "Skipping $target: a parent directory is a symlink into the repo"
+      continue
+    fi
     if [[ -e "$target" && ! -L "$target" ]]; then
       warn "Backing up: $target → ${target}${BACKUP_SUFFIX}"
       mv "$target" "${target}${BACKUP_SUFFIX}"
     fi
     if [[ "$USE_COPY" == true ]]; then
+      # A symlink left by an earlier run without --copy points at $src, and
+      # cp refuses to copy a file onto itself.
+      [[ -L "$target" ]] && rm -f "$target"
       cp "$src" "$target"
     else
       ln -sf "$src" "$target"
@@ -2175,59 +2235,74 @@ fi
 # ── Generate shell init scripts ───────────────────────────────────────────────
 log "=== Generating shell init scripts ==="
 
-if [[ ! -f "$HOME/.local/share/atuin/init.zsh" ]] && { command -v atuin &>/dev/null || [[ -f "$LOCAL_BIN/atuin" ]]; }; then
+# gen_init_script <file> <ok-message> <command...>: writes the command's output
+# to <file> through a temp file, so a failing tool leaves no empty init script
+# for the skip-if-present checks below to keep forever.
+gen_init_script() {
+  local file="$1" msg="$2"
+  shift 2
+  if "$@" >"${file}.tmp" 2>/dev/null && [[ -s "${file}.tmp" ]]; then
+    mv "${file}.tmp" "$file"
+    ok "$msg"
+  else
+    rm -f "${file}.tmp"
+    warn "Couldn't generate ${file} with '$*'. Re-run install.sh to retry."
+  fi
+}
+
+if [[ ! -s "$HOME/.local/share/atuin/init.zsh" ]] && { command -v atuin &>/dev/null || [[ -f "$LOCAL_BIN/atuin" ]]; }; then
   ATUIN="${LOCAL_BIN}/atuin"
   [[ -f "$ATUIN" ]] || ATUIN="atuin"
-  "$ATUIN" init zsh --disable-up-arrow >"$HOME/.local/share/atuin/init.zsh" 2>/dev/null && ok "atuin init generated"
+  gen_init_script "$HOME/.local/share/atuin/init.zsh" "atuin init generated" "$ATUIN" init zsh --disable-up-arrow
 fi
 
-if [[ ! -f "$HOME/.cache/starship/init.zsh" ]] && { command -v starship &>/dev/null || [[ -f "$LOCAL_BIN/starship" ]]; }; then
+if [[ ! -s "$HOME/.cache/starship/init.zsh" ]] && { command -v starship &>/dev/null || [[ -f "$LOCAL_BIN/starship" ]]; }; then
   STARSHIP="${LOCAL_BIN}/starship"
   [[ -f "$STARSHIP" ]] || STARSHIP="starship"
   mkdir -p "$HOME/.cache/starship"
-  "$STARSHIP" init zsh >"$HOME/.cache/starship/init.zsh" 2>/dev/null && ok "starship init generated"
+  gen_init_script "$HOME/.cache/starship/init.zsh" "starship init generated" "$STARSHIP" init zsh
 fi
 
-if [[ ! -f "$HOME/.local/share/zoxide/init.zsh" ]] && { command -v zoxide &>/dev/null || [[ -f "$LOCAL_BIN/zoxide" ]]; }; then
+if [[ ! -s "$HOME/.local/share/zoxide/init.zsh" ]] && { command -v zoxide &>/dev/null || [[ -f "$LOCAL_BIN/zoxide" ]]; }; then
   ZOXIDE="${LOCAL_BIN}/zoxide"
   [[ -f "$ZOXIDE" ]] || ZOXIDE="zoxide"
   mkdir -p "$HOME/.local/share/zoxide"
-  "$ZOXIDE" init zsh >"$HOME/.local/share/zoxide/init.zsh" 2>/dev/null && ok "zoxide init generated"
+  gen_init_script "$HOME/.local/share/zoxide/init.zsh" "zoxide init generated" "$ZOXIDE" init zsh
 fi
 
-if [[ ! -f "$HOME/.cache/carapace/init.zsh" ]] && { command -v carapace &>/dev/null || [[ -f "$LOCAL_BIN/carapace" ]]; }; then
+if [[ ! -s "$HOME/.cache/carapace/init.zsh" ]] && { command -v carapace &>/dev/null || [[ -f "$LOCAL_BIN/carapace" ]]; }; then
   CARAPACE="${LOCAL_BIN}/carapace"
   [[ -f "$CARAPACE" ]] || CARAPACE="carapace"
-  "$CARAPACE" _carapace zsh >"$HOME/.cache/carapace/init.zsh" 2>/dev/null && ok "carapace init generated"
+  gen_init_script "$HOME/.cache/carapace/init.zsh" "carapace init generated" "$CARAPACE" _carapace zsh
 fi
 
 # nu: only generated under --nushell; nushell/config.nu sources these same
 # tools' init.nu files the way zsh/.zshrc sources the init.zsh ones above.
 if [[ "$WANT_NUSHELL" == true ]]; then
-  if [[ ! -f "$HOME/.local/share/atuin/init.nu" ]] && { command -v atuin &>/dev/null || [[ -f "$LOCAL_BIN/atuin" ]]; }; then
+  if [[ ! -s "$HOME/.local/share/atuin/init.nu" ]] && { command -v atuin &>/dev/null || [[ -f "$LOCAL_BIN/atuin" ]]; }; then
     ATUIN="${LOCAL_BIN}/atuin"
     [[ -f "$ATUIN" ]] || ATUIN="atuin"
-    "$ATUIN" init nu --disable-up-arrow >"$HOME/.local/share/atuin/init.nu" 2>/dev/null && ok "atuin init generated (nu)"
+    gen_init_script "$HOME/.local/share/atuin/init.nu" "atuin init generated (nu)" "$ATUIN" init nu --disable-up-arrow
   fi
 
-  if [[ ! -f "$HOME/.cache/starship/init.nu" ]] && { command -v starship &>/dev/null || [[ -f "$LOCAL_BIN/starship" ]]; }; then
+  if [[ ! -s "$HOME/.cache/starship/init.nu" ]] && { command -v starship &>/dev/null || [[ -f "$LOCAL_BIN/starship" ]]; }; then
     STARSHIP="${LOCAL_BIN}/starship"
     [[ -f "$STARSHIP" ]] || STARSHIP="starship"
     mkdir -p "$HOME/.cache/starship"
-    "$STARSHIP" init nu >"$HOME/.cache/starship/init.nu" 2>/dev/null && ok "starship init generated (nu)"
+    gen_init_script "$HOME/.cache/starship/init.nu" "starship init generated (nu)" "$STARSHIP" init nu
   fi
 
-  if [[ ! -f "$HOME/.local/share/zoxide/init.nu" ]] && { command -v zoxide &>/dev/null || [[ -f "$LOCAL_BIN/zoxide" ]]; }; then
+  if [[ ! -s "$HOME/.local/share/zoxide/init.nu" ]] && { command -v zoxide &>/dev/null || [[ -f "$LOCAL_BIN/zoxide" ]]; }; then
     ZOXIDE="${LOCAL_BIN}/zoxide"
     [[ -f "$ZOXIDE" ]] || ZOXIDE="zoxide"
     mkdir -p "$HOME/.local/share/zoxide"
-    "$ZOXIDE" init nushell >"$HOME/.local/share/zoxide/init.nu" 2>/dev/null && ok "zoxide init generated (nu)"
+    gen_init_script "$HOME/.local/share/zoxide/init.nu" "zoxide init generated (nu)" "$ZOXIDE" init nushell
   fi
 
-  if [[ ! -f "$HOME/.cache/carapace/init.nu" ]] && { command -v carapace &>/dev/null || [[ -f "$LOCAL_BIN/carapace" ]]; }; then
+  if [[ ! -s "$HOME/.cache/carapace/init.nu" ]] && { command -v carapace &>/dev/null || [[ -f "$LOCAL_BIN/carapace" ]]; }; then
     CARAPACE="${LOCAL_BIN}/carapace"
     [[ -f "$CARAPACE" ]] || CARAPACE="carapace"
-    "$CARAPACE" _carapace nushell >"$HOME/.cache/carapace/init.nu" 2>/dev/null && ok "carapace init generated (nu)"
+    gen_init_script "$HOME/.cache/carapace/init.nu" "carapace init generated (nu)" "$CARAPACE" _carapace nushell
   fi
 fi
 
@@ -2286,7 +2361,9 @@ done
 # "broken" with no visible error. Seeding the grant here avoids that entirely.
 # Permissions below match each plugin's own request_permission() call (checked
 # against source at time of writing — re-check if bumping versions above).
-# Append-only: never overwrites grants for other plugins the user has approved.
+# Never touches grants for other plugins. A plugin already in the file gets
+# any missing scopes from its entry here added to its block; extra scopes the
+# user approved by hand stay.
 #
 # Keyed by the *deployed* ~/.local/share path, not $ZELLIJ_PLUGIN_DIR (the repo
 # source dir) — Zellij's permission cache key is exactly what config.kdl's
@@ -2305,7 +2382,29 @@ touch "$ZELLIJ_PERMISSIONS_FILE"
 for entry in "${ZELLIJ_PLUGIN_PERMISSIONS[@]}"; do
   IFS='|' read -r dest perms <<<"$entry"
   plugin_path="${HOME}/.local/share/zellij/plugins/${dest}"
-  if grep -qF "\"${plugin_path}\"" "$ZELLIJ_PERMISSIONS_FILE"; then
+  if grep -qxF "\"${plugin_path}\" {" "$ZELLIJ_PERMISSIONS_FILE"; then
+    # Already seeded: add any scopes a plugin bump introduced to its block,
+    # keeping whatever else is there. awk exits 10 when it added something.
+    perms_tmp="${ZELLIJ_PERMISSIONS_FILE}.tmp"
+    perms_rc=0
+    awk -v key="\"${plugin_path}\" {" -v perms="$perms" '
+      BEGIN { n = split(perms, want, " ") }
+      $0 == key { inblk = 1; print; next }
+      inblk && /^}/ {
+        for (i = 1; i <= n; i++) if (!(want[i] in have)) { print "    " want[i]; added = 1 }
+        inblk = 0; print; next
+      }
+      inblk { have[$1] = 1; print; next }
+      { print }
+      END { if (added) exit 10 }
+    ' "$ZELLIJ_PERMISSIONS_FILE" >"$perms_tmp" || perms_rc=$?
+    if [[ "$perms_rc" == 10 ]]; then
+      mv "$perms_tmp" "$ZELLIJ_PERMISSIONS_FILE"
+      ok "Added new zellij permission scopes for ${dest}"
+    else
+      rm -f "$perms_tmp"
+      [[ "$perms_rc" == 0 ]] || warn "Couldn't update zellij permissions for ${dest} (awk exit ${perms_rc})"
+    fi
     continue
   fi
   {
@@ -2340,7 +2439,7 @@ done
 # install.sh run. Re-link now so a fresh plugin works on the very first run.
 link_package bin
 
-# ── Fonts (Linux / macOS only — WSL defers to windows-setup.ps1) ─────────────
+# ── Fonts (native Linux only; WSL defers to windows-setup.ps1) ───────────────
 if [[ "$IS_WSL" == false ]]; then
   log "=== JetBrainsMono Nerd Font ==="
   FONT_KEY="jetbrainsmono-nf"
@@ -2371,10 +2470,12 @@ if [[ "$IS_WSL" == false ]]; then
       warn "Could not find JetBrainsMono.zip asset — skipping font install."
     else
       font_tmp=$(mktemp -d)
-      trap "rm -rf '$font_tmp'" RETURN
 
-      if curl -fL --connect-timeout 30 --max-time 600 --retry 2 "$font_zip_url" -o "$font_tmp/JetBrainsMono.zip"; then
-        unzip -q "$font_tmp/JetBrainsMono.zip" -d "$font_tmp/fonts"
+      if ! curl -fL --connect-timeout 30 --max-time 600 --retry 2 "$font_zip_url" -o "$font_tmp/JetBrainsMono.zip"; then
+        warn "Font download failed. Skipping."
+      elif ! unzip -q "$font_tmp/JetBrainsMono.zip" -d "$font_tmp/fonts"; then
+        warn "Couldn't extract the font archive. Skipping."
+      else
 
         if [[ "$OS" == "darwin" ]]; then
           FONT_DEST="$HOME/Library/Fonts"
@@ -2393,9 +2494,8 @@ if [[ "$IS_WSL" == false ]]; then
         [[ "$OS" == "linux" ]] && fc-cache -f "$FONT_DEST" 2>/dev/null || true
         set_installed_version "$FONT_KEY" "$font_latest"
         ok "JetBrainsMono Nerd Font installed (${font_count} files) at ${font_latest}"
-      else
-        warn "Font download failed — skipping."
       fi
+      rm -rf "$font_tmp"
     fi
   fi
 fi
@@ -2660,6 +2760,9 @@ cleanup_orphans() {
     done
     [[ "$cleaned_claude" == false ]] && ok "No orphaned Claude Code versions to clean up"
   fi
+  # The `[[ ]] && ok` above is false after a cleanup; don't let it become the
+  # function's status and trip `set -e` at the call site.
+  return 0
 }
 if [[ "$DO_CLEANUP" == true ]]; then
   if [[ "$LINK_ONLY" == true ]]; then

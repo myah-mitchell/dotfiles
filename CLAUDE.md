@@ -74,11 +74,11 @@ Versions are pinned in the `ZELLIJ_PLUGINS` array in `install.sh` and must stay 
 | `zellij-newtab-plus.wasm` | `AlexZasorin/zellij-newtab-plus` | Tagged release; powers the `c` binding |
 | `zjhints.wasm` | `myah-mitchell/zjhints` | Own repo; temporarily pinned to the `ea-mouse-support` prerelease, and `--update` picks up a rebuilt tag |
 
-zellij itself is also temporarily installed from the `myah-mitchell/zellij` fork (see the `TEMPORARY` comment on its `CORE_TOOLS` rows). That fork publishes only a linux-x86_64 asset, so aarch64 and macOS installs fail until it publishes more. Its `TOOL_PINS` entry pins the exact tag `fork-v0.46.4`, because the fork's nightlies are built from plain upstream main without the fork's patches; switch it to `nightly-*` once they include them (see [Pinning a tool](#pinning-a-tool)). zjhints needs that fork at `fork-v0.46.2` or later.
+zellij itself is also temporarily installed from the `myah-mitchell/zellij` fork (see the `TEMPORARY` comment on its `CORE_TOOLS` rows). That fork publishes only a linux-x86_64 asset, so aarch64 installs fail until it publishes more. Its `TOOL_PINS` entry pins the exact tag `fork-v0.46.4`, because the fork's nightlies are built from plain upstream main without the fork's patches; switch it to `nightly-*` once they include them (see [Pinning a tool](#pinning-a-tool)). zjhints needs that fork at `fork-v0.46.2` or later.
 
 ### Plugin permission pre-seeding
 
-Each plugin's `request_permission()` needs a one-time interactive approval, shown in the plugin's own pane. zjstatus and zellij-autolock live in unfocused, size-1, borderless panes, so that prompt is easy never to see, and the plugin then sits inert with no error. `install.sh` pre-writes the grants to `~/.cache/zellij/permissions.kdl`, appending without touching grants for other plugins. If a plugin bump starts requesting new permission scopes, update its entry in `ZELLIJ_PLUGIN_PERMISSIONS` in `install.sh`.
+Each plugin's `request_permission()` needs a one-time interactive approval, shown in the plugin's own pane. zjstatus and zellij-autolock live in unfocused, size-1, borderless panes, so that prompt is easy never to see, and the plugin then sits inert with no error. `install.sh` pre-writes the grants to `~/.cache/zellij/permissions.kdl` without touching grants for other plugins. If a plugin bump starts requesting new permission scopes, update its entry in `ZELLIJ_PLUGIN_PERMISSIONS` in `install.sh`: the next run adds any scope missing from that plugin's existing block and keeps scopes approved by hand.
 
 ## Zsh
 
@@ -158,11 +158,16 @@ The pre-migration setup also ran three plugins (`nu_plugin_skim`, `nu_plugin_dns
                     the binary itself is gitignored and downloaded by install.sh
 ```
 
+### Supported platforms
+
+Linux only for now, x86_64 and aarch64, WSL2 included. `install.sh` exits with an error on macOS: it needs bash 4 or later and GNU grep, sed, and find, none of which macOS ships. The `darwin` rows in the tool arrays and the macOS branches are left in place, unused, so support can be restored by fixing those dependencies and removing the guard in the platform-detection section.
+
 ### Linker behavior
 
 - `PACKAGES` in `install.sh` lists the package directories: `bin bash zsh starship zellij nvim git ripgrep bat yazi atuin lazygit tealdeer ssh alacritty claude ccstatusline`, plus `nushell` under `--nushell`. A new package means adding its directory name here.
 - A package can hold a `.linkignore` (one glob per line, `#` comments) listing files not to link. `yazi/.linkignore` excludes `.config/yazi/flavors/*` and `.config/yazi/plugins/*`, which `ya pkg` manages at runtime.
-- If `link_package` finds a real file (not a symlink) at a target path, it backs it up to `<target>.bak.<timestamp>` before linking.
+- If `link_package` finds a real file (not a symlink) at a target path, it backs it up to `<target>.bak.<timestamp>` before linking. It skips, with a warning, a target that's the repo file itself because a parent directory is a symlink into the repo (a leftover GNU stow folded link, say).
+- `remove_package` (`--remove`) only deletes symlinks that resolve to the repo's file, so a user's own symlink at the same path stays.
 - `prune_stale_symlinks()` runs before linking on every invocation. It sweeps `$HOME` (excluding `.cache`, `.cargo`, `.rustup`, `.npm`, `.local/share/nvim`, and the repo itself) for symlinks into the repo whose target is gone, and removes them. `link_package` only creates links for files that exist, so this is what cleans up after a renamed or deleted config file.
 
 ### Flags
@@ -186,7 +191,7 @@ The pre-migration setup also ran three plugins (`nu_plugin_skim`, `nu_plugin_dns
 
 #### `--windows`
 
-Only meaningful under WSL2: `WANT_WINDOWS_SETUP`, computed right after `IS_WSL` detection, is false on native Linux and macOS regardless of the flag. It gates the [WSL2](#wsl2) block: installing Alacritty with winget, installing the JetBrainsMono Nerd Font on the Windows side, and creating the Alacritty config symlink. It's opt-in because a WSL box isn't necessarily used through Windows Alacritty at all (a dev container, a CI runner, a headless instance reached over SSH), and those have no business running winget or PowerShell.
+Only meaningful under WSL2: `WANT_WINDOWS_SETUP`, computed right after `IS_WSL` detection, is false on native Linux regardless of the flag. It gates the [WSL2](#wsl2) block: installing Alacritty with winget, installing the JetBrainsMono Nerd Font on the Windows side, and creating the Alacritty config symlink. It's opt-in because a WSL box isn't necessarily used through Windows Alacritty at all (a dev container, a CI runner, a headless instance reached over SSH), and those have no business running winget or PowerShell.
 
 #### `--cargo`
 
@@ -194,7 +199,7 @@ Besides building Rust tools from source, `--cargo` installs `dnlmlr/cargo-clean-
 
 - `~/.local` is skipped, along with `~/.cache`, `~/.cargo`, and `~/.rustup`. Neovim plugins such as blink.cmp keep prebuilt native libraries in their own `target/` directory under `~/.local/share/nvim`, and deleting it breaks them.
 - `install.sh` writes the `.service` and `.timer` files straight into `~/.config/systemd/user/` instead of deploying them from a package, because `systemctl enable` refuses unit files that are symlinks pointing outside its search path. Edits to those files are overwritten on the next `--cargo` run; change the heredocs in `install_cargo_clean_all()` instead.
-- Without a systemd user session (macOS, or a WSL distro with systemd off), the timer is skipped with a warning that prints the equivalent manual command.
+- Without a systemd user session (a WSL distro with systemd off, for example), the timer is skipped with a warning that prints the equivalent manual command.
 - Check the schedule with `systemctl --user list-timers cargo-clean-all.timer`, and read past runs with `journalctl --user -u cargo-clean-all.service`.
 
 ##### Background: why not cargo-sweep
@@ -219,7 +224,7 @@ cargo-sweep is the better-known tool, but its README marks it unmaintained and r
 - It removes old Claude Code versions regardless of `WANT_CLAUDE_STACK`. The native updater puts each version in `~/.local/share/claude/versions/<version>` (300 to 350MB each) and repoints `~/.local/bin/claude`, but never deletes old ones. `cleanup_orphans()` resolves that symlink and deletes every other entry in `versions/`.
 - Combined with `--link` it does nothing: the arrays are never populated on a link-only run, so `install.sh` warns and skips rather than judge orphans against an empty set.
 
-When adding a bespoke installer that doesn't go through the four arrays, add its key to `known_dest` too, or `--cleanup` deletes it as an orphan. `yazi` is in that list for this reason: it calls `download_release()` directly instead of going through `CLI_TOOLS`. Its companion binary `ya` never gets a `.versions` entry, so it needs no entry.
+When adding a bespoke installer that doesn't go through the four arrays, add its key to `known_dest` too, or `--cleanup` deletes it as an orphan. `yazi` is in that list for this reason: it calls `download_release()` directly instead of going through `CLI_TOOLS`. Its companion binary `ya` comes from the same archive through `download_release()`'s optional fifth argument (extra binaries) and never gets a `.versions` entry, so it needs no entry. A missing `ya` makes the next run reinstall yazi.
 
 ### The `homepath` git filter
 
@@ -242,13 +247,13 @@ The five scripts in `zellij/.config/zellij/scripts/` (`weather.py`, `sysinfo.py`
 
 ### Version tracking and the run log
 
-`install.sh` records installed binary and plugin versions in `~/.local/bin/.versions`, the deployed path under `$HOME` (gitignored, regenerated by `install.sh`). A re-run skips anything that already has a recorded version, unless a [tool pin](#pinning-a-tool) selects a different one; `--update` forces everything to re-check.
+`install.sh` records installed binary and plugin versions in `~/.local/bin/.versions`, the deployed path under `$HOME` (gitignored, regenerated by `install.sh`). A re-run skips anything that already has a recorded version, unless a [tool pin](#pinning-a-tool) selects a different one; `--update` forces everything to re-check. `download_release()` also records each tool's source repo in `~/.local/bin/.versions-repos`, so a row moved to another repo (reverting the zellij fork, say) reinstalls instead of reporting "already at" the other repo's tag. It's a separate file so nothing else that reads `.versions` has to change.
 
 Every invocation appends its full output to `~/.local/state/dotfiles/install.log`. Logging starts right after argument parsing, before the early-exit flags (`--check-pins`, `--upgrade`, `--yubikey`, `--remove`), so those runs are logged too. It exists because `.versions` and the `full-install` marker are overwritten each run and record no history. Each run is bracketed by timestamped `=== ... ===` lines, with the exit status in the footer. A `sed` filter in the `tee` pipeline strips ANSI colors from the file while the terminal stays colored. The log is trimmed to its most recent 5000 lines at the start of each run and isn't touched by `--cleanup`.
 
 ### Adding a tool
 
-Follow the `download_release()` pattern in the `CORE_TOOLS` and `CLI_TOOLS` arrays: `dest|crate|repo|os|arch|asset-glob|binary-name-in-archive`, fetched through the GitHub releases API and compared against `.versions`. Each platform gets its own row: use `darwin|*` only when the asset is a universal macOS build, since `*` takes whichever architecture's asset matches first. Set `GITHUB_TOKEN` before a fresh install: unauthenticated GitHub API calls are capped at 60 an hour, and installing 25 or more tools from scratch can hit that.
+Follow the `download_release()` pattern in the `CORE_TOOLS` and `CLI_TOOLS` arrays: `dest|crate|repo|os|arch|asset-glob|binary-name-in-archive`, fetched through the GitHub releases API and compared against `.versions`. Each platform gets its own row. Linux rows only for now (see [Supported platforms](#supported-platforms)); `*` in the arch field takes whichever architecture's asset matches first. Set `GITHUB_TOKEN` before a fresh install: unauthenticated GitHub API calls are capped at 60 an hour, and installing 25 or more tools from scratch can hit that.
 
 ### Pinning a tool
 
@@ -288,7 +293,7 @@ Three tools are layered deliberately rather than one replacing another:
 
 ### Release asset gaps
 
-delta publishes no aarch64 musl build and no x86_64 macOS build, so its `CLI_TOOLS` rows are `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-gnu`, and `aarch64-apple-darwin` only. Its crate is `git-delta` (binary `delta`) for the `--cargo` path. diffnav is Go, so its crate field is `-`.
+delta publishes no aarch64 musl build and no x86_64 macOS build, so its Linux `CLI_TOOLS` rows are `x86_64-unknown-linux-musl` and `aarch64-unknown-linux-gnu`. Its crate is `git-delta` (binary `delta`) for the `--cargo` path. diffnav is Go, so its crate field is `-`.
 
 ## Alias priority chain
 
@@ -323,7 +328,7 @@ Three layers keep everything in sync with the Windows clipboard. Zellij and Neov
 
 ### WSL2 detection and distro name
 
-`install.sh` detects WSL2 with `grep -qi microsoft /proc/version`. Only under WSL2 does the Windows section run; on native Linux and macOS, `install.sh` downloads the Nerd Font itself instead (the "Fonts (Linux / macOS only)" section of the script).
+`install.sh` detects WSL2 with `grep -qi microsoft /proc/version`. Only under WSL2 does the Windows section run; on native Linux, `install.sh` downloads the Nerd Font itself instead (the "Fonts (native Linux only)" section of the script).
 
 The `\\wsl.localhost\<distro>\...` path for the Alacritty target comes from `$WSL_DISTRO_NAME`, which WSL sets for the session. The fallback, `wsl.exe --list --running --quiet | head -1`, is unreliable when more than one distro is registered or running, since list order doesn't guarantee the current distro comes first. A wrong guess silently points the config at a path that doesn't exist and leaves `%APPDATA%\alacritty\alacritty.toml` missing, which breaks `Ctrl+C` and OSC52 copy in the shell with no obvious error.
 
@@ -412,11 +417,6 @@ Its layout is configured interactively (running `ccstatusline` outside a Claude 
 
 Matches go to zjstatus's notification pill through `zellij pipe "zjstatus::notify::<message>"`, zjstatus's own pipe protocol, which `format_center "{notifications}"` already renders. `Notification` hooks have no decision control, so the script always exits 0 and swallows every failure (no `zellij`, not in a session, malformed payload); it can never block or break a session.
 
-### Multi-account switching
-
-`realiti4/claude-swap` (PyPI, CLI `cswap` or `claude-swap`) lets several Claude accounts share one machine and rotates between them, manually or automatically, before a rate limit hits. It isn't in `PACKAGES`: it owns its own config and credential storage (the OS keychain where available, otherwise `0600` files mirroring Claude Code's layout).
-
-`install_claude_swap()` installs it under `WANT_CLAUDE_STACK` with `uv tool install claude-swap`, which is why `uv` is in `CLI_TOOLS`; nothing else needs it. That's the install method `cswap upgrade` detects, so upgrade it with `cswap upgrade`. `install.sh --update` also works, but claude-swap already prompts when a new version is out. It talks only to `pypi.org` (version check) and Anthropic's `api.anthropic.com` and `platform.claude.com` (OAuth refresh and usage, with the user's own tokens), with no third-party telemetry.
 ### Resurrecting Claude sessions with Zellij
 
 A resurrected Zellij session reopens each Claude Code pane as `claude --resume <uuid>`, suspended until **Enter** is pressed, so the pane comes back to the conversation it was on, including after `/clear` or `/resume`. Three pieces make that work:
@@ -433,6 +433,11 @@ Known gaps:
 - A pane started with plain `command claude`, or before the wrapper existed, saves as plain `claude` and resurrects as a new session.
 - The wrapper's subcommand list mirrors `claude --help`. A new subcommand missing from it gets `--session-id` prepended and may fail; add it to the first `case` in the wrapper.
 
+### Multi-account switching
+
+`realiti4/claude-swap` (PyPI, CLI `cswap` or `claude-swap`) lets several Claude accounts share one machine and rotates between them, manually or automatically, before a rate limit hits. It isn't in `PACKAGES`: it owns its own config and credential storage (the OS keychain where available, otherwise `0600` files mirroring Claude Code's layout).
+
+`install_claude_swap()` installs it under `WANT_CLAUDE_STACK` with `uv tool install claude-swap`, which is why `uv` is in `CLI_TOOLS`; nothing else needs it. That's the install method `cswap upgrade` detects, so upgrade it with `cswap upgrade`. `install.sh --update` also works, but claude-swap already prompts when a new version is out. It talks only to `pypi.org` (version check) and Anthropic's `api.anthropic.com` and `platform.claude.com` (OAuth refresh and usage, with the user's own tokens), with no third-party telemetry.
 
 ## Theme
 
