@@ -2125,17 +2125,30 @@ git -C "$DOTFILES" config filter.homepath.smudge "$DOTFILES/git-filters/homepath
 git -C "$DOTFILES" config filter.homepath.required true
 # `checkout-index -f` still skips re-smudging when the working-tree file's
 # stat already matches the index (e.g. right after a fresh clone left the raw
-# placeholder in place because the filter wasn't registered yet) — `-f` only
+# placeholder in place because the filter wasn't registered yet): `-f` only
 # forces overwriting, it doesn't bypass that freshness check. Removing the
 # file first guarantees a real rewrite, so the filter always actually runs.
-rm -f "$DOTFILES/zellij/.config/zellij/config.kdl"
-git -C "$DOTFILES" checkout-index -f -- zellij/.config/zellij/config.kdl
+#
+# Skip the rewrite when the file has uncommitted edits, or they'd be silently
+# discarded. `git diff` runs the clean filter, so a correctly smudged copy, or
+# one still holding the placeholder, counts as unmodified and is rewritten.
+# It's `git diff --quiet` rather than `git status` because status (and
+# `update-index --refresh`) report a size change against stale index stat data
+# as modified without comparing content, which is the state a plain
+# `checkout-index` leaves; `-u` below records the rewritten file's stat.
+kdl_rel=zellij/.config/zellij/config.kdl
+if [[ -f "$DOTFILES/$kdl_rel" ]] && ! git -C "$DOTFILES" diff --no-ext-diff --quiet -- "$kdl_rel"; then
+  warn "$kdl_rel has uncommitted changes; leaving it as is instead of re-checking it out"
+else
+  rm -f "$DOTFILES/$kdl_rel"
+  git -C "$DOTFILES" checkout-index -f -u -- "$kdl_rel"
+fi
 # Verify the placeholder actually got replaced — the filter has failed
 # silently before (non-executable script, stat-cache skip above), and a
 # leftover __DOTFILES_HOME__ breaks zjstatus with no visible error at runtime.
 # Fail loudly here instead of discovering it later.
-if grep -q '__DOTFILES_HOME__' "$DOTFILES/zellij/.config/zellij/config.kdl"; then
-  err "homepath filter did not expand __DOTFILES_HOME__ — check git-filters/*.sh are executable and filter.homepath.* is registered"
+if grep -q '__DOTFILES_HOME__' "$DOTFILES/$kdl_rel"; then
+  err "homepath filter did not expand __DOTFILES_HOME__ in $kdl_rel: check git-filters/*.sh are executable and filter.homepath.* is registered; if the file has uncommitted changes, commit or stash them and re-run"
   exit 1
 fi
 ok "Registered homepath git filter"
