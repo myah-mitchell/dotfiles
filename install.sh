@@ -270,11 +270,9 @@ ZELLIJ_PLUGINS=(
   # Revert to "zjstatus.wasm|dj95/zjstatus|v0.25.0" when done testing.
   "zjstatus.wasm|myah-mitchell/zjstatus|fork-v0.25.1"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
-  # TEMPORARY: pinned to the ea-mouse-support prerelease for clickable hints,
-  # which needs zellij fork-v0.46.2 or later. A tag rebuilt in place is only
-  # picked up with --update. Pin a versioned tag again once zjhints cuts a
-  # release.
-  "zjhints.wasm|myah-mitchell/zjhints|ea-mouse-support"
+  # TEMPORARY: pinned to the ea-v0.6.0 prerelease
+  "zjhints.wasm|myah-mitchell/zjhints|ea-v0.6.0-*"
+  "zjtabs.wasm|myah-mitchell/zjtabs|ea-v0.6.0-*"
 )
 ZSH_PLUGINS=(
   "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
@@ -298,7 +296,7 @@ TOOL_PINS=(
   # TEMPORARY: the fork's nightlies are built from plain upstream main without
   # the fork's patches, so stay on the fork release that has them. Switch to
   # "nightly-*" once nightlies stack the fork patches.
-  "zellij|myah-mitchell/zellij|fork-v0.46.4"
+  "zellij|myah-mitchell/zellij|fork-v0.46.7-*"
 )
 
 # ── Platform detection ────────────────────────────────────────────────────────
