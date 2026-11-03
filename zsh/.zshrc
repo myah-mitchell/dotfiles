@@ -177,6 +177,35 @@ sudo() {
   fi
 }
 
+# ── claude: pin a session ID so Zellij resurrection can resume it ────────────
+# A new interactive session gets `--session-id <uuid>`, which puts the ID in
+# the process argv where Zellij's command discovery sees it. The
+# post_command_discovery_hook (zellij/.config/zellij/scripts/resurrect-hook.sh)
+# then saves the pane as `claude --resume <uuid>`. Left alone: subcommands,
+# print mode, anything that already picks a session, and help/version.
+claude() {
+  case "$1" in
+    agents|attach|auth|auto-mode|doctor|gateway|import|install|logs|mcp|plugin|plugins|\
+    purge|respawn|rm|setup-token|stop|kill|ultrareview|update|upgrade)
+      command claude "$@"; return ;;
+  esac
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      -p|--print|-c|--continue|-r|--resume|--resume=*|--session-id|--session-id=*|\
+      --from-pr|--from-pr=*|--teleport|--teleport=*|-h|--help|-v|--version)
+        command claude "$@"; return ;;
+    esac
+  done
+  local id
+  if [[ -r /proc/sys/kernel/random/uuid ]]; then
+    id=$(</proc/sys/kernel/random/uuid)
+  else
+    id=${(L)$(uuidgen)}  # macOS
+  fi
+  command claude --session-id "$id" "$@"
+}
+
 # ── Keybindings ───────────────────────────────────────────────────────────────
 # Ctrl+F — fzf file picker, insert path at cursor (Ctrl+R is bound by atuin's
 # own init above)

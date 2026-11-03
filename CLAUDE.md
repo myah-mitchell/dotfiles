@@ -238,7 +238,7 @@ Neovim's clipboard `copy` entry in `nvim/.config/nvim/lua/config/autocmds.lua` h
 
 ### Executable scripts
 
-The four scripts in `zellij/.config/zellij/scripts/` (`weather.py`, `sysinfo.py`, `battery.py`, `clip-clean.py`) must stay executable in git. zjstatus and Neovim's clipboard provider invoke them directly, so a missing exec bit fails silently as `Permission denied`: copy or the pills just stop working, with no error in the terminal.
+The five scripts in `zellij/.config/zellij/scripts/` (`weather.py`, `sysinfo.py`, `battery.py`, `clip-clean.py`, `resurrect-hook.sh`) must stay executable in git. zjstatus, Zellij, and Neovim's clipboard provider invoke them directly, so a missing exec bit fails silently as `Permission denied`: copy, the pills, or Claude session resurrection just stop working, with no error in the terminal.
 
 ### Version tracking and the run log
 
@@ -389,7 +389,7 @@ Deployed unconditionally, since it's config only. It links:
 
 | Source | Target | Contents |
 | --- | --- | --- |
-| `claude/.claude/settings.json` | `~/.claude/settings.json` | Settings, the status line, and the notification hook |
+| `claude/.claude/settings.json` | `~/.claude/settings.json` | Settings, the status line, and the notification and session-tracking hooks |
 | `claude/.claude/keybindings.json` | `~/.claude/keybindings.json` | Maps `alt+enter`, `shift+enter`, and `ctrl+enter` to `chat:newline` |
 | `claude/.claude/CLAUDE.md` | `~/.claude/CLAUDE.md` | Global instructions for every session: pushing back on requests, codebase conventions, the `/create-commits` and `/push-changes` workflow, Conventional Commits, documentation, writing style |
 | `claude/.claude/skills/*/` | `~/.claude/skills/*/` | Skills, linked one file at a time; a new skill needs an `install.sh --link` run before it appears |
@@ -417,6 +417,22 @@ Matches go to zjstatus's notification pill through `zellij pipe "zjstatus::notif
 `realiti4/claude-swap` (PyPI, CLI `cswap` or `claude-swap`) lets several Claude accounts share one machine and rotates between them, manually or automatically, before a rate limit hits. It isn't in `PACKAGES`: it owns its own config and credential storage (the OS keychain where available, otherwise `0600` files mirroring Claude Code's layout).
 
 `install_claude_swap()` installs it under `WANT_CLAUDE_STACK` with `uv tool install claude-swap`, which is why `uv` is in `CLI_TOOLS`; nothing else needs it. That's the install method `cswap upgrade` detects, so upgrade it with `cswap upgrade`. `install.sh --update` also works, but claude-swap already prompts when a new version is out. It talks only to `pypi.org` (version check) and Anthropic's `api.anthropic.com` and `platform.claude.com` (OAuth refresh and usage, with the user's own tokens), with no third-party telemetry.
+### Resurrecting Claude sessions with Zellij
+
+A resurrected Zellij session reopens each Claude Code pane as `claude --resume <uuid>`, suspended until **Enter** is pressed, so the pane comes back to the conversation it was on, including after `/clear` or `/resume`. Three pieces make that work:
+
+1. The `claude` wrapper function in `zsh/.zshrc` starts every new interactive session with `--session-id <uuid>`, which puts the ID in the process argv. It passes through untouched for subcommands, `-p`, `-c`, `-r`/`--resume`, `--session-id`, `--from-pr`, `--teleport`, and help or version flags.
+2. `post_command_discovery_hook` in `config.kdl` runs `zellij/.config/zellij/scripts/resurrect-hook.sh` on each pane's discovered command before it's saved. The script rewrites a `claude` argv carrying a session ID to `claude --resume <uuid>`, dropping every other flag, and prints anything else unchanged.
+3. The `SessionStart` hook, `claude/.claude/scripts/claude-resurrect-map.py`, handles `/clear` and `/resume`, which switch sessions without changing argv. It walks up its parent processes to the `claude` process, reads the session ID from its argv, and writes the current session ID to `~/.local/state/claude-resurrect/<argv-id>`, or removes that file when the two match. `resurrect-hook.sh` resumes the ID in that file when it exists. Files untouched for 90 days are pruned.
+
+Zellij gives the hook only the space-joined argv in `$RESURRECT_COMMAND`, never the PID or the session itself, which is why the ID has to be in argv. The Zellij hook runs through `sh -c`, so `~` in its path expands and it needs no [`homepath` filter](#the-homepath-git-filter).
+
+Known gaps:
+
+- A pane started with `claude -c` or the bare `claude -r` picker has no session ID in argv, so it resurrects as typed.
+- A pane started with plain `command claude`, or before the wrapper existed, saves as plain `claude` and resurrects as a new session.
+- The wrapper's subcommand list mirrors `claude --help`. A new subcommand missing from it gets `--session-id` prepended and may fail; add it to the first `case` in the wrapper.
+
 
 ## Theme
 

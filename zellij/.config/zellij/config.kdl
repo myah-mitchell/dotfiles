@@ -25,6 +25,7 @@ session_serialization true
 pane_viewport_serialization true
 scrollback_lines_to_serialize 0
 serialization_interval 60
+post_command_discovery_hook "~/.config/zellij/scripts/resurrect-hook.sh"  // saves Claude Code panes as `claude --resume <id>`; see the script
 show_startup_tips false
 show_release_notes false
 osc8_hyperlinks true
