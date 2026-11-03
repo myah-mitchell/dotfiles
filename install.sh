@@ -264,15 +264,22 @@ trap 'echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") install.sh exited (status $?) =
 # the rest of the script's install machinery to have run first.
 #
 # ZELLIJ_PLUGINS / ZSH_PLUGINS row format: dest|owner/repo|pinned_tag
+# A ZELLIJ_PLUGINS tag can also be a prefix ending in *, like TOOL_PINS below:
+# the newest release whose tag starts with it and that has a <dest> asset,
+# prereleases included, picked up with --update. Keep * for repos you control.
+# A prefix pin skips the bump-PR review, so a release that adds a
+# request_permission() scope arrives unchecked, and until
+# ZELLIJ_PLUGIN_PERMISSIONS has it, the plugin sits inert.
 ZELLIJ_PLUGINS=(
   "zellij-autolock.wasm|fresh2dev/zellij-autolock|0.3.0"
   # TEMPORARY: pointed at myah-mitchell/zjstatus fork instead of dj95/zjstatus.
   # Revert to "zjstatus.wasm|dj95/zjstatus|v0.25.0" when done testing.
   "zjstatus.wasm|myah-mitchell/zjstatus|fork-v0.25.1"
   "zellij-newtab-plus.wasm|AlexZasorin/zellij-newtab-plus|v0.6.0"
-  # TEMPORARY: pinned to the ea-v0.6.0 prerelease
+  # TEMPORARY: tracks the ea-v0.6.0 prerelease builds (ea-v0.6.0-<yymmdd>),
+  # which need zellij fork-v0.46.2 or later. zjtabs ships in zjhints' releases.
   "zjhints.wasm|myah-mitchell/zjhints|ea-v0.6.0-*"
-  "zjtabs.wasm|myah-mitchell/zjtabs|ea-v0.6.0-*"
+  "zjtabs.wasm|myah-mitchell/zjhints|ea-v0.6.0-*"
 )
 ZSH_PLUGINS=(
   "zsh-autosuggestions|zsh-users/zsh-autosuggestions|v0.7.1"
@@ -296,7 +303,7 @@ TOOL_PINS=(
   # TEMPORARY: the fork's nightlies are built from plain upstream main without
   # the fork's patches, so stay on the fork release that has them. Switch to
   # "nightly-*" once nightlies stack the fork patches.
-  "zellij|myah-mitchell/zellij|fork-v0.46.7-*"
+  "zellij|myah-mitchell/zellij|fork-ea-v0.46.7-*"
 )
 
 # ── Platform detection ────────────────────────────────────────────────────────
@@ -436,22 +443,54 @@ install_ccstatusline() {
 # ~/.local/share itself, rather than relying on link_package's per-package
 # pass (see "Deploy configs" below) to pick it up — that pass runs earlier in
 # a normal install, before this download exists.
+#
+# SELECTOR is an exact release tag, or a tag prefix ending in * (see
+# ZELLIJ_PLUGINS). An exact tag downloads straight from its release URL with
+# no API call; a prefix costs one releases API call, and only when the
+# installed version doesn't already satisfy it or under --update.
 install_zellij_plugin() {
-  local dest="$1" repo="$2" tag="$3"
+  local dest="$1" repo="$2" selector="$3"
   local plugin_dir="${SHARE_DIR}/zellij/plugins"
   local deployed_dir="$HOME/.local/share/zellij/plugins"
   mkdir -p "$plugin_dir" "$deployed_dir"
 
-  local installed
+  local installed installed_repo
   installed=$(get_installed_version "$dest")
+  installed_repo=$(get_installed_repo "$dest")
   if [[ -n "$installed" && ! -f "${plugin_dir}/${dest}" ]]; then
     warn "${dest} recorded as ${installed} in .versions but missing from disk. Reinstalling."
     installed=""
   fi
-  if [[ "$installed" == "$tag" && "$FORCE_UPDATE" == false ]]; then
-    ok "${dest} already at ${tag}"
+  if [[ -n "$installed" && -n "$installed_repo" && "$installed_repo" != "$repo" ]]; then
+    log "${dest} ${installed} came from ${installed_repo}, but its row now uses ${repo}. Reinstalling."
+    installed=""
+  fi
+  if [[ -n "$installed" && "$FORCE_UPDATE" == false ]] && pin_satisfied "$installed" "$selector"; then
+    ok "${dest} already at ${installed}"
+    # Entries from before the repo was tracked: assume the row's repo.
+    if [[ -z "$installed_repo" ]]; then set_installed_repo "$dest" "$repo"; fi
     ln -sf "${plugin_dir}/${dest}" "${deployed_dir}/${dest}"
     return
+  fi
+
+  local tag="$selector" url="https://github.com/${repo}/releases/download/${selector}/${dest}"
+  if [[ "$selector" == *'*' ]]; then
+    local api_response asset_re
+    api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
+      "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases?per_page=30") || true
+    asset_re="/$(printf '%s' "$dest" | sed 's/[][\.*^$+?(){}|]/\\&/g')\$"
+    tag="" url=""
+    IFS=$'\t' read -r tag url < <(newest_release_asset "$api_response" "$asset_re" "${selector%\*}") || true
+    if [[ -z "$url" ]]; then
+      warn "No ${repo} release tagged ${selector} has a ${dest} asset (or the API call failed). Skipping."
+      return 1
+    fi
+    if [[ "$tag" == "$installed" ]]; then
+      ok "${dest} already at ${installed}, the newest ${selector} release"
+      if [[ -z "$installed_repo" ]]; then set_installed_repo "$dest" "$repo"; fi
+      ln -sf "${plugin_dir}/${dest}" "${deployed_dir}/${dest}"
+      return
+    fi
   fi
 
   log "Downloading ${dest} ${tag}..."
@@ -459,12 +498,16 @@ install_zellij_plugin() {
   # download over the live .wasm would break every new terminal, and with
   # .versions still on the old tag, later runs would never repair it.
   if curl -fL --connect-timeout 30 --max-time 120 --retry 2 \
-    "https://github.com/${repo}/releases/download/${tag}/${dest}" \
-    -o "${plugin_dir}/${dest}.tmp" &&
+    "$url" -o "${plugin_dir}/${dest}.tmp" &&
     mv "${plugin_dir}/${dest}.tmp" "${plugin_dir}/${dest}"; then
     set_installed_version "$dest" "$tag"
+    set_installed_repo "$dest" "$repo"
     ln -sf "${plugin_dir}/${dest}" "${deployed_dir}/${dest}"
     ok "${dest} installed at ${tag}"
+    # A prefix pin has no bump PR to carry the permissions review note.
+    if [[ "$selector" == *'*' && -n "$installed" ]]; then
+      warn "${dest} moved from ${installed} to ${tag} through its ${selector} pin. If the new release requests new permission scopes, add them to ZELLIJ_PLUGIN_PERMISSIONS, or the plugin sits inert."
+    fi
   else
     rm -f "${plugin_dir}/${dest}.tmp"
     warn "Download failed for ${dest} — zjstatus/autolock won't load until this succeeds (re-run install.sh)"
@@ -567,8 +610,9 @@ latest_github_tag() {
 }
 
 # Newest release (prereleases included) whose tag starts with $2, for
-# TOOL_PINS prefix selectors. Ignores assets, so it's for reporting only;
-# download_release does its own asset-aware lookup.
+# TOOL_PINS and ZELLIJ_PLUGINS prefix selectors. Ignores assets, so it's for
+# reporting only; download_release and install_zellij_plugin do their own
+# asset-aware lookups.
 latest_github_release_with_prefix() {
   curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
     "${GITHUB_AUTH[@]}" "https://api.github.com/repos/$1/releases?per_page=30" |
@@ -640,12 +684,17 @@ check_pins() {
   echo
   printf "  ${BOLD}%-28s %-14s %-14s %s${RESET}\n" "NAME" "PINNED" "LATEST" "STATUS"
 
-  echo -e "  ${CYAN}Zellij plugins${RESET} (GitHub releases)"
+  echo -e "  ${CYAN}Zellij plugins${RESET} (GitHub releases; a * selector tracks the newest matching tag)"
   local entry dest repo tag latest
   for entry in "${ZELLIJ_PLUGINS[@]}"; do
     IFS='|' read -r dest repo tag <<<"$entry"
-    latest=$(latest_github_release "$repo") || true
-    print_pin_row "$dest" "$tag" "$latest"
+    if [[ "$tag" == *'*' ]]; then
+      latest=$(latest_github_release_with_prefix "$repo" "${tag%\*}") || true
+      print_pin_row "$dest" "$tag" "$latest" "${GREEN}tracks newest${RESET}"
+    else
+      latest=$(latest_github_release "$repo") || true
+      print_pin_row "$dest" "$tag" "$latest"
+    fi
   done
   echo
 
@@ -692,6 +741,10 @@ upgrade_pin() {
   for entry in "${ZELLIJ_PLUGINS[@]}"; do
     IFS='|' read -r dest repo tag <<<"$entry"
     [[ "$dest" == "$name" ]] || continue
+    if [[ "$tag" == *'*' ]]; then
+      ok "${dest} tracks the newest ${tag} release, so there's no pin to bump. Run ./install.sh --update to pick up a newer one."
+      exit 0
+    fi
     log "Checking upstream for ${dest}..."
     latest=$(latest_github_release "$repo") || true
     [[ -z "$latest" ]] && {

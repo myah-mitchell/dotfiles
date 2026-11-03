@@ -23,8 +23,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # An exact-tag TOOL_PINS row gets an entry with kind: tool-release and
-        # name: its dest. A * prefix row has no pin to bump, so it gets none.
+        # Every ZELLIJ_PLUGINS row gets an entry with kind: github-release and
+        # name: its dest minus .wasm. An exact-tag TOOL_PINS row gets one with
+        # kind: tool-release and name: its dest. A row whose pin is a * prefix
+        # keeps its entry: the check script skips it, and picks it back up
+        # once the row returns to an exact tag.
         include:
           - name: zellij-autolock
             kind: github-release
@@ -38,6 +41,10 @@ jobs:
             kind: github-release
             repo: AlexZasorin/zellij-newtab-plus
           - name: zjhints
+            kind: github-release
+            repo: myah-mitchell/zjhints
+          # zjtabs ships in zjhints' releases.
+          - name: zjtabs
             kind: github-release
             repo: myah-mitchell/zjhints
           - name: zellij

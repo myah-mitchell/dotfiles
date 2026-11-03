@@ -92,6 +92,16 @@ case "$KIND" in
       print $1 if /"\Q$dest|$repo|\E([^"]+)"/;
     ' "$INSTALL_SH")
 
+    # A prefix pin (ending in *) already tracks the newest matching release at
+    # install time, so there's nothing to bump. Rewriting it to
+    # /releases/latest would replace the prefix with an exact tag, possibly an
+    # older non-prerelease one.
+    if [[ "$old_version" == *'*' ]]; then
+      echo "${NAME}: ${old_version} is a prefix pin that tracks the newest matching release; nothing to bump"
+      echo "VERSION_CHANGED=false" >> "$GITHUB_ENV"
+      exit 0
+    fi
+
     new_version=$(api_curl "https://api.github.com/repos/${REPO}/releases/latest" \
       | grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
     if [[ -z "$new_version" ]]; then
