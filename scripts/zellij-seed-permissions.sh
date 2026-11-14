@@ -3,7 +3,7 @@
 # waiting for a prompt in a size-1 borderless pane.
 #
 # Usage: zellij-seed-permissions.sh <plugin.wasm> <scope>...
-# Runs as a dfapp post_install hook; DFAPP_PREFIX says where the plugin links to.
+# Runs as a dfutil post_install hook; DFUTIL_PREFIX says where the plugin links to.
 #
 # Zellij keys its permission cache by the plugin path exactly as config.kdl's
 # file: location expands it, so the key is <prefix>/share/zellij/plugins/<name>.
@@ -13,7 +13,7 @@ set -eu
 
 plugin=${1:?usage: zellij-seed-permissions.sh <plugin.wasm> <scope>...}
 shift
-prefix=${DFAPP_PREFIX:-$HOME/.local}
+prefix=${DFUTIL_PREFIX:-$HOME/.local}
 file=${XDG_CACHE_HOME:-$HOME/.cache}/zellij/permissions.kdl
 key="\"${prefix}/share/zellij/plugins/${plugin}\" {"
 

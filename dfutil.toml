@@ -1,8 +1,8 @@
-# dfapp manifest for these dotfiles. It sits beside install.sh and does not
-# replace it yet. See docs/dfapp-port.md for what maps to what and what does not.
+# dfutil manifest for these dotfiles. It sits beside install.sh and does not
+# replace it yet. See docs/dfutil-port.md for what maps to what and what does not.
 #
 # Asset globs are anchored: they must match the whole asset name. The patterns
-# are the install.sh ones, so run `dfapp plan` to catch any that drift.
+# are the install.sh ones, so run `dfutil plan` to catch any that drift.
 
 [settings]
 presets = ["base"]
@@ -11,7 +11,7 @@ palette = "mocha"
 
 # ── Packages ─────────────────────────────────────────────────────────────────
 # The `bin` package is left out on purpose. It is install.sh's own download
-# target, and dfapp keeps tools under its own directories.
+# target, and dfutil keeps tools under its own directories.
 
 [packages.bash]
 description = "bash startup files"
@@ -455,7 +455,7 @@ category = "shell"
 kind = "script"
 install = "sh scripts/install-zsh-plugin.sh zsh-autosuggestions zsh-users/zsh-autosuggestions v0.7.1"
 version = "echo v0.7.1"
-uninstall = "rm -f \"$DFAPP_PREFIX/share/zsh/plugins/zsh-autosuggestions\""
+uninstall = "rm -f \"$DFUTIL_PREFIX/share/zsh/plugins/zsh-autosuggestions\""
 
 [tools.zsh-syntax-highlighting]
 description = "Command-line syntax highlighting"
@@ -463,7 +463,7 @@ category = "shell"
 kind = "script"
 install = "sh scripts/install-zsh-plugin.sh zsh-syntax-highlighting zsh-users/zsh-syntax-highlighting 0.8.0"
 version = "echo 0.8.0"
-uninstall = "rm -f \"$DFAPP_PREFIX/share/zsh/plugins/zsh-syntax-highlighting\""
+uninstall = "rm -f \"$DFUTIL_PREFIX/share/zsh/plugins/zsh-syntax-highlighting\""
 
 [tools.zsh-you-should-use]
 description = "Reminds you of aliases you have"
@@ -471,7 +471,7 @@ category = "shell"
 kind = "script"
 install = "sh scripts/install-zsh-plugin.sh zsh-you-should-use MichaelAquilina/zsh-you-should-use 1.11.1"
 version = "echo 1.11.1"
-uninstall = "rm -f \"$DFAPP_PREFIX/share/zsh/plugins/zsh-you-should-use\""
+uninstall = "rm -f \"$DFUTIL_PREFIX/share/zsh/plugins/zsh-you-should-use\""
 
 # ── Themes ───────────────────────────────────────────────────────────────────
 # Downloaded Catppuccin Mocha ports for bat, eza, and zsh-syntax-highlighting.
@@ -501,7 +501,7 @@ description = "Node.js LTS from nodejs.org"
 category = "dev"
 kind = "script"
 install = "sh scripts/install-node.sh"
-version = "\"$DFAPP_TOOL_DIR/bin/node\" --version"
+version = "\"$DFUTIL_TOOL_DIR/bin/node\" --version"
 bins = ["node=bin/node", "npm=bin/npm", "npx=bin/npx"]
 
 # Claude's own installer manages its launcher and updates itself.
@@ -564,8 +564,8 @@ install = "sh scripts/install-nushell-extras.sh"
 version = "echo mocha"
 
 # ── Building from source ─────────────────────────────────────────────────────
-# dfapp has no way to order the rustup bootstrap ahead of source builds, since
-# `requires` pulls its target into every selection. Run `dfapp apply` twice
+# dfutil has no way to order the rustup bootstrap ahead of source builds, since
+# `requires` pulls its target into every selection. Run `dfutil apply` twice
 # on a host with no Rust toolchain, or install rustup first.
 [tools.rustup]
 description = "Rust toolchain bootstrap"

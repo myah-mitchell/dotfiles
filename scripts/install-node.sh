@@ -1,8 +1,8 @@
 #!/bin/sh
-# Install the latest Node.js LTS from nodejs.org into $DFAPP_TOOL_DIR.
+# Install the latest Node.js LTS from nodejs.org into $DFUTIL_TOOL_DIR.
 #
-# Runs as a dfapp script tool. nodejs/node publishes GitHub releases with no
-# binary assets, so the github kind cannot install it. dfapp links
+# Runs as a dfutil script tool. nodejs/node publishes GitHub releases with no
+# binary assets, so the github kind cannot install it. dfutil links
 # node, npm, and npx from the tool dir into the bin dir (see `bins`).
 set -eu
 
@@ -25,6 +25,6 @@ curl -fsSL --connect-timeout 30 --max-time 600 --retry 2 \
 mkdir "$tmp/node"
 tar -xJf "$tmp/node.tar.xz" -C "$tmp/node" --strip-components=1
 
-rm -rf "${DFAPP_TOOL_DIR:?}"
-mkdir -p "$(dirname "$DFAPP_TOOL_DIR")"
-mv "$tmp/node" "$DFAPP_TOOL_DIR"
+rm -rf "${DFUTIL_TOOL_DIR:?}"
+mkdir -p "$(dirname "$DFUTIL_TOOL_DIR")"
+mv "$tmp/node" "$DFUTIL_TOOL_DIR"

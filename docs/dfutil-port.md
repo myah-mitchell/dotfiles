@@ -1,18 +1,18 @@
-# dfapp port
+# dfutil port
 
-This repo carries a `dfapp.toml` manifest beside `install.sh`. The manifest describes the same tools, packages, and presets that `install.sh` installs, for use with dfapp. `install.sh` and every existing package stay in place, so both systems work from the same checkout.
+This repo carries a `dfutil.toml` manifest beside `install.sh`. The manifest describes the same tools, packages, and presets that `install.sh` installs, for use with dfutil. `install.sh` and every existing package stay in place, so both systems work from the same checkout.
 
-This page maps `install.sh` concepts to dfapp, lists the exact edits needed to switch a machine over, and records what dfapp can't express yet.
+This page maps `install.sh` concepts to dfutil, lists the exact edits needed to switch a machine over, and records what dfutil can't express yet.
 
 ## Contents
 
 - [Layout](#layout)
 - [Presets](#presets)
-- [How install.sh maps to dfapp](#how-installsh-maps-to-dfapp)
+- [How install.sh maps to dfutil](#how-installsh-maps-to-dfutil)
 - [Templates and palettes](#templates-and-palettes)
-- [Switching a machine to dfapp](#switching-a-machine-to-dfapp)
+- [Switching a machine to dfutil](#switching-a-machine-to-dfutil)
 - [Not ported](#not-ported)
-- [Gaps in dfapp](#gaps-in-dfapp)
+- [Gaps in dfutil](#gaps-in-dfutil)
 - [Validation](#validation)
 - [Background](#background)
 
@@ -20,14 +20,14 @@ This page maps `install.sh` concepts to dfapp, lists the exact edits needed to s
 
 | Path | Purpose |
 | --- | --- |
-| `dfapp.toml` | Settings, packages, tools, and presets |
+| `dfutil.toml` | Settings, packages, tools, and presets |
 | `palettes/mocha.toml`, `palettes/latte.toml` | The 26 Catppuccin color names for each flavor |
 | `scripts/` | Helpers that script tools and `post_install` hooks run from the repo root |
 | `zellij/.config/zellij/config.kdl.tmpl` | Zellij config with home path, plugin path, and colors as placeholders |
 | `starship/.config/starship.toml.tmpl` | Starship config with the palette block rendered from the active palette |
 | `zellij/.linkignore`, `starship/.linkignore` | Keep the untemplated originals from deploying beside the rendered files |
 
-The `bin` package has no entry in `dfapp.toml`. It is the directory `install.sh` downloads binaries into, and dfapp keeps tools under `~/.local/share/dfapp/tools` and links them into `~/.local/bin` itself.
+The `bin` package has no entry in `dfutil.toml`. It is the directory `install.sh` downloads binaries into, and dfutil keeps tools under `~/.local/share/dfutil/tools` and links them into `~/.local/bin` itself.
 
 ## Presets
 
@@ -44,22 +44,22 @@ The presets mirror the `install.sh` flags. `settings.presets` selects `base`, `s
 
 `full` lists `windows-setup` directly instead of extending `windows`, because `--full` implies `--windows` and the tool's `when = { wsl = true }` makes it a no-op elsewhere.
 
-## How install.sh maps to dfapp
+## How install.sh maps to dfutil
 
 ### Release binaries
 
 Every row of `CORE_TOOLS` and `CLI_TOOLS` is a `github` tool with `repo`, `assets.linux-x86_64`, `assets.linux-aarch64`, and, where `install.sh` has one, `crate` for source builds. Darwin rows are dropped.
 
 - The tool name is `install.sh`'s `dest`, so `rg`, `trip`, `btm`, and `tree-sitter-cli` keep their names. `bins` is set only where the name inside the archive differs (`yazi` and `ya`, `nvim=bin/nvim`, `tree-sitter-cli=tree-sitter`).
-- Globs are copied from `install.sh` with three exceptions: `lazygit` and `glow` match the casing and `difft` the version segment that current releases use, and `rg` on aarch64 picks the musl build because the old pattern matched two assets. dfapp matches case-sensitively against the whole asset name, so the globs need checking against real releases whenever an upstream renames assets.
+- Globs are copied from `install.sh` with three exceptions: `lazygit` and `glow` match the casing and `difft` the version segment that current releases use, and `rg` on aarch64 picks the musl build because the old pattern matched two assets. dfutil matches case-sensitively against the whole asset name, so the globs need checking against real releases whenever an upstream renames assets.
 - `tree-sitter-cli` uses the `.zip` asset. Upstream publishes no bare `tree-sitter-cli-linux-x64` asset.
-- Tools with no aarch64 Linux asset (`rga`, `choose`, `procs`, `sd`, `presenterm`, `mdcat`) carry `when = { arch = "x86_64" }`. Without it, dfapp rejects the whole config on aarch64.
+- Tools with no aarch64 Linux asset (`rga`, `choose`, `procs`, `sd`, `presenterm`, `mdcat`) carry `when = { arch = "x86_64" }`. Without it, dfutil rejects the whole config on aarch64.
 - `7zz` has no `crate`: crates.io has no crate of that name, so a source build can't work for it. `install.sh` lists one.
 - The `TOOL_PINS` entry for zellij becomes `pin = "fork-ea-v0.46.7-*"` on the `myah-mitchell/zellij` fork. The fork publishes only x86_64, and the aarch64 asset glob stays so an aarch64 install fails at install time exactly as `install.sh` does.
 
 ### Shell init scripts
 
-`starship`, `zoxide`, `atuin`, and `carapace` carry `init.zsh`, and where meaningful `init.bash` and `init.nushell`, commands. dfapp writes each to `~/.local/share/dfapp/init/<tool>.<ext>` and aggregates them into `init.zsh`, `init.bash`, and `init.nu` for the selected shells. These replace the four fixed paths `install.sh` generates.
+`starship`, `zoxide`, `atuin`, and `carapace` carry `init.zsh`, and where meaningful `init.bash` and `init.nushell`, commands. dfutil writes each to `~/.local/share/dfutil/init/<tool>.<ext>` and aggregates them into `init.zsh`, `init.bash`, and `init.nu` for the selected shells. These replace the four fixed paths `install.sh` generates.
 
 ### Zellij plugins
 
@@ -80,17 +80,17 @@ If a plugin bump asks for new scopes, edit the scope list in that tool's `post_i
 
 ### zsh plugins
 
-The three plugins publish tags but no GitHub Releases, and dfapp's `github` kind and script tools with a `repo` read only releases. Each is therefore a repo-less `script` tool whose install command embeds the tag, so a pin bump changes the recipe and triggers a reinstall. `scripts/install-zsh-plugin.sh` downloads the tag tarball, extracts it into the tool directory, and links it at `<prefix>/share/zsh/plugins/<name>`. For user scope that is `~/.local/share/zsh/plugins/<name>`, so `.zshrc` sources them unchanged.
+The three plugins publish tags but no GitHub Releases, and dfutil's `github` kind and script tools with a `repo` read only releases. Each is therefore a repo-less `script` tool whose install command embeds the tag, so a pin bump changes the recipe and triggers a reinstall. `scripts/install-zsh-plugin.sh` downloads the tag tarball, extracts it into the tool directory, and links it at `<prefix>/share/zsh/plugins/<name>`. For user scope that is `~/.local/share/zsh/plugins/<name>`, so `.zshrc` sources them unchanged.
 
 ### Bespoke installers
 
-| `install.sh` function | dfapp tool | Kind | Notes |
+| `install.sh` function | dfutil tool | Kind | Notes |
 | --- | --- | --- | --- |
-| `install_node` | `node` | `script` | `scripts/install-node.sh` fetches the latest LTS from nodejs.org. The `nodejs/node` GitHub releases carry no binaries, so the `github` kind can't install it. dfapp links `node`, `npm`, and `npx` from the tool directory instead of merging trees into `~/.local` |
+| `install_node` | `node` | `script` | `scripts/install-node.sh` fetches the latest LTS from nodejs.org. The `nodejs/node` GitHub releases carry no binaries, so the `github` kind can't install it. dfutil links `node`, `npm`, and `npx` from the tool directory instead of merging trees into `~/.local` |
 | `install_claude` | `claude` | `script` | Runs the official installer; the version command reads `claude --version` |
 | `install_ccstatusline` | `ccstatusline` | `npm` | Pinned to `2.2.32`, requires `node` |
 | `install_claude_swap` | `claude-swap` | `uv` | Links `cswap` and `claude-swap`, requires `uv` |
-| `install_powershell` | `pwsh` | `github` | The release tarball unpacks into a versioned directory, and dfapp links `pwsh` from it |
+| `install_powershell` | `pwsh` | `github` | The release tarball unpacks into a versioned directory, and dfutil links `pwsh` from it |
 | nvim | `nvim` | `github` | Links `bin/nvim` only. Neovim finds its runtime relative to the resolved executable path, so the `share/nvim/runtime` and `lib/nvim` copies `install.sh` makes should be unnecessary. This has not been run |
 | yazi and `ya` | `yazi` | `github` | `post_install` runs `scripts/yazi-packages.sh` for the nine `ya pkg` packages |
 | Nerd Font | `jetbrainsmono-nerd-font` | `script` | `when = { os = "linux", wsl = false }`; WSL gets the font from `windows-setup.ps1` |
@@ -107,7 +107,7 @@ The three plugins publish tags but no GitHub Releases, and dfapp's `github` kind
 
 ## Templates and palettes
 
-dfapp renders `*.tmpl` files with `{{ name }}` placeholders and drops the suffix on deploy. The rendered file lands in `~/.local/share/dfapp/rendered/` and the home path links to it. A `.linkignore` entry keeps the untemplated original out of the deploy.
+dfutil renders `*.tmpl` files with `{{ name }}` placeholders and drops the suffix on deploy. The rendered file lands in `~/.local/share/dfutil/rendered/` and the home path links to it. A `.linkignore` entry keeps the untemplated original out of the deploy.
 
 `zellij/.config/zellij/config.kdl.tmpl` replaces:
 
@@ -126,11 +126,11 @@ These files are deliberately not templated:
 - `zsh/.zshenv` has an `FZF_DEFAULT_OPTS` color block, but `.zshenv` is sourced by every zsh invocation and a rendered link adds a moving part to it.
 - The downloaded bat, eza, zsh-syntax-highlighting, and nushell themes are third-party files.
 
-`dfapp palette set latte` recolors only the two templated files. Everything in the list above stays Mocha.
+`dfutil palette set latte` recolors only the two templated files. Everything in the list above stays Mocha.
 
-## Switching a machine to dfapp
+## Switching a machine to dfutil
 
-Run `dfapp init --repo <repo-path> --preset base`, add the presets the machine needs, then `dfapp apply`. Deploying links files over the existing symlinks, and any real file in the way is backed up as `<target>.bak.<timestamp>`. Make these edits in the same change.
+Run `dfutil init --repo <repo-path> --preset base`, add the presets the machine needs, then `dfutil apply`. Deploying links files over the existing symlinks, and any real file in the way is backed up as `<target>.bak.<timestamp>`. Make these edits in the same change.
 
 ### zsh/.zshrc
 
@@ -142,11 +142,11 @@ Replace the four per-tool lines in the *Tool integrations* block with one line f
 -  [[ -f ~/.local/share/atuin/init.zsh ]] && source ~/.local/share/atuin/init.zsh
 -  [[ -f ~/.cache/starship/init.zsh ]] && source ~/.cache/starship/init.zsh
 -  [[ -f ~/.cache/carapace/init.zsh ]] && source ~/.cache/carapace/init.zsh
-+  [[ -f ~/.local/share/dfapp/init/init.zsh ]] && source ~/.local/share/dfapp/init/init.zsh
++  [[ -f ~/.local/share/dfutil/init/init.zsh ]] && source ~/.local/share/dfutil/init/init.zsh
  fi
 ```
 
-dfapp sources the tools in name order: atuin, carapace, starship, zoxide. `.zshrc` currently loads zoxide, atuin, starship, carapace. Check that `Ctrl+R` and the prompt behave after the change.
+dfutil sources the tools in name order: atuin, carapace, starship, zoxide. `.zshrc` currently loads zoxide, atuin, starship, carapace. Check that `Ctrl+R` and the prompt behave after the change.
 
 The plugin lines (`~/.local/share/zsh/plugins/...`) and the theme line (`~/.config/zsh/themes/...`) need no edit, because the plugin links and the theme download land at the same paths.
 
@@ -155,7 +155,7 @@ The plugin lines (`~/.local/share/zsh/plugins/...`) and the theme line (`~/.conf
 Needed only with the `nushell` preset. Replace the four `source` lines under *Tool integrations* (zoxide, atuin, starship, carapace) with one:
 
 ```nu
-source ~/.local/share/dfapp/init/init.nu
+source ~/.local/share/dfutil/init/init.nu
 ```
 
 The comments above each line go with them. The theme `source` line and the `secrets.nu` line in `env.nu` stay, and `nushell-extras` creates both files.
@@ -170,24 +170,24 @@ The comments above each line go with them. The theme `source` line and the `secr
 
 | Feature | Why |
 | --- | --- |
-| `bin` package | `install.sh`'s download target. dfapp links tools into `~/.local/bin` itself |
-| `.versions`, `.versions-repos`, and the run log | dfapp records its own state under `~/.local/share/dfapp` |
-| `--check-pins` and `--upgrade=<name>` | No dfapp equivalent. Bump a pin by editing `dfapp.toml` |
-| Weekly bump PRs (`check-pinned-versions.yml`) | The workflow reads pins from `install.sh`, not `dfapp.toml`. The zsh plugin and `ccstatusline` pins, and the review notes about permission scopes and `installedVersion`, need a new workflow |
-| `--cleanup` | dfapp uninstalls a tool when it leaves the selection. Pruning old Claude Code versions, removing `~/.cargo` and `~/.rustup` when `--cargo` is off, and uninstalling Mason LSPs have no equivalent |
-| `--copy` and `--remove` | dfapp has its own deploy and uninstall commands |
+| `bin` package | `install.sh`'s download target. dfutil links tools into `~/.local/bin` itself |
+| `.versions`, `.versions-repos`, and the run log | dfutil records its own state under `~/.local/share/dfutil` |
+| `--check-pins` and `--upgrade=<name>` | No dfutil equivalent. Bump a pin by editing `dfutil.toml` |
+| Weekly bump PRs (`check-pinned-versions.yml`) | The workflow reads pins from `install.sh`, not `dfutil.toml`. The zsh plugin and `ccstatusline` pins, and the review notes about permission scopes and `installedVersion`, need a new workflow |
+| `--cleanup` | dfutil uninstalls a tool when it leaves the selection. Pruning old Claude Code versions, removing `~/.cargo` and `~/.rustup` when `--cargo` is off, and uninstalling Mason LSPs have no equivalent |
+| `--copy` and `--remove` | dfutil has its own deploy and uninstall commands |
 | `--yubikey` | `pull_yubikey_ssh_key()` has no tool form. It stays in `install.sh` |
 | `~/.ssh/sockets` creation and the `chmod 700 ~/.ssh` and `chmod 600 ~/.ssh/config` fixes | No hook runs outside a tool. Create the directory by hand or add a script tool |
-| `mosh` through apt, the git-core PPA upgrade, and the zsh, git, and locale prerequisite checks | System package installs are a documented exception in `install.sh`. dfapp installs nothing system-wide in user scope |
+| `mosh` through apt, the git-core PPA upgrade, and the zsh, git, and locale prerequisite checks | System package installs are a documented exception in `install.sh`. dfutil installs nothing system-wide in user scope |
 | Re-smudging `config.kdl` through the `homepath` filter | Replaced by the template |
 | Mason LSP uninstall for non-`--full` runs | The `full` preset sets the marker; leaving it only removes the marker |
 | macOS | Dropped from `install.sh` as well |
 
-## Gaps in dfapp
+## Gaps in dfutil
 
-These limits shaped `dfapp.toml`. Each is a candidate dfapp feature.
+These limits shaped `dfutil.toml`. Each is a candidate dfutil feature.
 
-- **No build-time dependency.** `requires` pulls its target into every selection, including prebuilt runs. The `cargo` preset can't order `rustup` ahead of the source builds of other tools without forcing rustup onto every host. Only `cargo-clean-all` requires it. On a host with no Rust toolchain, install `rustup` first, or run `dfapp apply` a second time. A `build_requires` field that applies only under `build = "source"` would fix this.
+- **No build-time dependency.** `requires` pulls its target into every selection, including prebuilt runs. The `cargo` preset can't order `rustup` ahead of the source builds of other tools without forcing rustup onto every host. Only `cargo-clean-all` requires it. On a host with no Rust toolchain, install `rustup` first, or run `dfutil apply` a second time. A `build_requires` field that applies only under `build = "source"` would fix this.
 - **Missing assets invalidate the config.** A selected `github` tool with no asset for the current platform fails validation. The six tools without aarch64 builds need `when = { arch = "x86_64" }`, which also disables their source builds on aarch64. Skipping with a warning would match `install.sh`.
 - **Tag-only repos can't be pinned.** Script tools with a `repo` read only GitHub Releases. The zsh plugins are repo-less script tools with the tag written into the install and version commands.
 - **Script tools without a `repo` never see upstream updates.** `node` installs the latest LTS once and reinstalls only when its recipe changes.
@@ -204,4 +204,4 @@ Both checks ran against scratch homes only, never the real home directory.
 
 ## Background
 
-`install.sh` is a roughly 2,800-line bash script that downloads, links, and records versions in one pass. dfapp separates the declarative manifest from the tool that applies it. The port leaves `install.sh` working until a machine is switched. The two keep separate state and both write to `~/.local/bin`, so run only one of them on a given machine.
+`install.sh` is a roughly 2,800-line bash script that downloads, links, and records versions in one pass. dfutil separates the declarative manifest from the tool that applies it. The port leaves `install.sh` working until a machine is switched. The two keep separate state and both write to `~/.local/bin`, so run only one of them on a given machine.

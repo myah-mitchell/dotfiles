@@ -3,7 +3,7 @@
 # yazi/.linkignore keeps these directories out of the deployed package.
 set -u
 
-ya=${DFAPP_BIN_DIR:+$DFAPP_BIN_DIR/}ya
+ya=${DFUTIL_BIN_DIR:+$DFUTIL_BIN_DIR/}ya
 for pkg in \
   yazi-rs/flavors:catppuccin-mocha \
   yazi-rs/plugins:full-border \

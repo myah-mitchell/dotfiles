@@ -1,6 +1,6 @@
 #!/bin/bash
 # Windows-side setup under WSL2: Alacritty, the Nerd Font, and the Alacritty
-# config link. Runs as the install command of the `windows-setup` dfapp tool,
+# config link. Runs as the install command of the `windows-setup` dfutil tool,
 # from the repo root. Never fails the run: every problem is a warning.
 #
 # Needs WSL interop. The distro name comes from $WSL_DISTRO_NAME, because

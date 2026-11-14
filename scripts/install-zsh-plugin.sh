@@ -2,10 +2,10 @@
 # Install a zsh plugin from the source tarball at a pinned git tag.
 #
 # Usage: install-zsh-plugin.sh <name> <owner/repo> <tag>
-# Runs as a dfapp script tool. These repos publish tags but no GitHub
-# Releases, so dfapp's github kind cannot see them.
+# Runs as a dfutil script tool. These repos publish tags but no GitHub
+# Releases, so dfutil's github kind cannot see them.
 #
-# The plugin lands in $DFAPP_TOOL_DIR/<name> and is linked at
+# The plugin lands in $DFUTIL_TOOL_DIR/<name> and is linked at
 # <prefix>/share/zsh/plugins/<name>, which is where .zshrc sources it from.
 set -eu
 
@@ -21,7 +21,7 @@ curl -fsSL --connect-timeout 30 --max-time 120 --retry 2 \
 mkdir "$tmp/src"
 tar -xzf "$tmp/src.tar.gz" -C "$tmp/src" --strip-components=1
 
-rm -rf "${DFAPP_TOOL_DIR:?}/${name}"
-mkdir -p "$DFAPP_TOOL_DIR" "$DFAPP_PREFIX/share/zsh/plugins"
-mv "$tmp/src" "$DFAPP_TOOL_DIR/$name"
-ln -sfn "$DFAPP_TOOL_DIR/$name" "$DFAPP_PREFIX/share/zsh/plugins/$name"
+rm -rf "${DFUTIL_TOOL_DIR:?}/${name}"
+mkdir -p "$DFUTIL_TOOL_DIR" "$DFUTIL_PREFIX/share/zsh/plugins"
+mv "$tmp/src" "$DFUTIL_TOOL_DIR/$name"
+ln -sfn "$DFUTIL_TOOL_DIR/$name" "$DFUTIL_PREFIX/share/zsh/plugins/$name"

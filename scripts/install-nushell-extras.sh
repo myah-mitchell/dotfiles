@@ -1,7 +1,7 @@
 #!/bin/sh
 # Nushell extras: the Catppuccin Mocha theme and an empty secrets.nu.
 #
-# Runs as a dfapp script tool. config.nu sources the theme, and env.nu sources
+# Runs as a dfutil script tool. config.nu sources the theme, and env.nu sources
 # secrets.nu. Nu resolves `source` at parse time, so a missing file is a
 # startup error, which is why secrets.nu is created empty here.
 set -u

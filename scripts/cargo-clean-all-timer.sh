@@ -12,7 +12,7 @@
 set -u
 
 unit_dir=${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user
-bin=${DFAPP_BIN_DIR:-$HOME/.local/bin}
+bin=${DFUTIL_BIN_DIR:-$HOME/.local/bin}
 
 case ${1:-} in
   remove)

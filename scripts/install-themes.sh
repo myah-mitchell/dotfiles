@@ -1,10 +1,10 @@
 #!/bin/sh
 # Download the Catppuccin Mocha themes for bat, eza, and zsh-syntax-highlighting.
 #
-# Runs as a dfapp script tool. Each file is fetched only when missing, through
+# Runs as a dfutil script tool. Each file is fetched only when missing, through
 # a temp file so a failed download never leaves a partial theme behind.
 # The themes are Mocha only: they follow the upstream ports, not the active
-# dfapp palette.
+# dfutil palette.
 set -u
 
 config=${XDG_CONFIG_HOME:-$HOME/.config}
