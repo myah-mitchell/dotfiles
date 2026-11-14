@@ -67,6 +67,7 @@ description = "Nushell config"
 # ── Core tools ───────────────────────────────────────────────────────────────
 [tools.starship]
 description = "Shell prompt"
+category = "shell"
 repo = "starship/starship"
 crate = "starship"
 assets.linux-x86_64 = "starship-x86_64-unknown-linux-musl.tar.gz"
@@ -81,6 +82,7 @@ init.nushell = "starship init nu"
 # time, same as install.sh.
 [tools.zellij]
 description = "Terminal multiplexer (fork)"
+category = "zellij"
 repo = "myah-mitchell/zellij"
 crate = "zellij"
 pin = "fork-ea-v0.46.7-*"
@@ -89,6 +91,7 @@ assets.linux-aarch64 = "zellij-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.nu]
 description = "Nushell binary"
+category = "shell"
 repo = "nushell/nushell"
 crate = "nu"
 assets.linux-x86_64 = "nu-*-x86_64*linux*musl*.tar.gz"
@@ -98,6 +101,7 @@ assets.linux-aarch64 = "nu-*-aarch64*linux*musl*.tar.gz"
 
 [tools.bat]
 description = "cat with syntax highlighting"
+category = "files"
 repo = "sharkdp/bat"
 crate = "bat"
 assets.linux-x86_64 = "bat-*-x86_64*linux*musl*.tar.gz"
@@ -105,6 +109,7 @@ assets.linux-aarch64 = "bat-*-aarch64*linux*musl*.tar.gz"
 
 [tools.fd]
 description = "Simple, fast find"
+category = "search"
 repo = "sharkdp/fd"
 crate = "fd-find"
 assets.linux-x86_64 = "fd-*-x86_64*linux*musl*.tar.gz"
@@ -112,6 +117,7 @@ assets.linux-aarch64 = "fd-*-aarch64*linux*musl*.tar.gz"
 
 [tools.rg]
 description = "ripgrep, fast recursive grep"
+category = "search"
 repo = "BurntSushi/ripgrep"
 crate = "ripgrep"
 assets.linux-x86_64 = "ripgrep-*-x86_64*linux*musl*.tar.gz"
@@ -119,6 +125,7 @@ assets.linux-aarch64 = "ripgrep-*-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.rga]
 description = "ripgrep over PDFs, archives, and more"
+category = "search"
 # No aarch64 asset upstream.
 repo = "phiresky/ripgrep-all"
 crate = "ripgrep_all"
@@ -127,6 +134,7 @@ assets.linux-x86_64 = "ripgrep_all-*-x86_64*linux*musl*.tar.gz"
 
 [tools.eza]
 description = "Modern ls"
+category = "files"
 repo = "eza-community/eza"
 crate = "eza"
 assets.linux-x86_64 = "eza_x86_64*linux*musl*.tar.gz"
@@ -134,12 +142,14 @@ assets.linux-aarch64 = "eza_aarch64-unknown-linux-gnu.tar.gz"
 
 [tools.fzf]
 description = "Fuzzy finder"
+category = "search"
 repo = "junegunn/fzf"
 assets.linux-x86_64 = "fzf-*-linux_amd64.tar.gz"
 assets.linux-aarch64 = "fzf-*-linux_arm64.tar.gz"
 
 [tools.zoxide]
 description = "Smarter cd"
+category = "shell"
 repo = "ajeetdsouza/zoxide"
 crate = "zoxide"
 assets.linux-x86_64 = "zoxide-*-x86_64*linux*musl*.tar.gz"
@@ -150,6 +160,7 @@ init.nushell = "zoxide init nushell"
 
 [tools.ruff]
 description = "Python linter and formatter"
+category = "dev"
 repo = "astral-sh/ruff"
 crate = "ruff"
 assets.linux-x86_64 = "ruff-x86_64-unknown-linux-musl.tar.gz"
@@ -157,18 +168,21 @@ assets.linux-aarch64 = "ruff-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.uv]
 description = "Python package and tool manager"
+category = "dev"
 repo = "astral-sh/uv"
 assets.linux-x86_64 = "uv-x86_64-unknown-linux-musl.tar.gz"
 assets.linux-aarch64 = "uv-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.lazygit]
 description = "Git TUI"
+category = "git"
 repo = "jesseduffield/lazygit"
 assets.linux-x86_64 = "lazygit_*_linux_x86_64.tar.gz"
 assets.linux-aarch64 = "lazygit_*_linux_arm64.tar.gz"
 
 [tools.serpl]
 description = "Search and replace TUI"
+category = "search"
 repo = "yassinebridi/serpl"
 crate = "serpl"
 assets.linux-x86_64 = "serpl-*-linux-x86_64.tar.gz"
@@ -176,6 +190,7 @@ assets.linux-aarch64 = "serpl-*-linux-arm64.tar.gz"
 
 [tools.gping]
 description = "ping with a graph"
+category = "monitor"
 repo = "orf/gping"
 crate = "gping"
 assets.linux-x86_64 = "gping-Linux-musl-x86_64.tar.gz"
@@ -183,6 +198,7 @@ assets.linux-aarch64 = "gping-Linux-musl-arm64.tar.gz"
 
 [tools.trip]
 description = "Network diagnostic tool (trippy)"
+category = "monitor"
 repo = "fujiapple852/trippy"
 crate = "trippy"
 assets.linux-x86_64 = "trippy-*-x86_64-unknown-linux-musl.tar.gz"
@@ -190,6 +206,7 @@ assets.linux-aarch64 = "trippy-*-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.tldr]
 description = "tealdeer, fast tldr client"
+category = "docs"
 repo = "tealdeer-rs/tealdeer"
 crate = "tealdeer"
 assets.linux-x86_64 = "tealdeer-linux-x86_64-musl"
@@ -197,6 +214,7 @@ assets.linux-aarch64 = "tealdeer-linux-aarch64-musl"
 
 [tools.tspin]
 description = "tailspin, log file highlighter"
+category = "monitor"
 repo = "bensadeh/tailspin"
 crate = "tailspin"
 assets.linux-x86_64 = "tailspin-x86_64-unknown-linux-musl.tar.gz"
@@ -204,6 +222,7 @@ assets.linux-aarch64 = "tailspin-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.choose]
 description = "Human-friendly cut and awk alternative"
+category = "search"
 # No aarch64 Linux asset upstream.
 repo = "theryangeary/choose"
 crate = "choose"
@@ -212,6 +231,7 @@ assets.linux-x86_64 = "choose-x86_64-unknown-linux-musl"
 
 [tools.difft]
 description = "difftastic, structural diff"
+category = "git"
 repo = "Wilfred/difftastic"
 crate = "difftastic"
 assets.linux-x86_64 = "difft-*-x86_64-unknown-linux-gnu.tar.gz"
@@ -219,6 +239,7 @@ assets.linux-aarch64 = "difft-*-aarch64-unknown-linux-gnu.tar.gz"
 
 [tools.delta]
 description = "Syntax-highlighting pager for diffs"
+category = "git"
 repo = "dandavison/delta"
 crate = "git-delta"
 assets.linux-x86_64 = "delta-*-x86_64-unknown-linux-musl.tar.gz"
@@ -226,6 +247,7 @@ assets.linux-aarch64 = "delta-*-aarch64-unknown-linux-gnu.tar.gz"
 
 [tools.diffnav]
 description = "Diff file-tree browser (needs delta)"
+category = "git"
 # Shells out to delta by name.
 repo = "dlvhdr/diffnav"
 assets.linux-x86_64 = "diffnav_Linux_x86_64.tar.gz"
@@ -233,6 +255,7 @@ assets.linux-aarch64 = "diffnav_Linux_arm64.tar.gz"
 
 [tools.procs]
 description = "Modern ps"
+category = "monitor"
 # No aarch64 Linux asset upstream.
 repo = "dalance/procs"
 crate = "procs"
@@ -241,6 +264,7 @@ assets.linux-x86_64 = "procs-v*-x86_64*linux*.zip"
 
 [tools.sd]
 description = "Intuitive find and replace"
+category = "search"
 # No aarch64 Linux asset upstream.
 repo = "chmln/sd"
 crate = "sd"
@@ -249,12 +273,14 @@ assets.linux-x86_64 = "sd-v*-x86_64*linux*musl*.tar.gz"
 
 [tools.viddy]
 description = "Modern watch"
+category = "monitor"
 repo = "sachaos/viddy"
 assets.linux-x86_64 = "viddy-*-linux-x86_64.tar.gz"
 assets.linux-aarch64 = "viddy-*-linux-arm64.tar.gz"
 
 [tools.ouch]
 description = "Painless compression and decompression"
+category = "files"
 repo = "ouch-org/ouch"
 crate = "ouch"
 assets.linux-x86_64 = "ouch-x86_64-unknown-linux-musl.tar.gz"
@@ -262,6 +288,7 @@ assets.linux-aarch64 = "ouch-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.presenterm]
 description = "Terminal slideshows from Markdown"
+category = "docs"
 # No aarch64 Linux asset upstream.
 repo = "mfontanini/presenterm"
 crate = "presenterm"
@@ -270,12 +297,14 @@ assets.linux-x86_64 = "presenterm-*-x86_64*linux*musl*.tar.gz"
 
 [tools.asciinema]
 description = "Terminal session recorder"
+category = "docs"
 repo = "asciinema/asciinema"
 assets.linux-x86_64 = "asciinema-x86_64-unknown-linux-musl"
 assets.linux-aarch64 = "asciinema-aarch64-unknown-linux-gnu"
 
 [tools.btm]
 description = "bottom, system monitor"
+category = "monitor"
 repo = "ClementTsang/bottom"
 crate = "bottom"
 assets.linux-x86_64 = "bottom_x86_64-unknown-linux-musl.tar.gz"
@@ -283,6 +312,7 @@ assets.linux-aarch64 = "bottom_aarch64-unknown-linux-musl.tar.gz"
 
 [tools.carapace]
 description = "Multi-shell completion"
+category = "shell"
 repo = "carapace-sh/carapace-bin"
 assets.linux-x86_64 = "carapace-bin_*_linux_amd64.tar.gz"
 assets.linux-aarch64 = "carapace-bin_*_linux_arm64.tar.gz"
@@ -292,12 +322,14 @@ init.nushell = "carapace _carapace nushell"
 
 [tools.glow]
 description = "Markdown renderer"
+category = "docs"
 repo = "charmbracelet/glow"
 assets.linux-x86_64 = "glow_*_Linux_x86_64.tar.gz"
 assets.linux-aarch64 = "glow_*_Linux_arm64.tar.gz"
 
 [tools.mdcat]
 description = "Markdown renderer with images and links"
+category = "docs"
 # x86_64 only. Links the system OpenSSL 3, so it needs a recent distro.
 repo = "BIRSAx2/mdcat"
 crate = "mdcat"
@@ -306,18 +338,21 @@ assets.linux-x86_64 = "mdcat-*-x86_64-unknown-linux-*.tar.gz"
 
 [tools.7zz]
 description = "7-Zip"
+category = "files"
 repo = "ip7z/7zip"
 assets.linux-x86_64 = "7z*-linux-x64.tar.xz"
 assets.linux-aarch64 = "7z*-linux-arm64.tar.xz"
 
 [tools.jq]
 description = "JSON processor"
+category = "search"
 repo = "jqlang/jq"
 assets.linux-x86_64 = "jq-linux-amd64"
 assets.linux-aarch64 = "jq-linux-arm64"
 
 [tools.tree-sitter-cli]
 description = "tree-sitter CLI"
+category = "dev"
 # Installed as tree-sitter-cli, matching install.sh.
 repo = "tree-sitter/tree-sitter"
 assets.linux-x86_64 = "tree-sitter-cli-linux-x64.zip"
@@ -326,6 +361,7 @@ bins = ["tree-sitter-cli=tree-sitter"]
 
 [tools.atuin]
 description = "Shell history database and search"
+category = "shell"
 repo = "atuinsh/atuin"
 crate = "atuin"
 assets.linux-x86_64 = "atuin-x86_64-unknown-linux-musl.tar.gz"
@@ -336,6 +372,7 @@ init.nushell = "atuin init nu --disable-up-arrow"
 
 [tools.yazi]
 description = "File manager, with its ya companion"
+category = "files"
 repo = "sxyazi/yazi"
 bins = ["yazi", "ya"]
 assets.linux-x86_64 = "yazi-x86_64-unknown-linux-musl.zip"
@@ -344,6 +381,7 @@ post_install = "sh scripts/yazi-packages.sh"
 
 [tools.nvim]
 description = "Neovim"
+category = "dev"
 repo = "neovim/neovim"
 bins = ["nvim=bin/nvim"]
 assets.linux-x86_64 = "nvim-linux-x86_64.tar.gz"
@@ -357,6 +395,7 @@ assets.linux-aarch64 = "nvim-linux-arm64.tar.gz"
 
 [tools.zellij-autolock]
 description = "Locks Zellij while a trigger process has focus"
+category = "zellij"
 repo = "fresh2dev/zellij-autolock"
 pin = "tag:0.3.0"
 assets.any = "zellij-autolock.wasm"
@@ -366,6 +405,7 @@ post_install = "sh scripts/zellij-seed-permissions.sh zellij-autolock.wasm ReadA
 # TEMPORARY fork. Upstream is dj95/zjstatus at v0.25.0.
 [tools.zjstatus]
 description = "Zellij status bar"
+category = "zellij"
 repo = "myah-mitchell/zjstatus"
 pin = "tag:fork-v0.25.1"
 assets.any = "zjstatus.wasm"
@@ -375,6 +415,7 @@ post_install = "sh scripts/zellij-seed-permissions.sh zjstatus.wasm ReadApplicat
 # Installed and granted, but config.kdl does not load it.
 [tools.zellij-newtab-plus]
 description = "Floating new-tab picker with zoxide"
+category = "zellij"
 repo = "AlexZasorin/zellij-newtab-plus"
 pin = "tag:v0.6.0"
 assets.any = "zellij-newtab-plus.wasm"
@@ -385,6 +426,7 @@ post_install = "sh scripts/zellij-seed-permissions.sh zellij-newtab-plus.wasm Ru
 # permission scopes by hand.
 [tools.zjhints]
 description = "Zellij keybinding hints bar"
+category = "zellij"
 repo = "myah-mitchell/zjhints"
 pin = "ea-v0.6.0-*"
 assets.any = "zjhints.wasm"
@@ -395,6 +437,7 @@ post_install = "sh scripts/zellij-seed-permissions.sh zjhints.wasm ReadApplicati
 # install.sh has no permissions entry for it either.
 [tools.zjtabs]
 description = "Zellij tab bar (not loaded yet)"
+category = "zellij"
 repo = "myah-mitchell/zjhints"
 pin = "ea-v0.6.0-*"
 assets.any = "zjtabs.wasm"
@@ -408,6 +451,7 @@ links = { "share/zellij/plugins/zjtabs.wasm" = "zjtabs.wasm" }
 
 [tools.zsh-autosuggestions]
 description = "Fish-style autosuggestions"
+category = "shell"
 kind = "script"
 install = "sh scripts/install-zsh-plugin.sh zsh-autosuggestions zsh-users/zsh-autosuggestions v0.7.1"
 version = "echo v0.7.1"
@@ -415,6 +459,7 @@ uninstall = "rm -f \"$DFAPP_PREFIX/share/zsh/plugins/zsh-autosuggestions\""
 
 [tools.zsh-syntax-highlighting]
 description = "Command-line syntax highlighting"
+category = "shell"
 kind = "script"
 install = "sh scripts/install-zsh-plugin.sh zsh-syntax-highlighting zsh-users/zsh-syntax-highlighting 0.8.0"
 version = "echo 0.8.0"
@@ -422,6 +467,7 @@ uninstall = "rm -f \"$DFAPP_PREFIX/share/zsh/plugins/zsh-syntax-highlighting\""
 
 [tools.zsh-you-should-use]
 description = "Reminds you of aliases you have"
+category = "shell"
 kind = "script"
 install = "sh scripts/install-zsh-plugin.sh zsh-you-should-use MichaelAquilina/zsh-you-should-use 1.11.1"
 version = "echo 1.11.1"
@@ -432,6 +478,7 @@ uninstall = "rm -f \"$DFAPP_PREFIX/share/zsh/plugins/zsh-you-should-use\""
 # They are Mocha only and do not follow [settings] palette.
 [tools.catppuccin-themes]
 description = "Catppuccin Mocha themes for bat, eza, zsh-syntax-highlighting"
+category = "theme"
 kind = "script"
 install = "sh scripts/install-themes.sh"
 version = "echo mocha"
@@ -439,6 +486,7 @@ requires = ["bat"]
 
 [tools.jetbrainsmono-nerd-font]
 description = "JetBrainsMono Nerd Font (native Linux; WSL gets it from windows-setup)"
+category = "theme"
 kind = "script"
 install = "sh scripts/install-nerd-font.sh"
 version = "echo latest"
@@ -450,6 +498,7 @@ when = { os = "linux", wsl = false }
 # tracks "latest LTS" at first install, not afterward.
 [tools.node]
 description = "Node.js LTS from nodejs.org"
+category = "dev"
 kind = "script"
 install = "sh scripts/install-node.sh"
 version = "\"$DFAPP_TOOL_DIR/bin/node\" --version"
@@ -458,12 +507,14 @@ bins = ["node=bin/node", "npm=bin/npm", "npx=bin/npx"]
 # Claude's own installer manages its launcher and updates itself.
 [tools.claude]
 description = "Claude Code, through its own installer"
+category = "claude"
 kind = "script"
 install = "curl -fsSL https://claude.ai/install.sh | bash"
 version = "claude --version | cut -d' ' -f1"
 
 [tools.ccstatusline]
 description = "Claude Code status line"
+category = "claude"
 kind = "npm"
 pin = "2.2.32"
 requires = ["node"]
@@ -472,6 +523,7 @@ requires = ["node"]
 
 [tools.claude-swap]
 description = "Switch between Claude accounts"
+category = "claude"
 kind = "uv"
 package = "claude-swap"
 bins = ["cswap", "claude-swap"]
@@ -480,6 +532,7 @@ requires = ["uv"]
 # ── Full IDE workstation ─────────────────────────────────────────────────────
 [tools.pwsh]
 description = "PowerShell, for the powershell_es LSP"
+category = "dev"
 repo = "PowerShell/PowerShell"
 assets.linux-x86_64 = "powershell-*-linux-x64.tar.gz"
 assets.linux-aarch64 = "powershell-*-linux-arm64.tar.gz"
@@ -487,6 +540,7 @@ assets.linux-aarch64 = "powershell-*-linux-arm64.tar.gz"
 # nvim reads this marker to enable its heavier Mason LSPs.
 [tools.full-marker]
 description = "Marker file that turns on nvim's heavier LSPs"
+category = "dev"
 kind = "script"
 install = "mkdir -p \"$HOME/.local/state/dotfiles\" && touch \"$HOME/.local/state/dotfiles/full-install\""
 version = "echo marker"
@@ -495,6 +549,7 @@ uninstall = "rm -f \"$HOME/.local/state/dotfiles/full-install\""
 # ── WSL2 ─────────────────────────────────────────────────────────────────────
 [tools.windows-setup]
 description = "Alacritty, font, and config link on the Windows side"
+category = "system"
 kind = "script"
 install = "bash scripts/windows-setup.sh"
 version = "echo installed"
@@ -503,6 +558,7 @@ when = { wsl = true }
 # ── Nushell ──────────────────────────────────────────────────────────────────
 [tools.nushell-extras]
 description = "Catppuccin theme and empty secrets.nu for nushell"
+category = "system"
 kind = "script"
 install = "sh scripts/install-nushell-extras.sh"
 version = "echo mocha"
@@ -513,6 +569,7 @@ version = "echo mocha"
 # on a host with no Rust toolchain, or install rustup first.
 [tools.rustup]
 description = "Rust toolchain bootstrap"
+category = "dev"
 kind = "script"
 install = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --quiet"
 version = "\"$HOME/.cargo/bin/rustc\" --version | cut -d' ' -f2"
@@ -520,6 +577,7 @@ uninstall = "\"$HOME/.cargo/bin/rustup\" self uninstall -y"
 
 [tools.cargo-clean-all]
 description = "Deletes stale Cargo target dirs, on a weekly timer"
+category = "dev"
 kind = "cargo"
 crate = "cargo-clean-all"
 requires = ["rustup"]
