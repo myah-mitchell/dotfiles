@@ -289,7 +289,7 @@ ZSH_PLUGINS=(
 # ccstatusline: npm-pinned rather than always-latest (see install_ccstatusline
 # below for why) — kept as a plain variable, not a local inside that function,
 # so --check-pins/--upgrade=ccstatusline can read/rewrite it the same way.
-CCSTATUSLINE_PINNED_VERSION="2.2.32"
+CCSTATUSLINE_PINNED_VERSION="2.2.34"
 # CORE_TOOLS/CLI_TOOLS (and yazi) install /releases/latest unless their dest
 # has a row here. Applies to every platform row of that dest, and only while
 # the repo matches (so a repo switch can't silently keep a stale pin).
