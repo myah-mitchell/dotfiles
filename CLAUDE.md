@@ -7,8 +7,10 @@ This file is for Claude Code sessions working in this dotfiles repo. It records 
 - [Zellij mode architecture](#zellij-mode-architecture)
 - [Unified Ctrl+hjkl navigation](#unified-ctrlhjkl-navigation)
 - [Zellij status bar and plugin loading](#zellij-status-bar-and-plugin-loading)
+- [Two installers: dfutil and install.sh](#two-installers-dfutil-and-installsh)
 - [Zsh](#zsh)
 - [Nushell: optional secondary shell](#nushell-optional-secondary-shell)
+- [dfutil](#dfutil)
 - [Config deployment](#config-deployment)
 - [Deliberate omissions](#deliberate-omissions)
 - [Diff tools: difftastic, delta, diffnav](#diff-tools-difftastic-delta-diffnav)
@@ -23,49 +25,38 @@ This file is for Claude Code sessions working in this dotfiles repo. It records 
 
 ## Zellij mode architecture
 
-Three modes are in play. Don't conflate them.
+Zellij's default keybindings stay (`keybinds clear-defaults=false`), with a handful of changes on top. Three modes matter. Don't conflate them.
 
 | Mode | What it is | When active |
 | --- | --- | --- |
-| `normal` | Main operating mode (custom) | Default, for all terminal use |
-| `tmux` | Prefix layer (custom) | After backtick is pressed |
+| `normal` | Default mode | All terminal use |
+| `tmux` | Zellij's built-in prefix layer | After `Ctrl b`, Zellij's default |
 | `locked` | Zellij's built-in full passthrough | Managed by zellij-autolock, or `Ctrl g` by hand |
 
-`normal` mode intercepts `Ctrl+hjkl` for pane navigation and backtick to enter `tmux` mode. Every other key passes through to the terminal.
+`normal` adds `Ctrl w` for move mode. `Ctrl+hjkl` (pane focus) and `Ctrl g` (lock) are bound in `shared_except "locked"`, and `Alt+hjkl` and `Ctrl y` (copy) in `shared`. A backtick binding to enter `tmux` is present but commented out.
 
-`tmux` mode is the prefix layer, like tmux's `C-b`, with backtick as the prefix. Most actions return to `normal` after running.
+`tmux` mode adds `\` and `-` to split right and down, `s` for scroll, `/` for search, and `d` to detach, and backtick or `Esc` returns to `normal`. It unbinds Zellij's `Ctrl b` "send literal `Ctrl b`" action. In `scroll` and `search`, `y` and `Ctrl c` copy the selection without leaving the mode.
 
-| Key | Action |
-| --- | --- |
-| `\` / `-` | Split pane |
-| `c` | New tab, via the zellij-newtab-plus floating picker with zoxide directory jump |
-| `p` / `n`, `[` / `]` | Previous / next tab |
-| `1` to `9` | Jump to tab |
-| `hjkl` / `HJKL` | Move focus / move pane |
-| `x`, `z`, `f`, `e`, `w` | Close, fullscreen, toggle floating, toggle embed/floating, toggle pane frames |
-| `,`, `d`, `q` | Rename tab, detach, quit |
-| `o`, `r`, `s`, `/` | Session, resize, scroll, search modes |
-
-`locked` mode sends every keystroke straight to the focused pane. It's never entered by hand except through the `Ctrl g` escape hatch, bound in `shared_except "locked" "tmux"` to enter and inside `locked` to exit. `zellij-autolock` switches to it based on the focused process and back out when that process closes. Don't add keybindings to `locked` beyond the escape hatch.
+`locked` mode sends every keystroke straight to the focused pane. Its only binding is the `Ctrl g` escape hatch, which also re-enables zellij-autolock; the `Ctrl g` that enters it disables autolock, so a hand lock isn't undone the next time focus moves. `zellij-autolock` switches to it based on the focused process and back out when that process closes. Don't add keybindings to `locked` beyond the escape hatch.
 
 ## Unified Ctrl+hjkl navigation
 
 Two components work together:
 
-1. `fresh2dev/zellij-autolock` (Zellij plugin) watches the focused process. It switches Zellij to `locked` when one of its `triggers` is focused (`nvim|hx|fzf|zoxide|atuin|tmux`, set in `zellij/.config/zellij/config.kdl`) and back to `normal` when it closes.
+1. `fresh2dev/zellij-autolock` (Zellij plugin) watches the focused process. It switches Zellij to `locked` when one of its `triggers` is focused (`nvim|hx|fzf|zoxide|atuin|tmux`, set as `lock_regex` in `zellij/.config/zellij/config.kdl.tmpl`) and back to `normal` when it closes.
 2. `swaits/zellij-nav.nvim` (Neovim plugin) handles `Ctrl+hjkl` inside Neovim. It moves between splits, and at a window edge calls `zellij action move-focus` to move to the adjacent Zellij pane.
 
 The result: `Ctrl+hjkl` moves between Zellij panes in the terminal, between Neovim splits inside nvim, and across the boundary between the two.
 
 ## Zellij status bar and plugin loading
 
-`zellij/.config/zellij/layouts/default.kdl` renders a zjstatus bar (mode pill, tab pills, weather/sysinfo/battery command pills, datetime, username and hostname) plus a zjhints keybinding-hints bar. Both are themed inline in `config.kdl`'s `plugins { ... }` block with Catppuccin Mocha hex values. There's no shared palette file, so a theme change has to be made here too (see [Theme](#theme)).
+`zellij/.config/zellij/layouts/default.kdl` renders a zjstatus bar (mode pill, tab pills, weather/sysinfo/battery command pills, datetime, username and hostname) plus a zjhints keybinding-hints bar. Both are themed inline in the `plugins { ... }` block. In `config.kdl.tmpl` every color is a `{{ palette.<name> }}` placeholder that dfutil fills from `palettes/`; the untemplated `config.kdl` that `install.sh` deploys carries the same colors as Mocha hex values, so a color change has to be made in both (see [Theme](#theme)).
 
 ### Plugins load from local files
 
-`config.kdl` references every plugin as `file:~/.local/share/zellij/plugins/<name>.wasm`. `install.sh` downloads each `.wasm` once into `bin/.local/share/zellij/plugins/`, which `link_package` symlinks into `~/.local/share/zellij/plugins/`, and records the version in `.versions`. A live `https://` location, or a dead pinned tag, would block every new terminal, because these plugins load on every `zellij_autostart`.
+`config.kdl` references every plugin as `file:~/.local/share/zellij/plugins/<name>.wasm`, and `config.kdl.tmpl` as `file:{{ prefix }}/share/zellij/plugins/<name>.wasm`, which renders to the same path for a user-scope install. dfutil installs each plugin as a `github` tool that links its `.wasm` there. `install.sh` downloads each `.wasm` once into `bin/.local/share/zellij/plugins/`, which `link_package` symlinks into `~/.local/share/zellij/plugins/`, and records the version in `.versions`. A live `https://` location, or a dead pinned tag, would block every new terminal, because these plugins load on every `zellij_autostart`.
 
-Versions are pinned in the `ZELLIJ_PLUGINS` array in `install.sh` and must stay in lockstep with the plugin names used in `config.kdl`. A pin is an exact release tag, or a tag prefix ending in `*`, which installs the newest release whose tag starts with the prefix and has the plugin's `.wasm` asset, prereleases included. A prefix pin picks up a newer release only with `--update`, and costs one GitHub API call when it does. Keep prefix pins to repos you control: they skip the bump-PR review, so a release that adds a permission scope arrives unchecked (see [Plugin permission pre-seeding](#plugin-permission-pre-seeding)). `install.sh` prints a reminder whenever a prefix pin moves a plugin to a new release.
+Versions are pinned twice, in each plugin's `pin` in `dfutil.toml` and in the `ZELLIJ_PLUGINS` array in `install.sh`, and both must stay in lockstep with the plugin names used in `config.kdl`. A pin is an exact release tag, or a tag prefix ending in `*`, which installs the newest release whose tag starts with the prefix and has the plugin's `.wasm` asset, prereleases included. A prefix pin picks up a newer release only with `--update`, and costs one GitHub API call when it does. Keep prefix pins to repos you control: they skip the bump-PR review, so a release that adds a permission scope arrives unchecked (see [Plugin permission pre-seeding](#plugin-permission-pre-seeding)). `install.sh` prints a reminder whenever a prefix pin moves a plugin to a new release.
 
 The plugins:
 
@@ -73,7 +64,7 @@ The plugins:
 | --- | --- | --- |
 | `zellij-autolock.wasm` | `fresh2dev/zellij-autolock` | Tagged release |
 | `zjstatus.wasm` | `myah-mitchell/zjstatus` fork | Temporary; see the comment in `ZELLIJ_PLUGINS` for the upstream pin to restore |
-| `zellij-newtab-plus.wasm` | `AlexZasorin/zellij-newtab-plus` | Tagged release; powers the `c` binding |
+| `zellij-newtab-plus.wasm` | `AlexZasorin/zellij-newtab-plus` | Tagged release. Installed and granted permissions, but not loaded by `config.kdl` or any layout, and no binding uses it |
 | `zjhints.wasm` | `myah-mitchell/zjhints` | Own repo; temporarily tracks the `ea-v0.6.0-*` prerelease builds |
 | `zjtabs.wasm` | `myah-mitchell/zjhints` | Ships in zjhints' releases, on the same `ea-v0.6.0-*` pin. Installed, but not loaded by `config.kdl` or any layout yet, and it has no `ZELLIJ_PLUGIN_PERMISSIONS` entry |
 
@@ -81,7 +72,18 @@ zellij itself is also temporarily installed from the `myah-mitchell/zellij` fork
 
 ### Plugin permission pre-seeding
 
-Each plugin's `request_permission()` needs a one-time interactive approval, shown in the plugin's own pane. zjstatus and zellij-autolock live in unfocused, size-1, borderless panes, so that prompt is easy never to see, and the plugin then sits inert with no error. `install.sh` pre-writes the grants to `~/.cache/zellij/permissions.kdl` without touching grants for other plugins. If a plugin bump starts requesting new permission scopes, update its entry in `ZELLIJ_PLUGIN_PERMISSIONS` in `install.sh`: the next run adds any scope missing from that plugin's existing block and keeps scopes approved by hand.
+Each plugin's `request_permission()` needs a one-time interactive approval, shown in the plugin's own pane. zjstatus and zellij-autolock live in unfocused, size-1, borderless panes, so that prompt is easy never to see, and the plugin then sits inert with no error. Both installers pre-write the grants to `~/.cache/zellij/permissions.kdl` without touching grants for other plugins: dfutil through each plugin's `post_install`, which runs `scripts/zellij-seed-permissions.sh` with the plugin's scope list, and `install.sh` from `ZELLIJ_PLUGIN_PERMISSIONS`. If a plugin bump starts requesting new permission scopes, update both lists: the next run adds any scope missing from that plugin's existing block and keeps scopes approved by hand.
+
+## Two installers: dfutil and install.sh
+
+Two installers deploy this repo, from the same checkout:
+
+- [dfutil](https://github.com/myah-mitchell/dfutil) reads `dfutil.toml` and is the installer for new machines (see [dfutil](#dfutil)).
+- `install.sh` is a single bash script that fleet hosts still run, through the fleet ansible role's `sync.yml`. It stays until that role switches to dfutil.
+
+Both install the same tools at the same pins, link the same packages, and write the same paths under `$HOME`, so the shell and editor configs work under either. They keep separate state, and both write to `~/.local/bin`, so a machine runs only one of them. Many sections below name an `install.sh` function or flag; the [mapping table](#how-installsh-maps-to-dfutil) gives each one's dfutil equivalent.
+
+When changing a pin, a tool, or a package, change both installers in the same commit. The weekly pin check rewrites both (see [Pinned-version checks](#pinned-version-checks)).
 
 ## Zsh
 
@@ -95,7 +97,11 @@ zsh is the primary shell. Its config lives in the `zsh` package, laid out flat u
 
 ### Tool-init scripts
 
-Shell-init scripts are sourced from fixed, pre-generated paths rather than generated on the fly, for the same reason the Zellij plugins are local files: they're sourced on every new shell, so generating them each time would add latency to every terminal. Add any new tool that generates an init script the same way.
+Shell-init scripts are sourced from fixed, pre-generated paths rather than generated on the fly, for the same reason the Zellij plugins are local files: they're sourced on every new shell, so generating them each time would add latency to every terminal. Add any new tool that generates an init script the same way, in both installers.
+
+dfutil writes every tool's init script under `~/.local/share/dfutil/init/` and concatenates the ones for each selected shell into `init.zsh`, `init.bash`, and `init.nu` there, sourcing tools in name order (atuin, carapace, starship, zoxide). `.zshrc` sources that `init.zsh` when it exists and otherwise falls back to the four per-tool files `install.sh` generates, and `config.nu` does the same with `init.nu`. Only one set exists on a given machine, so neither shell loads a tool twice.
+
+The `install.sh` paths:
 
 ```text
 ~/.local/share/atuin/init.zsh    generated by: atuin init zsh --disable-up-arrow
@@ -112,7 +118,7 @@ Shell-init scripts are sourced from fixed, pre-generated paths rather than gener
 
 `zsh-autosuggestions`, `zsh-syntax-highlighting`, and `zsh-you-should-use` are loaded directly, not through a framework like oh-my-zsh. Starship, atuin, zoxide, and carapace already own the prompt, history, and completion, so a framework would only add redundant machinery.
 
-They're pinned in the `ZSH_PLUGINS` array in `install.sh` and tracked in `.versions`. None of them publish GitHub Releases, so `install.sh` downloads the source tarball at the pinned tag (`github.com/<repo>/archive/refs/tags/<tag>.tar.gz`) and extracts it into `~/.local/share/zsh/plugins/<name>/`, and `.zshrc` sources each plugin's `.plugin.zsh` from there.
+They're pinned in the `ZSH_PLUGINS` array in `install.sh` and, in `dfutil.toml`, in each plugin's script-tool install command. None of them publish GitHub Releases, so both download the source tarball at the pinned tag (`github.com/<repo>/archive/refs/tags/<tag>.tar.gz`) into `~/.local/share/zsh/plugins/<name>/` (dfutil through `scripts/install-zsh-plugin.sh`, which links it there from the tool directory), and `.zshrc` sources each plugin's `.plugin.zsh` from there.
 
 `zsh-syntax-highlighting` must be sourced last, after anything else that wraps zle widgets, or it breaks other plugins' keybindings. Both highlighting plugins are Catppuccin Mocha colored: `zsh-syntax-highlighting` through the downloaded theme (see [Theme](#theme)), `zsh-autosuggestions` through a hand-set `ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE`, since no official port exists for it.
 
@@ -140,7 +146,7 @@ The primary shell was Nushell until its structured-data model proved incompatibl
 
 ## Nushell: optional secondary shell
 
-`install.sh --nushell` makes `nu` available to launch by hand. zsh stays the default shell either way. `WANT_NUSHELL`, computed right after argument parsing like `WANT_CLAUDE_STACK`, gates everything below. The flag is standalone and not implied by `--full`, since Nushell has nothing to do with the IDE-workstation setup `--full` covers.
+dfutil's `nushell` preset, or `install.sh --nushell`, makes `nu` available to launch by hand. zsh stays the default shell either way. The rest of this section describes `install.sh`; under dfutil, the preset selects the `nu` tool, the `nushell` package, and the `nushell-extras` script tool, which downloads the theme and creates `secrets.nu`. `WANT_NUSHELL`, computed right after argument parsing like `WANT_CLAUDE_STACK`, gates everything below. The flag is standalone and not implied by `--full`, since Nushell has nothing to do with the IDE-workstation setup `--full` covers.
 
 ### What it installs
 
@@ -166,7 +172,113 @@ The catppuccin theme works by mutating `$env.config.color_config` and `.explore`
 
 The pre-migration setup also ran three plugins (`nu_plugin_skim`, `nu_plugin_dns`, `nu_plugin_highlight`) that ship no prebuilt binary, so installing them means bootstrapping rustup and cargo. `--nushell` never triggers a cargo bootstrap, so they aren't installed. To add them, follow the shape at the `pre-zsh-migration` tag: a `NUSHELL_PLUGINS_CARGO` array installed through `cargo_install` when `HAVE_CARGO` is true, a registration step (`nu -c "plugin add ...; plugin use ..."`) after configs are linked, and a `plugins:` block in `config.nu`'s `$env.config`.
 
+## dfutil
+
+`dfutil.toml` describes every tool, package, and preset for [dfutil](https://github.com/myah-mitchell/dfutil). A host records its own choices (repo path, presets, palette) in `~/.config/dfutil/host.toml`, written by `dfutil init`. dfutil keeps tools under `~/.local/share/dfutil/tools`, links their binaries into `~/.local/bin`, and keeps its state, rendered templates, and init scripts under `~/.local/share/dfutil`.
+
+| Path | Holds |
+| --- | --- |
+| `dfutil.toml` | Settings, packages, tools, and presets |
+| `palettes/mocha.toml`, `palettes/latte.toml` | The 26 Catppuccin color names for each flavor |
+| `scripts/` | Helpers that script tools and `post_install` hooks run from the repo root |
+| `zellij/.config/zellij/config.kdl.tmpl` | Zellij config with the home path, plugin path, and colors as placeholders |
+| `starship/.config/starship.toml.tmpl` | Starship config whose palette block renders from the active palette |
+| `zellij/.linkignore`, `starship/.linkignore` | Keep the untemplated `install.sh` copies from deploying beside the rendered files |
+
+The `bin` package has no `[packages.bin]` entry: it's `install.sh`'s download target.
+
+Keep `host.toml`'s `repo` absolute or `~`-relative. dfutil 0.0.1 accepts a relative path such as `./dotfiles` and links plain files relative to it, so every link except the rendered templates dangles.
+
+### Presets
+
+`settings.presets` selects `base`, `settings.shells` selects `zsh`, and `settings.palette` selects `mocha`.
+
+| Preset | `install.sh` flag | Adds |
+| --- | --- | --- |
+| `base` | none | `dfutil` itself, core and CLI tools, Zellij and zsh plugins, themes, the Nerd Font on native Linux, `ssh-dirs`, and every package except `nushell` |
+| `claude` | `--claude` | `claude`, `node`, `ccstatusline`, `claude-swap` |
+| `full` | `--full` | `claude`, plus `pwsh`, the `full-marker` tool, and `windows-setup` |
+| `windows` | `--windows` | `windows-setup`, which only runs under WSL2 |
+| `nushell` | `--nushell` | `nu`, `nushell-extras`, the `nushell` package, and the nushell init script |
+| `cargo` | `--cargo` | `build = "source"`, `rustup`, and `cargo-clean-all` with its weekly timer |
+
+`full` lists `windows-setup` directly instead of extending `windows`, because `--full` implies `--windows` and the tool's `when = { wsl = true }` makes it a no-op elsewhere.
+
+### How install.sh maps to dfutil
+
+Every `CORE_TOOLS` and `CLI_TOOLS` row is a `github` tool with `repo`, `assets.linux-x86_64`, `assets.linux-aarch64`, and, where `install.sh` has one, `crate` for source builds.
+
+- The tool name is `install.sh`'s `dest`, so `rg`, `trip`, `btm`, and `tree-sitter-cli` keep their names. `bins` is set only where the name inside the archive differs (`yazi` and `ya`, `nvim=bin/nvim`, `tree-sitter-cli=tree-sitter`).
+- dfutil matches asset globs case-sensitively against the whole asset name, so check them against real releases whenever an upstream renames assets.
+- Tools with no aarch64 Linux asset (`rga`, `choose`, `procs`, `sd`, `presenterm`, `mdcat`) carry `when = { arch = "x86_64" }`. Without it, dfutil rejects the whole config on aarch64.
+- `7zz` has no `crate`: crates.io has no crate of that name.
+- zellij's `TOOL_PINS` entry is `pin = "fork-ea-v0.46.7-*"` on the `myah-mitchell/zellij` fork. The aarch64 glob stays, so an aarch64 install fails at install time exactly as `install.sh` does.
+
+The bespoke installers:
+
+| `install.sh` | dfutil tool | Kind | Notes |
+| --- | --- | --- | --- |
+| `install_node` | `node` | `script` | `scripts/install-node.sh` fetches the latest LTS from nodejs.org, since `nodejs/node` releases carry no binaries. dfutil links `node`, `npm`, and `npx` from the tool directory instead of merging trees into `~/.local` |
+| `install_claude` | `claude` | `script` | Runs the official installer |
+| `install_ccstatusline` | `ccstatusline` | `npm` | Exact pin, requires `node` |
+| `install_claude_swap` | `claude-swap` | `uv` | Links `cswap` and `claude-swap`, requires `uv` |
+| `install_powershell` | `pwsh` | `github` | Links `pwsh` from the unpacked release |
+| nvim | `nvim` | `github` | Links `bin/nvim` only; Neovim finds its runtime relative to the resolved executable |
+| yazi and `ya` | `yazi` | `github` | `post_install` runs `scripts/yazi-packages.sh` for the `ya pkg` packages |
+| Nerd Font | `jetbrainsmono-nerd-font` | `script` | `when = { os = "linux", wsl = false }`; WSL gets the font from `windows-setup.ps1` |
+| bat, eza, and zsh-syntax-highlighting themes | `catppuccin-themes` | `script` | Requires `bat`, and runs `bat cache --build`. Mocha only |
+| Nushell theme and `secrets.nu` | `nushell-extras` | `script` | In the `nushell` preset |
+| `full-install` marker | `full-marker` | `script` | Creates `~/.local/state/dotfiles/full-install`, which nvim reads, and removes it on uninstall |
+| `~/.ssh/sockets` and `chmod 700 ~/.ssh` | `ssh-dirs` | `script` | `ssh/.ssh/config`'s `ControlPath` needs the directory, or multiplexed connections fail |
+| Windows block | `windows-setup` | `script` | `when = { wsl = true }`; `scripts/windows-setup.sh` keeps the interop check, distro detection, and path conversion, then calls `windows-setup.ps1` |
+| rustup bootstrap | `rustup` | `script` | In the `cargo` preset |
+| `install_cargo_clean_all` | `cargo-clean-all` | `cargo` | `post_install` writes the systemd units through `scripts/cargo-clean-all-timer.sh`, and `uninstall` removes them |
+
+zsh plugins are repo-less `script` tools whose install command embeds the tag, so a pin bump changes the recipe and triggers a reinstall (see [Plugins](#plugins)).
+
+These have no dfutil equivalent:
+
+| `install.sh` feature | Status |
+| --- | --- |
+| `.versions`, `.versions-repos`, and the run log | dfutil records its own state |
+| `--check-pins` and `--upgrade=<name>` | Edit `dfutil.toml`; the weekly workflow covers drift |
+| `--cleanup` | dfutil uninstalls a tool when it leaves the selection. Pruning old Claude Code versions, removing `~/.cargo` and `~/.rustup`, and uninstalling Mason LSPs aren't covered |
+| `--copy` and `--remove` | dfutil has its own deploy and uninstall commands |
+| `chmod 600 ~/.ssh/config` | Not ported. The deployed file is a link, so ssh checks the mode of the repo file it points at |
+| `mosh`, the git-core PPA, and the zsh, git, and locale prerequisite checks | dfutil installs nothing system-wide in user scope |
+
+### Templates and palettes
+
+dfutil renders `*.tmpl` files with `{{ name }}` placeholders and drops the suffix on deploy. The rendered file lands in `~/.local/share/dfutil/rendered/`, and the home path links to it.
+
+- `config.kdl.tmpl` uses `{{ home }}` for the four script paths, `{{ prefix }}` for the plugin locations, and `{{ palette.<name> }}` for all 69 colors.
+- `starship.toml.tmpl` renders its palette block from the active palette, under the name `catppuccin`, since the block follows the active flavor.
+
+`dfutil palette set latte` recolors only those two files. These stay Mocha, deliberately untemplated:
+
+- `zellij/.config/zellij/themes/catppuccin_mm.kdl` holds tweaked values such as `#bb5471`.
+- `alacritty/.config/alacritty/themes/catppuccin-mocha.toml` is imported by name, and Windows Alacritty reads it through the NTFS link chain.
+- `git/.gitconfig` mixes Mocha values with derived colors such as `#663f52`.
+- `ripgrep/.config/ripgrep/ripgreprc` uses `0xRR,0xGG,0xBB`.
+- `zsh/.zshenv`'s `FZF_DEFAULT_OPTS` block, because `.zshenv` is sourced by every zsh invocation and a rendered link adds a moving part to it.
+- The downloaded bat, eza, zsh-syntax-highlighting, and nushell themes.
+
+`zellij/.config/zellij/config.kdl` and `starship/.config/starship.toml` duplicate their `.tmpl` files for `install.sh`. Keep the pairs in sync, and delete the untemplated copies, `.gitattributes`, and `git-filters/` when `install.sh` is retired.
+
+### Gaps in dfutil
+
+These limits shaped `dfutil.toml`. Each is a candidate dfutil feature.
+
+- `requires` pulls its target into every selection, including prebuilt runs, so the `cargo` preset can't order `rustup` ahead of other tools' source builds without forcing rustup onto every host. On a host with no Rust toolchain, install `rustup` first or run `dfutil apply` twice.
+- A selected `github` tool with no asset for the current platform fails validation instead of being skipped with a warning, which is why the x86_64-only tools need `when`.
+- Script tools with a `repo` read only GitHub Releases, so tag-only repos (the zsh plugins) can't be pinned through `repo`.
+- Script tools without a `repo` never see upstream updates. `node` installs the latest LTS once and reinstalls only when its recipe changes.
+- Hooks only run for tools, so work like `ssh-dirs` needs a script tool.
+- `catppuccin-themes` always fetches Mocha, whatever the palette.
+
 ## Config deployment
+
+This section covers `install.sh`. dfutil's own deploy is in [dfutil](#dfutil).
 
 `install.sh` deploys configs with its own `link_package()`, `remove_package()`, and `prune_stale_symlinks()` functions. They walk each package directory and symlink every file (or copy it, with `--copy`) into the matching path under `$HOME`, one file at a time.
 
@@ -255,6 +367,8 @@ Filter commands are local git config, not versioned, so `install.sh` registers t
 - It deletes `config.kdl` right before `git checkout-index -f -u`. `-f` only forces overwriting; it doesn't bypass git's stat-based freshness check, so a file whose mtime already matches the index (for example, one checked out before the filter was registered) is silently not re-smudged. `-u` records the rewritten file's stat in the index. Afterwards it greps for a leftover `__DOTFILES_HOME__` and fails loudly if the filter didn't run.
 - It skips that rewrite, with a warning, when `config.kdl` has uncommitted changes, so a live edit isn't discarded. The check is `git diff --no-ext-diff --quiet`, which runs the clean filter and compares content. `git status` and `update-index --refresh` aren't used, because they report a size change against stale index stat data as a modification without comparing content.
 - It runs before the `PACKAGES` linking loop. The ansible role that deploys this repo excludes `config.kdl` from what it copies to the host (see its `sync.yml`), so on a host's first run this checkout is the only thing that creates the file. `link_package` only links files that exist when it walks the package (`find "$pkg_dir" -type f`), so if this block ran after the loop, `~/.config/zellij/config.kdl` would silently never be linked on a first run.
+
+dfutil doesn't use the filter: it deploys `config.kdl.tmpl`, which writes those paths as `{{ home }}` and renders them per host. The filter, `.gitattributes`, and the untemplated `config.kdl` stay until `install.sh` is retired.
 
 Neovim's clipboard `copy` entry in `nvim/.config/nvim/lua/config/autocmds.lua` has the same no-shell-expansion constraint but doesn't need the filter: it's Lua, evaluated on the machine running it, so it computes the path with `vim.fn.expand("~/.config/zellij/scripts/clip-clean.py")`. If another file has this problem, check whether it's executable config that can compute its own path before reaching for the filter, which is only for static data read as is by something that doesn't invoke a shell.
 
@@ -414,7 +528,7 @@ Deployed unconditionally, since it's config only. It links:
 | `claude/.claude/settings.json` | `~/.claude/settings.json` | Settings, the status line, and the notification and session-tracking hooks |
 | `claude/.claude/keybindings.json` | `~/.claude/keybindings.json` | Maps `alt+enter`, `shift+enter`, and `ctrl+enter` to `chat:newline` |
 | `claude/.claude/CLAUDE.md` | `~/.claude/CLAUDE.md` | Global instructions for every session: pushing back on requests, codebase conventions, the `/create-commits` and `/push-changes` workflow, Conventional Commits, documentation, writing style |
-| `claude/.claude/skills/*/` | `~/.claude/skills/*/` | Skills, linked one file at a time; a new skill needs an `install.sh --link` run before it appears |
+| `claude/.claude/skills/*/` | `~/.claude/skills/*/` | Skills, linked one file at a time; a new skill needs a `dfutil deploy` or `install.sh --link` run before it appears |
 
 Only `alt+enter` actually reaches Claude Code over WSL2, Windows Terminal, and Zellij: Shift+Enter and Ctrl+Enter both arrive as bytes already claimed by something else. The other two bindings are harmless and stay in case the terminal side starts telling them apart.
 
@@ -493,13 +607,17 @@ If one becomes unmaintained, its config section needs replacing. They're all sma
 
 ### Weekly bump PRs
 
-`.github/workflows/check-pinned-versions.yml` runs weekly and on manual dispatch, and opens a PR when one of `install.sh`'s hardcoded pins falls behind upstream. It covers the `ZELLIJ_PLUGINS` release tags, the npm-pinned `ccstatusline`, and any exact-tag `TOOL_PINS` row given a `tool-release` matrix entry. Unpinned `CORE_TOOLS` and `CLI_TOOLS` rows resolve `/releases/latest` at install time and so have no stale pin. A `*` prefix pin in either array always tracks the newest match, so the check script skips it; its matrix entry stays, so the row is checked again once it returns to an exact tag. Currently that's zellij, zjhints, and zjtabs. It doesn't cover `ZSH_PLUGINS` either: those repos publish tags but no GitHub Releases, and the checker has no `github-tag` kind yet, so bump them by hand or with `--upgrade`.
+`.github/workflows/check-pinned-versions.yml` runs weekly and on manual dispatch, and opens a PR when an exact pin in `dfutil.toml` falls behind upstream. Its `plan` job builds the matrix with `.github/scripts/pinned-tools.py`, which lists every `tag:` or exact-version pin on a github or npm tool, plus the tag in each zsh plugin's `install-zsh-plugin.sh` command. Floating pins (`latest`, a partial version, a `*` prefix) resolve at install time and are skipped. A new exact pin is covered without editing the workflow.
 
-Each matrix entry runs `.github/scripts/check-pinned-version.sh`, which reads the current pin from `install.sh`, queries upstream (GitHub releases or the npm registry), and rewrites that one version string in place with Perl, passing values through `%ENV` rather than interpolating them into the `-e` source, because tags and versions are untrusted input. For `ccstatusline` it also syncs `installation.installedVersion` in `ccstatusline/.config/ccstatusline/settings.json`. Each PR carries a review note naming the manual check this file calls for (re-syncing ccstatusline's `installedVersion`, or checking a Zellij plugin's `request_permission()` scopes against `ZELLIJ_PLUGIN_PERMISSIONS`). Below the note, the PR body has the upstream GitHub release notes for every release since the old pin, with `@mentions` turned into code spans and every GitHub link and `#123` or `owner/repo#123` ref sent through `redirect.github.com`. The repo is public, so a direct link or qualified ref would add a "mentioned this" entry to the upstream issue's timeline, and only GitHub Support can remove one. The PRs are for review, never auto-merged.
+For each tool, `.github/scripts/check-pinned-version.sh` queries upstream: GitHub releases, the npm registry, or, for the tag-only zsh plugin repos, the highest clean `vX.Y.Z` tag. It then rewrites the pin in `dfutil.toml` and the matching row in `install.sh` together, so the two can't drift while fleet hosts still run `install.sh`. For ccstatusline it also syncs `installation.installedVersion` in its settings file. Upstream values are checked against `^[A-Za-z0-9._-]+$` and reach Perl only through `%ENV`, never interpolated into the `-e` source, because tags and versions are untrusted input.
+
+Each PR carries a review note: for a Zellij plugin, re-check its `request_permission()` scopes against the tool's `post_install` list in `dfutil.toml` and `ZELLIJ_PLUGIN_PERMISSIONS` in `install.sh`. Below the note are the upstream release notes for every release since the old pin, with `@mentions` turned into code spans and every GitHub link and `#123` or `owner/repo#123` ref sent through `redirect.github.com`. The repo is public, so a direct link or qualified ref would add a "mentioned this" entry to the upstream issue's timeline, and only GitHub Support can remove one. The PRs are for review, never auto-merged.
 
 The workflow needs the repo setting *Allow GitHub Actions to create pull requests* (under *Settings > Actions > General*). Without it, the `peter-evans/create-pull-request` step can't open the PR, even though the bump commit succeeds.
 
 ### `--check-pins` and `--upgrade`
+
+These are `install.sh` flags. dfutil has no equivalent: bump a pin there by editing `dfutil.toml`, and mirror it in `install.sh`.
 
 `./install.sh --check-pins` prints the `ZELLIJ_PLUGINS`, `ZSH_PLUGINS`, `ccstatusline`, and `TOOL_PINS` pins next to their current upstream versions and exits, without downloading anything.
 
@@ -509,15 +627,15 @@ Both flags share their lookup logic with the CI script, plus a `github-tag` look
 
 ## SSH: YubiKey resident key retrieval
 
-`./install.sh --yubikey` retrieves SSH keys already stored as FIDO2 resident keys on a YubiKey (or any FIDO2 authenticator) with `ssh-keygen -K`, which writes them into `~/.ssh/`. It only retrieves: if the key has no resident key yet, provision one first with `ssh-keygen -t ed25519-sk -O resident`. Like `--check-pins`, it runs on its own and exits.
+`scripts/yubikey-ssh-keys.sh` retrieves SSH keys already stored as FIDO2 resident keys on a YubiKey (or any FIDO2 authenticator) with `ssh-keygen -K`, which writes them into `~/.ssh/`. It only retrieves: if the key has no resident key yet, provision one first with `ssh-keygen -t ed25519-sk -O resident`. It's a standalone script, not a dfutil tool, because it needs the physical key and a person to touch it. `./install.sh --yubikey` runs the same script.
 
-`ssh-keygen -K` names its output files from what's stored on the key, so they land in `~/.ssh/` directly. The committed `ssh/.ssh/config` only knows `~/.ssh/id_ed25519` and `id_rsa`, so the flag prints a reminder to add an `IdentityFile` line by hand rather than guessing a filename to write into committed config.
+`ssh-keygen -K` names its output files from what's stored on the key, so they land in `~/.ssh/` directly. The committed `ssh/.ssh/config` only knows `~/.ssh/id_ed25519` and `id_rsa`, so the script prints a reminder to add an `IdentityFile` line by hand rather than guessing a filename to write into committed config.
 
 ### Design choices
 
 - FIDO2 resident keys rather than PIV/PKCS#11 (`ykcs11.so`, key used live through `PKCS11Provider`) or gpg-agent's SSH support. `ssh-keygen -K` is the standard OpenSSH 8.2+ way to set up an existing identity on a new machine, and it needs only an OpenSSH client with security-key support: no yubico-piv-tool, pcscd, or gpg-agent.
-- No dependency preflight and no `apt install`. Detecting FIDO2 support up front is fragile (package names, whether libfido2 is linked in or loaded as an external provider, and provider search paths all vary by distro), so `pull_yubikey_ssh_key()` runs the real operation and classifies any failure from its output, like the zsh-presence check does. See [Deliberate omissions](#deliberate-omissions) for the only `apt` exceptions.
-- Streamed output. Retrieval needs a physical touch and may prompt for a PIN, so `ssh-keygen -K`'s output goes straight to the terminal through `tee`, with the copy kept only to classify a failure afterwards. `install.sh` runs under `set -eo pipefail`, so the pipeline is the condition of an `if` (an exemption from `set -e`); as a bare statement, the expected "no key plugged in" failure would abort the script before classification runs.
+- No dependency preflight and no `apt install`. Detecting FIDO2 support up front is fragile (package names, whether libfido2 is linked in or loaded as an external provider, and provider search paths all vary by distro), so the script runs the real operation and classifies any failure from its output, like the zsh-presence check does. See [Deliberate omissions](#deliberate-omissions) for the only `apt` exceptions.
+- Streamed output. Retrieval needs a physical touch and may prompt for a PIN, so `ssh-keygen -K`'s output goes straight to the terminal through `tee`, with the copy kept only to classify a failure afterwards. The script runs without `set -e` and reads `ssh-keygen`'s exit status from `PIPESTATUS[0]`, because under `set -e` the expected "no key plugged in" failure would abort it before classification runs.
 - Classification order. An OpenSSH 10.x client with FIDO2 linked in prints `Provider "internal" returned failure -4` and `Unable to load resident keys: device not found` when no key is plugged in. The broad `provider` match for "libfido2 is missing" must be checked after the specific "device not found" pattern, or the common case is misreported as a missing library.
 
 ### WSL2 USB passthrough
@@ -527,7 +645,7 @@ WSL2 is a VM, so a plugged-in YubiKey is invisible to it until bridged over with
 1. On Windows, run `winget install usbipd`, then `usbipd list` with the YubiKey plugged in and note its `BUSID`.
 2. On Windows, once per device, run `usbipd bind --busid <busid>` as admin.
 3. On Windows, each session the key is needed, run `usbipd attach --wsl --busid <busid>`. Adding `--auto-attach` reattaches on reconnect but doesn't survive a reboot without extra Windows-side scheduling.
-4. In WSL2, `lsusb` shows the Yubico device. `./install.sh --yubikey`, `ssh-keygen -t ed25519-sk -O resident`, and ordinary `ssh` or `git` with an sk key then work as on native Linux. This works on stock Ubuntu-on-WSL2 with no custom kernel, per [Daniel Nashed's writeup](https://blog.nashcom.de/nashcomblog.nsf/dx/using-fido2-yubikey-on-wsl-for-ssh.htm).
+4. In WSL2, `lsusb` shows the Yubico device. `scripts/yubikey-ssh-keys.sh`, `ssh-keygen -t ed25519-sk -O resident`, and ordinary `ssh` or `git` with an sk key then work as on native Linux. This works on stock Ubuntu-on-WSL2 with no custom kernel, per [Daniel Nashed's writeup](https://blog.nashcom.de/nashcomblog.nsf/dx/using-fido2-yubikey-on-wsl-for-ssh.htm).
 
 Two problems seen in some setups, not all, so try without these fixes first:
 

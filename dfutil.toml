@@ -1,5 +1,6 @@
-# dfutil manifest for these dotfiles. It sits beside install.sh and does not
-# replace it yet. See docs/dfutil-port.md for what maps to what and what does not.
+# dfutil manifest for these dotfiles. It sits beside install.sh, which fleet
+# hosts still run; keep the two in step. The "dfutil" section of CLAUDE.md maps
+# one onto the other and lists what dfutil can't express yet.
 #
 # Asset globs are anchored: they must match the whole asset name. The patterns
 # are the install.sh ones, so run `dfutil plan` to catch any that drift.

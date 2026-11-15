@@ -1,7 +1,7 @@
 # config.nu: Nushell shell configuration
 # Sourced after env.nu on every interactive session.
 #
-# nu is an optional secondary shell here (installed via install.sh --nushell).
+# nu is an optional secondary shell here (dfutil's nushell preset, or install.sh --nushell).
 # zsh is the default shell zellij and bash hand off to; launch nu manually
 # with `nu` whenever you want it.
 

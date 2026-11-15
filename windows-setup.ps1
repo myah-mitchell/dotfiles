@@ -2,7 +2,7 @@
 .SYNOPSIS
     Windows-side setup for dotfiles: installs Alacritty, JetBrainsMono Nerd Font (NF/NFM/NFP),
     and creates the Alacritty config symlink pointing into the WSL2 dotfiles repo.
-    Called from install.sh on WSL2.
+    Called on WSL2 from install.sh, or from dfutil through scripts/windows-setup.sh.
 
 .PARAMETER AlacrittyTarget
     Full Windows path to the alacritty.toml source in the dotfiles repo.

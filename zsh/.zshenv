@@ -37,7 +37,7 @@ export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/ripgreprc"
 export BAT_THEME="Catppuccin Mocha"
 
 # ── eza ───────────────────────────────────────────────────────────────────────
-# Theme downloaded by install.sh from catppuccin/eza to $EZA_CONFIG_DIR/theme.yml
+# Theme downloaded by dfutil or install.sh from catppuccin/eza to $EZA_CONFIG_DIR/theme.yml
 export EZA_CONFIG_DIR="$HOME/.config/eza"
 
 # ── FZF — catppuccin mocha palette ────────────────────────────────────────────

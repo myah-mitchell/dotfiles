@@ -1,7 +1,7 @@
 # env.nu: environment variables only (no output allowed here)
 # Sourced before config.nu on every Nushell startup.
 #
-# nu is an optional secondary shell here (installed via install.sh --nushell);
+# nu is an optional secondary shell here (dfutil's nushell preset, or install.sh --nushell);
 # zsh stays the default shell regardless. When nu is launched manually from
 # inside an already-running zsh session, it inherits that session's SSH_AUTH_SOCK
 # and doesn't need its own ssh-agent bootstrap; see zsh/.zshrc for that setup.
@@ -44,7 +44,7 @@ $env.RIPGREP_CONFIG_PATH = ($env.HOME | path join ".config" "ripgrep" "ripgreprc
 $env.BAT_THEME = "Catppuccin Mocha"
 
 # ── eza ───────────────────────────────────────────────────────────────────────
-# Theme downloaded by install.sh from catppuccin/eza to $EZA_CONFIG_DIR/theme.yml
+# Theme downloaded by dfutil or install.sh from catppuccin/eza to $EZA_CONFIG_DIR/theme.yml
 $env.EZA_CONFIG_DIR = ($env.HOME | path join ".config" "eza")
 
 # ── FZF: catppuccin mocha palette ─────────────────────────────────────────────
@@ -79,7 +79,7 @@ $env.TERM_PROGRAM = ($env.TERM_PROGRAM? | default "")
 
 # ── Secrets (not committed; edit ~/.config/nushell/secrets.nu) ───────────────
 # e.g. $env.GITHUB_TOKEN = "ghp_..."
-# install.sh --nushell creates this file empty if it doesn't exist, since
+# dfutil's nushell-extras tool and install.sh --nushell create this file empty, since
 # Nu's source is parse-time-only and errors if the file is missing (unlike
 # zsh's guarded runtime source in .zshenv).
 source ~/.config/nushell/secrets.nu
