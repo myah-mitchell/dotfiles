@@ -120,6 +120,16 @@ They're pinned in the `ZSH_PLUGINS` array in `install.sh` and tracked in `.versi
 
 `sudo`'s `secure_path` in `/etc/sudoers` replaces `PATH`, so `sudo bat` or `sudo rg` can't find tools in `~/.local/bin`. The `sudo` wrapper function in `.zshrc` re-injects `PATH` to fix that.
 
+### The SSH agent
+
+`.zshrc` runs one ssh-agent per host, shared by every shell on it, at `~/.ssh/agent/<host>.sock` (the short hostname). Every shell exports that path as `SSH_AUTH_SOCK`, so Zellij panes and long-lived shells keep working after the agent restarts. The per-host name gives each host its own agent even when the home directory is shared.
+
+Each interactive shell checks that the agent answers, rather than that the socket file exists, because a crashed or killed agent leaves its socket behind. `ssh-add -l` exits 2 when nothing is listening; on that, or after three seconds without an answer, the shell kills the old agent and starts a new one.
+
+- The three-second limit is polled in zsh with `zselect`. Coreutils `timeout` would add about 100ms to every shell start, and a healthy agent answers in a few milliseconds.
+- A `zsystem flock` on `<host>.lock` serializes the check, so shells that open together, such as a resurrected Zellij session's panes, start one agent between them. `zsystem flock` doesn't create a missing lock file, so the file is touched first.
+- The old agent is killed only if `/proc/<pid>/comm` says `ssh-agent`, so a recycled PID in `<host>.pid` can't kill an unrelated process.
+
 ### Background: the move from Nushell
 
 The primary shell was Nushell until its structured-data model proved incompatible with too many bash-oriented guides and scripts. The last Nushell-based commit is tagged `pre-zsh-migration`. Two Nushell-era helpers have no zsh equivalent because zsh doesn't need them: the `nr <tool>` escape hatch (zsh's builtin `command <tool>` or `\<tool>` bypasses an alias) and a custom `sudo!!` function (zsh's `!!` history expansion makes `sudo !!` work as is). Nushell's per-session history isolation was also left behind; see [History](#history).

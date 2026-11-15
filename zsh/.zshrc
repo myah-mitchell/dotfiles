@@ -80,13 +80,58 @@ zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 unsetopt LIST_AMBIGUOUS
 
 # ── SSH agent ─────────────────────────────────────────────────────────────────
-_ssh_agent_socket="$HOME/.ssh/ssh-agent.sock"
-if [[ ! -S "$_ssh_agent_socket" ]]; then
-  ssh-agent -a "$_ssh_agent_socket" |
-    awk -F'[=;]' '/SSH_AGENT_PID/ {print $2}' >"$HOME/.ssh/ssh-agent.pid"
-fi
-export SSH_AUTH_SOCK="$_ssh_agent_socket"
-unset _ssh_agent_socket
+# One agent per host, shared by every shell on it. The socket has a fixed,
+# per-host path (so a home directory shared between hosts still gets one agent
+# each), which means shells and Zellij panes started at any time find the same
+# agent, and keep working after it's restarted.
+#
+# Checking only that the socket file exists isn't enough: a crashed or killed
+# agent leaves its socket behind. Each shell asks the agent to answer instead
+# (`ssh-add -l` exits 2 only when nothing is listening) and starts a fresh one
+# if it doesn't. A lock around the check stops shells that open at the same
+# moment, such as a resurrected Zellij session's panes, from starting two.
+_ssh_agent_start() {
+  emulate -L zsh
+  local dir="$HOME/.ssh/agent" name="${HOST%%.*}"
+  local sock="$dir/$name.sock" pidfile="$dir/$name.pid" lock="$dir/$name.lock"
+  local fd pid
+  export SSH_AUTH_SOCK="$sock"
+  mkdir -p -m 700 "$dir" || return
+  zmodload -F zsh/system b:zsystem || return
+  : >>"$lock" # zsystem flock won't create a missing lock file
+  zsystem flock -t 5 -f fd "$lock" || return
+  # A hung agent would hang every new shell with it, so the check gets three
+  # seconds. It's polled in-shell because coreutils `timeout` adds about
+  # 100ms to every shell start; a healthy agent answers in a few.
+  setopt no_monitor no_notify
+  zmodload -F zsh/zselect b:zselect || return
+  local rc=124 check tries
+  command ssh-add -l >/dev/null 2>&1 &
+  check=$!
+  for tries in {1..300}; do
+    if ! kill -0 $check 2>/dev/null; then
+      wait $check
+      rc=$?
+      break
+    fi
+    zselect -t 1 # hundredths of a second
+  done
+  (( rc == 124 )) && kill -KILL $check 2>/dev/null
+  if (( rc == 2 || rc == 124 )); then
+    # Kill the old agent if it's still running but not answering. The comm
+    # check keeps a recycled PID from killing some unrelated process.
+    [[ -r $pidfile ]] && pid=$(<$pidfile)
+    if [[ $pid == <-> && $(</proc/$pid/comm) == ssh-agent ]] 2>/dev/null; then
+      kill -KILL $pid 2>/dev/null
+    fi
+    rm -f "$sock"
+    command ssh-agent -a "$sock" -s |
+      sed -n 's/^SSH_AGENT_PID=\([0-9]*\);.*/\1/p' >|"$pidfile"
+  fi
+  zsystem flock -u $fd
+}
+_ssh_agent_start
+unfunction _ssh_agent_start
 
 # ── Tool integrations ─────────────────────────────────────────────────────────
 if [[ "$TERM" != "dumb" ]]; then
