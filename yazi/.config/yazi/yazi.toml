@@ -1,4 +1,4 @@
-# yazi.toml — https://yazi-rs.github.io/docs/configuration/yazi
+# yazi.toml: https://yazi-rs.github.io/docs/configuration/yazi
 
 [mgr]
 ratio          = [0, 4, 4]   # parent:current:preview column width ratios
@@ -48,7 +48,7 @@ rules = [
   { mime = "text/*",             use = ["edit", "view"] },
   { mime = "application/json",   use = ["edit", "view"] },
   { mime = "application/xml",    use = ["edit", "view"] },
-  # Images — let yazi handle natively
+  # Images: let yazi handle natively
   { mime = "image/*",            use = "image" },
   # Video / audio
   { mime = "video/*",            use = "play" },

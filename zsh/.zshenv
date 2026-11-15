@@ -1,4 +1,4 @@
-# .zshenv — environment variables only, sourced on every zsh invocation
+# .zshenv: environment variables only, sourced on every zsh invocation
 # (interactive, scripts, non-interactive) before .zshrc.
 
 # ── PATH ─────────────────────────────────────────────────────────────────────
@@ -37,10 +37,10 @@ export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/ripgreprc"
 export BAT_THEME="Catppuccin Mocha"
 
 # ── eza ───────────────────────────────────────────────────────────────────────
-# Theme downloaded by install.sh from catppuccin/eza to $EZA_CONFIG_DIR/theme.yml
+# Theme downloaded by dfutil or install.sh from catppuccin/eza to $EZA_CONFIG_DIR/theme.yml
 export EZA_CONFIG_DIR="$HOME/.config/eza"
 
-# ── FZF — catppuccin mocha palette ────────────────────────────────────────────
+# ── FZF: catppuccin mocha palette ─────────────────────────────────────────────
 export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --exclude .git"
 export FZF_DEFAULT_OPTS="
   --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8
@@ -70,9 +70,9 @@ export LC_ALL="en_US.UTF-8"
 export COLORTERM="truecolor"
 export TERM_PROGRAM="${TERM_PROGRAM:-}"
 
-# ── Secrets (not committed — edit ~/.config/zsh/secrets.zsh) ─────────────────
+# ── Secrets (not committed; edit ~/.config/zsh/secrets.zsh) ───────────────────
 # e.g. export GITHUB_TOKEN="ghp_..."
 # Guarded rather than pre-touched: zsh's source is a runtime check (unlike
 # Nu's parse-time-only source), so this file doesn't need to exist for this
-# line to be safe — install.sh doesn't need to pre-seed it empty.
+# line to be safe, and nothing needs to pre-seed it empty.
 [[ -f ~/.config/zsh/secrets.zsh ]] && source ~/.config/zsh/secrets.zsh

@@ -10,10 +10,10 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- Set by install.sh's --full flag (~/.local/state/dotfiles/full-install) —
--- see lua/plugins/lsp-servers.lua for the full explanation. Node.js itself
--- always installs (ccstatusline needs it too), so this marker — not "is node
--- on PATH" — is what distinguishes a full IDE workstation from a minimal
+-- Set by dfutil's full preset or install.sh --full
+-- (~/.local/state/dotfiles/full-install); see lua/plugins/lsp-servers.lua for the full explanation. Node.js itself
+-- always installs (ccstatusline needs it too), so this marker, not "is node
+-- on PATH", is what distinguishes a full IDE workstation from a minimal
 -- install; it gates whether the ~460MB PHP toolchain (intelephense/phpactor/
 -- php-cs-fixer/phpcs) gets pulled in here.
 local full_install = vim.fn.filereadable(vim.fn.expand("~/.local/state/dotfiles/full-install")) == 1
@@ -33,7 +33,7 @@ local spec = {
   -- window so you always see where you are in the file (VSCode "Sticky Scroll").
   { import = "lazyvim.plugins.extras.ui.treesitter-context" },
   -- Language support. Rust uses cargo/rust-analyzer (no Node/pwsh dependency,
-  -- always on). Python's ruff comes from install.sh's standalone binary
+  -- always on). Python's ruff is a standalone binary from dfutil or install.sh
   -- (always on); its pyright LSP is Node/Mason-based and disabled outside
   -- --full in lsp-servers.lua. HTML, CSS, Emmet and Bash servers are added
   -- manually in plugins/lsp-servers.lua (no dedicated lang.* extras exist for
@@ -54,7 +54,7 @@ local spec = {
   { import = "plugins" },
 }
 
--- PHP (intelephense/phpactor/php-cs-fixer/phpcs, ~160MB of Mason packages) —
+-- PHP (intelephense/phpactor/php-cs-fixer/phpcs, ~160MB of Mason packages):
 -- only on a full IDE workstation. See full_install comment above.
 if full_install then
   table.insert(spec, { import = "lazyvim.plugins.extras.lang.php" })

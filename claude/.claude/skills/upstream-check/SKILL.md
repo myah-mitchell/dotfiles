@@ -171,7 +171,7 @@ SKILL_SRC=$(dirname "$(readlink -f ~/.claude/skills/upstream-check/SKILL.md)")
 REF_DIR="$SKILL_SRC/references"
 ```
 
-- **`SKILL.md` is a symlink**: edit or create files under `$REF_DIR`. After creating a new file, link it by running `install.sh --link` from the root of the repo holding `$SKILL_SRC` (`git -C "$SKILL_SRC" rev-parse --show-toplevel`), then check that `~/.claude/skills/upstream-check/references/<owner>-<repo>.md` is a symlink. Edits to an existing file need no relink.
+- **`SKILL.md` is a symlink**: edit or create files under `$REF_DIR`. After creating a new file, link it by running `dfutil deploy` (or `install.sh --link` on a host that uses install.sh) from the root of the repo holding `$SKILL_SRC` (`git -C "$SKILL_SRC" rev-parse --show-toplevel`), then check that `~/.claude/skills/upstream-check/references/<owner>-<repo>.md` is a symlink. Edits to an existing file need no relink.
 - **`SKILL.md` is a plain file** (deployed with `install.sh --copy`, or installed some other way): the deployed copies aren't the source, and the next deploy overwrites them. Ask the user where the source repo is rather than writing to `~/.claude`.
 
 Writing a reference file never commits it. Tell the user the file changed so it goes through `/create-commits`.

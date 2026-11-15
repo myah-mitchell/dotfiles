@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — bootstrap dotfiles, download binaries, symlink configs
+# install.sh: bootstrap dotfiles, download binaries, symlink configs
 # Usage: ./install.sh [--update] [--link] [--copy] [--remove] [--windows] [--cargo] [--claude] [--full] [--nushell] [--cleanup] [--check-pins] [--upgrade=<name>] [--help]
 #
 # --update      Force re-download/rebuild all tools even if already at latest version
@@ -8,7 +8,7 @@
 # --remove      Remove all deployed symlinks from $HOME and exit (does not touch binaries)
 # --windows     Install Windows-side integration under WSL2: Alacritty (via winget), the
 #               JetBrainsMono Nerd Font, and the Alacritty config symlink (see
-#               WANT_WINDOWS_SETUP below). Off by default and a no-op outside WSL2 — this
+#               WANT_WINDOWS_SETUP below). Off by default and a no-op outside WSL2; this
 #               is only useful when Alacritty on the Windows side is how you're actually
 #               opening this WSL distro; a server/CI-style WSL box has no reason to want
 #               it. Implied by --full, same as --claude.
@@ -22,7 +22,7 @@
 #               Node.js (only needed here to npm-install ccstatusline), ccstatusline
 #               (renders its statusLine), and claude-swap (multi-account switcher for
 #               it). None of these are useful without Claude Code, so none install
-#               unless this flag or --full is passed — see WANT_CLAUDE_STACK below.
+#               unless this flag or --full is passed; see WANT_CLAUDE_STACK below.
 #               Implied by --full; pass this alone on a machine that wants Claude Code
 #               but not a full Neovim IDE setup.
 # --nushell     Install Nushell (nu) as an optional secondary shell alongside zsh, which
@@ -38,7 +38,7 @@
 # --full        Everything --claude and --windows install, PLUS PowerShell (~190MB
 #               self-contained tarball, only needed for Neovim's powershell_es LSP) and
 #               Neovim's heavier Mason-managed LSP servers: html/cssls/emmet/bashls/pyright
-#               and the whole PHP toolchain (intelephense/phpactor/php-cs-fixer/phpcs) —
+#               and the whole PHP toolchain (intelephense/phpactor/php-cs-fixer/phpcs),
 #               together ~460MB of Mason packages, via a marker file nvim's config
 #               reads (see FULL_INSTALL_MARKER below). Everything else (shell, zellij,
 #               git, core CLI tools, nvim itself, ruff) installs either way. Use this
@@ -53,34 +53,34 @@
 #               declares (e.g. a tool removed from CORE_TOOLS/CLI_TOOLS, nu if this
 #               run isn't --nushell, or ccstatusline if this run isn't --claude/--full;
 #               see WANT_NUSHELL/WANT_CLAUDE_STACK below), and, when this run
-#               isn't --full — pwsh plus the --full-only Mason LSP packages (see --full
+#               isn't --full, pwsh plus the --full-only Mason LSP packages (see --full
 #               above) that Neovim may have already downloaded under a previous --full
 #               run, and any old Claude Code version binaries left in
 #               ~/.local/share/claude/versions/ by its own native self-updater
-#               (~300MB+ each, pruned regardless of --claude — once Claude Code is
+#               (~300MB+ each, pruned regardless of --claude: once Claude Code is
 #               installed, cleaning up its stale old versions doesn't depend on
 #               whether this run also wants it reinstalled). Node.js itself is left
-#               alone even when orphaned (see the note in cleanup_orphans() — merging
+#               alone even when orphaned (see the note in cleanup_orphans(): merging
 #               its tree back apart from ccstatusline/claude-swap's npm packages isn't
 #               safe to automate, so it just warns instead of guessing).
 #               Combine with other flags freely; has no effect with --link (the tool
 #               arrays it diffs against are never populated without a real run).
 # --check-pins  Read-only: print each deliberately-pinned dependency (Zellij plugins,
-#               Zsh plugins, ccstatusline — see CLAUDE.md's "Zellij status bar &
+#               Zsh plugins, ccstatusline; see CLAUDE.md's "Zellij status bar &
 #               plugin loading" for why these three are pinned instead of
 #               always-latest like CORE_TOOLS/CLI_TOOLS; TOOL_PINS rows, per
 #               CLAUDE.md's "Pinning a tool", pin those too) alongside its current
-#               upstream version, and exits — no downloads, no file changes. Ignores
+#               upstream version, and exits. No downloads, no file changes. Ignores
 #               every other flag and runs before the zsh/git/locale prerequisite
 #               checks.
 # --upgrade=<name>  Bump exactly one pinned dependency to its latest upstream version
 #               (edits install.sh's own pin in place), install it right away
 #               (except a TOOL_PINS tool, which the next normal run installs), and
 #               print the same manual-review note the weekly pinned-version-bump
-#               workflow would carry — then exits. <name> is the "NAME" column from
+#               workflow would carry, then exits. <name> is the "NAME" column from
 #               --check-pins (e.g. --upgrade=zjstatus.wasm, --upgrade=ccstatusline).
 #               Deliberately one dependency per invocation, not a blanket "upgrade
-#               everything" — each of these three bumps carries its own manual
+#               everything": each of these three bumps carries its own manual
 #               follow-up (a Zellij plugin's request_permission() scopes, Zsh
 #               plugins' lack of an automated latest-tag check, ccstatusline's
 #               mirrored settings.json) that's meant to be reviewed individually
@@ -88,11 +88,11 @@
 # --yubikey     Retrieve resident SSH key(s) already provisioned on a YubiKey (or any
 #               FIDO2 authenticator) via `ssh-keygen -K`, downloading them straight
 #               into ~/.ssh/. Requires an OpenSSH client built with FIDO2/security-key
-#               support (8.2+) — checked and reported with install instructions on
+#               support (8.2+), checked and reported with install instructions on
 #               failure, not auto-installed (this repo avoids apt installs beyond the
 #               two documented exceptions; see CLAUDE.md's Deliberate Omissions table).
 #               Retrieve-only: this does not create a new resident key on the
-#               YubiKey — provision one first (ssh-keygen -t ed25519-sk -O resident),
+#               YubiKey. Provision one first (ssh-keygen -t ed25519-sk -O resident),
 #               on this machine or another, then use --yubikey wherever that key
 #               needs to exist as local files too. Standalone like --check-pins/
 #               --upgrade/--remove: does its own thing and exits.
@@ -112,14 +112,14 @@ warn() { echo -e "${YELLOW}[!]${RESET} $*"; }
 err() { echo -e "${RED}[✗]${RESET} $*" >&2; }
 
 usage() {
-  # echo -e (not a plain heredoc/cat) so ${BOLD}/${CYAN}/${RESET} — which
-  # hold literal \033[...m text, same as log()/ok()/warn()/err() above — get
+  # echo -e (not a plain heredoc/cat) so ${BOLD}/${CYAN}/${RESET} (which
+  # hold literal \033[...m text, same as log()/ok()/warn()/err() above) get
   # interpreted as real escape sequences instead of printing as raw text.
   echo -e "${BOLD}Usage:${RESET} ./install.sh [flags]
 
 Deploys dotfiles configs and downloads pinned tool binaries into \$HOME (no
 system-wide changes, everything lives under ~/.local/). Safe to re-run any
-time — re-running with no flags just re-syncs configs and skips tools
+time: re-running with no flags just re-syncs configs and skips tools
 already at their pinned/latest version.
 
 ${BOLD}Flags:${RESET}
@@ -140,7 +140,7 @@ ${BOLD}Flags:${RESET}
               claude-swap. None install without this flag or --full.
   ${CYAN}--full${RESET}      Everything --claude and --windows install, plus PowerShell
               (~190MB, for Neovim's powershell_es LSP) and Neovim's heavier
-              Mason-managed LSPs (html/cssls/emmet/bashls/pyright/PHP —
+              Mason-managed LSPs (html/cssls/emmet/bashls/pyright/PHP,
               ~460MB). Use on a full IDE workstation opened via Windows
               Alacritty; leave all three (--claude/--windows/--full) off on
               servers/shared boxes that only need the shell environment.
@@ -149,8 +149,8 @@ ${BOLD}Flags:${RESET}
               nu's Catppuccin theme, and its atuin/starship/zoxide/carapace
               init scripts. Not implied by --full.
   ${CYAN}--cleanup${RESET}   Remove stale/orphaned local state left behind by tools removed
-              from this script, old Claude Code version binaries, and —
-              unless the matching flag is also passed — --cargo's
+              from this script, old Claude Code version binaries, and
+              (unless the matching flag is also passed) --cargo's
               rustup/cargo toolchain, --full's extra Mason LSPs, and
               --nushell's nu binary
   ${CYAN}--check-pins${RESET}  Read-only: print Zellij plugins, Zsh plugins,
@@ -160,12 +160,12 @@ ${BOLD}Flags:${RESET}
               its review note, then exit. <name> is a NAME from
               --check-pins, e.g. --upgrade=ccstatusline
   ${CYAN}--yubikey${RESET}   Retrieve resident SSH key(s) already on a YubiKey/FIDO2
-              authenticator into ~/.ssh/ (ssh-keygen -K). Retrieve-only —
+              authenticator into ~/.ssh/ (ssh-keygen -K). Retrieve-only:
               provision a resident key first if the YubiKey doesn't have one.
   ${CYAN}--help${RESET}, ${CYAN}-h${RESET}  Show this help and exit
 
 Flags combine freely (e.g. --full --update --cleanup). See the top of this
-script and CLAUDE.md for the full rationale behind each flag — why each
+script and CLAUDE.md for the full rationale behind each flag: why each
 defaults on/off, exactly what it downloads, and how they interact."
 }
 
@@ -209,7 +209,7 @@ for arg in "$@"; do
   esac
 done
 
-# --full implies --claude — a full IDE workstation still wants Claude Code, not
+# --full implies --claude: a full IDE workstation still wants Claude Code, not
 # just the heavier nvim LSPs. Computed once here and reused everywhere the two
 # flags previously would have needed separate checks (install gating below,
 # cleanup_orphans()'s orphan detection).
@@ -233,7 +233,7 @@ LOCAL_SHARE="$HOME/.local/share"
 LOG_FILE="$HOME/.local/state/dotfiles/install.log"
 
 # ── Run log ───────────────────────────────────────────────────────────────────
-# install.sh otherwise leaves no record of past runs — VERSIONS_FILE and
+# install.sh otherwise leaves no record of past runs. VERSIONS_FILE and
 # FULL_INSTALL_MARKER (below) are current-state snapshots that get overwritten
 # each run, not a history. Every invocation's full output (stdout+stderr,
 # interleaved in the order it was printed) is appended here instead, with a
@@ -245,7 +245,7 @@ LOG_FILE="$HOME/.local/state/dotfiles/install.log"
 # --yubikey/--remove) so those get logged too, not just the main install path.
 mkdir -p "$(dirname "$LOG_FILE")"
 # Trim to the most recent 5000 lines before this run's output is appended, so
-# the log doesn't grow unbounded across months of re-runs — there's no
+# the log doesn't grow unbounded across months of re-runs; there's no
 # separate rotation step, and --cleanup has nothing to do with it (this is a
 # log, not a stale/orphaned tool install).
 if [[ -f "$LOG_FILE" ]]; then
@@ -287,7 +287,7 @@ ZSH_PLUGINS=(
   "zsh-you-should-use|MichaelAquilina/zsh-you-should-use|1.11.1"
 )
 # ccstatusline: npm-pinned rather than always-latest (see install_ccstatusline
-# below for why) — kept as a plain variable, not a local inside that function,
+# below for why), kept as a plain variable, not a local inside that function,
 # so --check-pins/--upgrade=ccstatusline can read/rewrite it the same way.
 CCSTATUSLINE_PINNED_VERSION="2.2.34"
 # CORE_TOOLS/CLI_TOOLS (and yazi) install /releases/latest unless their dest
@@ -307,7 +307,7 @@ TOOL_PINS=(
 )
 
 # ── Platform detection ────────────────────────────────────────────────────────
-# Refuse to run in Git Bash / MSYS — symlink semantics break on Windows
+# Refuse to run in Git Bash / MSYS: symlink semantics break on Windows
 if [[ "${OSTYPE:-}" == "msys" || "${OSTYPE:-}" == "cygwin" || "$(uname -s)" == MINGW* ]]; then
   err "Run this script inside WSL, not Git Bash / MSYS."
   err "  wsl -e bash ~/GitHub/dotfiles/install.sh"
@@ -345,15 +345,15 @@ log "Platform: ${OS}/${ARCH} | WSL: ${IS_WSL} | Dotfiles: ${DOTFILES}"
 GITHUB_AUTH=()
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
   GITHUB_AUTH=(-H "Authorization: Bearer $GITHUB_TOKEN")
-  log "GitHub token found — using authenticated API (5,000 req/hr limit)"
+  log "GitHub token found, using authenticated API (5,000 req/hr limit)"
 else
-  warn "No GITHUB_TOKEN set — unauthenticated API limit is 60 req/hr. Set it to avoid rate limiting on fresh installs."
+  warn "No GITHUB_TOKEN set; unauthenticated API limit is 60 req/hr. Set it to avoid rate limiting on fresh installs."
 fi
 
 # ── Prerequisites ─────────────────────────────────────────────────────────────
 for cmd in curl tar unzip; do
   if ! command -v "$cmd" &>/dev/null; then
-    err "Required tool not found: $cmd — please install it first."
+    err "Required tool not found: $cmd. Please install it first."
     exit 1
   fi
 done
@@ -362,7 +362,7 @@ done
 # Runs ahead of the zsh/git/locale prerequisite checks below: --check-pins and
 # --upgrade=<name> (dispatched further down, before those checks) need
 # $VERSIONS_FILE writable, but must exit without ever triggering those
-# checks' sudo git/locale installs — a plain version check shouldn't carry
+# checks' sudo git/locale installs; a plain version check shouldn't carry
 # that side effect.
 mkdir -p "$BIN_DIR" "$SHARE_DIR" "$LOCAL_BIN" "$LOCAL_SHARE" \
   "$HOME/.ssh/sockets" "$HOME/.cache/starship" "$HOME/.cache/carapace" \
@@ -396,7 +396,7 @@ touch "$VERSIONS_REPOS_FILE"
 get_installed_repo() { grep "^$1=" "$VERSIONS_REPOS_FILE" 2>/dev/null | cut -d= -f2 || echo ""; }
 set_installed_repo() { set_installed_version "$1" "$2" "$VERSIONS_REPOS_FILE"; }
 
-# ── Pinned installers (dest/repo/tag or npm-pinned — shared by the normal
+# ── Pinned installers (dest/repo/tag or npm-pinned, shared by the normal
 # install flow below and --check-pins/--upgrade=<name>) ───────────────────────
 
 # ccstatusline: npm CLI, renders the Claude Code statusLine. Pinned rather
@@ -404,7 +404,7 @@ set_installed_repo() { set_installed_version "$1" "$2" "$VERSIONS_REPOS_FILE"; }
 # its own installedVersion/method back into ~/.config/ccstatusline/
 # settings.json (the "installation" block, deployed as part of the
 # ccstatusline package below) and detects drift between that and the actual
-# npm-installed version — an unreviewed bump could desync the two and trip
+# npm-installed version; an unreviewed bump could desync the two and trip
 # its own update prompt. Bump deliberately via ./install.sh --upgrade=ccstatusline
 # (or by hand: npm view ccstatusline version, then update
 # CCSTATUSLINE_PINNED_VERSION above and the "installation" block in
@@ -425,7 +425,7 @@ install_ccstatusline() {
   fi
 
   if ! command -v npm &>/dev/null; then
-    warn "npm not found (node install may have failed) — skipping ccstatusline."
+    warn "npm not found (node install may have failed); skipping ccstatusline."
     return
   fi
 
@@ -434,14 +434,14 @@ install_ccstatusline() {
     set_installed_version "$key" "$pinned_version"
     ok "ccstatusline installed at ${pinned_version}"
   else
-    warn "ccstatusline install failed — the statusLine will show stale/no data until this succeeds."
+    warn "ccstatusline install failed; the statusLine will show stale/no data until this succeeds."
   fi
 }
 
 # Zellij plugin: dest.wasm|owner/repo|tag. Downloads the pinned release asset
 # into the repo's bin/.local/share tree and symlinks it straight into
 # ~/.local/share itself, rather than relying on link_package's per-package
-# pass (see "Deploy configs" below) to pick it up — that pass runs earlier in
+# pass (see "Deploy configs" below) to pick it up; that pass runs earlier in
 # a normal install, before this download exists.
 #
 # SELECTOR is an exact release tag, or a tag prefix ending in * (see
@@ -510,7 +510,7 @@ install_zellij_plugin() {
     fi
   else
     rm -f "${plugin_dir}/${dest}.tmp"
-    warn "Download failed for ${dest} — zjstatus/autolock won't load until this succeeds (re-run install.sh)"
+    warn "Download failed for ${dest}; zjstatus/autolock won't load until this succeeds (re-run install.sh)"
     return 1
   fi
 }
@@ -519,7 +519,7 @@ install_zellij_plugin() {
 # only, no binary asset), so each is a full source tarball extracted at a
 # pinned tag rather than a single release asset (see the "Zsh: plugins"
 # section below for the full reasoning). Deploys with the same per-file
-# symlink convention link_package uses — not a single directory symlink for
+# symlink convention link_package uses, not a single directory symlink for
 # the whole plugin, because .zshrc sourcing a fixed entrypoint path would
 # work either way, but a directory symlink here would make the *next* normal
 # install.sh run see the plugin's real files (reached by traversing that
@@ -554,7 +554,7 @@ install_zsh_plugin() {
       set_installed_version "$dest" "$tag"
       ok "${dest} installed at ${tag}"
     else
-      warn "Download failed for ${dest} — it won't load until this succeeds (re-run install.sh)"
+      warn "Download failed for ${dest}; it won't load until this succeeds (re-run install.sh)"
       rm -rf "$tmp"
       return 1
     fi
@@ -574,7 +574,7 @@ install_zsh_plugin() {
 
 # ── Pin version lookups (shared by --check-pins and --upgrade=<name>) ─────────
 # github-release: repos that publish a proper GitHub Release (all four
-# ZELLIJ_PLUGINS do — config.kdl pins the release asset directly rather than
+# ZELLIJ_PLUGINS do; config.kdl pins the release asset directly rather than
 # resolving latest at runtime, but the release itself exists to query).
 latest_github_release() {
   curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
@@ -582,10 +582,10 @@ latest_github_release() {
     grep -oP '"tag_name":\s*"\K[^"]+' | head -1
 }
 
-# github-tag: repos with tags but no GitHub Releases (all three ZSH_PLUGINS —
+# github-tag: repos with tags but no GitHub Releases (all three ZSH_PLUGINS;
 # see install_zsh_plugin above). The tags API has no "latest" concept the way
 # /releases/latest does, so pull the tag list and pick the highest by version
-# sort — preferring clean vX.Y.Z-style tags over ones with a pre-release
+# sort, preferring clean vX.Y.Z-style tags over ones with a pre-release
 # suffix (-alpha1, -beta1, -rc1, ...), since `sort -V` alone ranks e.g.
 # "0.8.0-alpha1-pre-redrawhook" above plain "0.8.0" even when (as confirmed
 # against zsh-users/zsh-syntax-highlighting's actual tag history) the suffixed
@@ -594,7 +594,7 @@ latest_github_release() {
 # scheme could still throw this off, which is exactly why --check-pins always
 # prints the resolved value for a human to sanity-check rather than silently
 # trusting it (this is also the `github-tag` checker kind CLAUDE.md notes
-# .github/scripts/check-pinned-version.sh doesn't have yet — ZSH_PLUGINS
+# .github/scripts/check-pinned-version.sh doesn't have yet; ZSH_PLUGINS
 # isn't covered by the automated weekly bump PRs for that reason).
 latest_github_tag() {
   local tags clean
@@ -655,7 +655,7 @@ latest_npm_version() {
 
 # A fetched tag/version is untrusted upstream input. upgrade_pin() splices it
 # into install.sh's own source via sed and into ccstatusline's settings.json,
-# so restrict it to characters that can't break out of either — no sed
+# so restrict it to characters that can't break out of either: no sed
 # delimiters/metacharacters (# | / & \), no quotes, nothing that could inject
 # more than a plain version string. (check-pinned-version.sh's CI-side
 # equivalent uses Perl with values passed through %ENV instead of
@@ -698,7 +698,7 @@ check_pins() {
   done
   echo
 
-  echo -e "  ${CYAN}Zsh plugins${RESET} (tags only, no GitHub releases — best-effort version sort)"
+  echo -e "  ${CYAN}Zsh plugins${RESET} (tags only, no GitHub releases; best-effort version sort)"
   for entry in "${ZSH_PLUGINS[@]}"; do
     IFS='|' read -r dest repo tag <<<"$entry"
     latest=$(latest_github_tag "$repo") || true
@@ -727,11 +727,11 @@ check_pins() {
   echo "Bump one with: ./install.sh --upgrade=<name>   e.g. ./install.sh --upgrade=zjstatus.wasm"
 }
 
-# Bumps exactly one pinned dependency (not "upgrade everything") — see the
+# Bumps exactly one pinned dependency (not "upgrade everything"); see the
 # --upgrade=<name> comment at the top of this file for why that's
 # deliberate. Rewrites install.sh's own pin via sed, installs the new
 # version immediately using the freshly-fetched value (not the just-edited
-# file — this process already read the old array into memory, and doesn't
+# file: this process already read the old array into memory, and doesn't
 # re-source itself mid-run), and prints the same manual-review note the
 # weekly automated bump-PR workflow (.github/workflows/check-pinned-
 # versions.yml) would have carried on that PR.
@@ -756,13 +756,13 @@ upgrade_pin() {
       exit 0
     fi
     valid_pin_value "$latest" || {
-      err "Fetched tag '${latest}' has unexpected characters — refusing to edit install.sh. Bump ZELLIJ_PLUGINS by hand instead."
+      err "Fetched tag '${latest}' has unexpected characters; refusing to edit install.sh. Bump ZELLIJ_PLUGINS by hand instead."
       exit 1
     }
     log "Bumping ${dest}: ${tag} -> ${latest}"
     sed -i "s#${dest}|${repo}|${tag}#${dest}|${repo}|${latest}#" "$DOTFILES/install.sh"
     install_zellij_plugin "$dest" "$repo" "$latest"
-    warn "Review before committing: re-check ${dest}'s request_permission() call against ZELLIJ_PLUGIN_PERMISSIONS in install.sh — if ${latest} requests new scopes, that array needs a matching entry (see CLAUDE.md's Plugin permission pre-seeding section), or the plugin will silently sit inert once approved."
+    warn "Review before committing: re-check ${dest}'s request_permission() call against ZELLIJ_PLUGIN_PERMISSIONS in install.sh. If ${latest} requests new scopes, that array needs a matching entry (see CLAUDE.md's Plugin permission pre-seeding section), or the plugin will silently sit inert once approved."
     ok "install.sh's pin is bumped and ${dest} ${latest} is installed."
     exit 0
   done
@@ -781,13 +781,13 @@ upgrade_pin() {
       exit 0
     fi
     valid_pin_value "$latest" || {
-      err "Fetched tag '${latest}' has unexpected characters — refusing to edit install.sh. Bump ZSH_PLUGINS by hand instead."
+      err "Fetched tag '${latest}' has unexpected characters; refusing to edit install.sh. Bump ZSH_PLUGINS by hand instead."
       exit 1
     }
     log "Bumping ${dest}: ${tag} -> ${latest}"
     sed -i "s#${dest}|${repo}|${tag}#${dest}|${repo}|${latest}#" "$DOTFILES/install.sh"
     install_zsh_plugin "$dest" "$repo" "$latest"
-    warn "Review before committing: the tags API has no 'latest' the way GitHub Releases does (see latest_github_tag's comment above) — double-check ${latest} is really ${dest}'s newest tag, not just the highest-sorting one, before committing. ${dest} loads on every new shell."
+    warn "Review before committing: the tags API has no 'latest' the way GitHub Releases does (see latest_github_tag's comment above). Double-check ${latest} is really ${dest}'s newest tag, not just the highest-sorting one, before committing. ${dest} loads on every new shell."
     ok "install.sh's pin is bumped and ${dest} ${latest} is installed."
     exit 0
   done
@@ -804,7 +804,7 @@ upgrade_pin() {
       exit 0
     fi
     valid_pin_value "$latest" || {
-      err "Fetched version '${latest}' has unexpected characters — refusing to edit install.sh. Bump CCSTATUSLINE_PINNED_VERSION by hand instead."
+      err "Fetched version '${latest}' has unexpected characters; refusing to edit install.sh. Bump CCSTATUSLINE_PINNED_VERSION by hand instead."
       exit 1
     }
     log "Bumping ccstatusline: ${CCSTATUSLINE_PINNED_VERSION} -> ${latest}"
@@ -814,7 +814,7 @@ upgrade_pin() {
       sed -i "s/\"installedVersion\": \"${CCSTATUSLINE_PINNED_VERSION}\"/\"installedVersion\": \"${latest}\"/" "$settings_json"
     fi
     install_ccstatusline "$latest"
-    warn "Review before committing: ccstatusline mirrors its own installedVersion into ccstatusline/.config/ccstatusline/settings.json (updated automatically here) — sanity-check that diff, and see the comment above install_ccstatusline() for anything else worth re-verifying."
+    warn "Review before committing: ccstatusline mirrors its own installedVersion into ccstatusline/.config/ccstatusline/settings.json (updated automatically here). Sanity-check that diff, and see the comment above install_ccstatusline() for anything else worth re-verifying."
     ok "install.sh's pin is bumped and ccstatusline ${latest} is installed."
     exit 0
   fi
@@ -854,99 +854,10 @@ upgrade_pin() {
 }
 
 # ── --yubikey: retrieve resident SSH key(s) from a FIDO2 authenticator ────────
-# Retrieve-only, standalone (like --check-pins/--upgrade/--remove above) — does
-# not provision a new resident key on the YubiKey itself; run
-# `ssh-keygen -t ed25519-sk -O resident` first (on this machine or another) if
-# the YubiKey doesn't have one yet.
-#
-# `ssh-keygen -K` downloads every resident key on the authenticator into the
-# current directory using filenames it derives from what's stored on the
-# device, so this cd's into ~/.ssh first rather than trying to name the
-# output itself. It needs an OpenSSH client built with FIDO2/security-key
-# support (8.2+), which in turn needs libfido2 available at runtime — rather
-# than preflight-detecting that (fragile: package names, dlopen-vs-linked-in
-# support, and provider paths all vary by distro/OS), this just runs the real
-# operation and classifies the failure if there is one, per CLAUDE.md's
-# Deliberate Omissions table (no new silent apt install for this).
-#
-# Output streams straight to the terminal via `tee` (not captured and
-# reprinted after the fact) because retrieval is interactive: the
-# authenticator needs a physical touch, and may prompt for its PIN, both of
-# which the user needs to see and respond to in real time. `tee` also keeps a
-# copy in $yubikey_out so a failure can still be classified afterward.
+# The retrieval lives in scripts/yubikey-ssh-keys.sh so it also works on hosts
+# set up with dfutil, which has no equivalent.
 pull_yubikey_ssh_key() {
-  if ! command -v ssh-keygen &>/dev/null; then
-    err "ssh-keygen not found — install an OpenSSH client first."
-    exit 1
-  fi
-
-  mkdir -p "$HOME/.ssh"
-  chmod 700 "$HOME/.ssh"
-
-  log "=== Retrieving resident SSH key(s) from YubiKey ==="
-  log "Insert the YubiKey if it isn't already, then touch it when it blinks — it may also prompt for its PIN."
-
-  local before after yubikey_out status
-  before=$(find "$HOME/.ssh" -maxdepth 1 -type f -name '*_sk*' 2>/dev/null | sort)
-  yubikey_out=$(mktemp)
-
-  # install.sh runs under `set -eo pipefail`, so this pipeline must be an
-  # `if` condition (one of set -e's documented exemptions) rather than a bare
-  # statement — a real, expected ssh-keygen failure (no key plugged in yet,
-  # say) would otherwise abort the whole script right here, before any of
-  # the classification below ever runs.
-  if (cd "$HOME/.ssh" && ssh-keygen -K) 2>&1 | tee "$yubikey_out"; then
-    status=0
-  else
-    status=${PIPESTATUS[0]}
-  fi
-
-  if [[ "$status" -ne 0 ]]; then
-    # Order matters: a real OpenSSH build with FIDO2 support built in still
-    # prints "Provider ... returned failure" for the ordinary "no key
-    # plugged in" case (confirmed against a real OpenSSH 10.2 client), so
-    # that specific, common case is checked first — a bare "provider" match
-    # below would otherwise misclassify it as libfido2 being missing.
-    if grep -qiE "illegal option|unknown option|invalid option" "$yubikey_out"; then
-      err "This ssh-keygen doesn't support -K — needs OpenSSH 8.2+ built with FIDO2/security-key support."
-      err "  Debian/Ubuntu: sudo apt install --only-upgrade openssh-client"
-      err "  macOS:         brew install openssh"
-    elif grep -qiE "device not found|no fido|no security key|no u2f|no such device|couldn't read" "$yubikey_out"; then
-      err "No FIDO2 authenticator detected — make sure the YubiKey is inserted (and touch it if it's blinking), then re-run."
-    elif grep -qiE "cannot open shared object|failed to dlopen|error while loading shared libraries|libfido2.*not found" "$yubikey_out"; then
-      err "ssh-keygen couldn't load its FIDO2 provider (libfido2) — install it and re-run:"
-      err "  Debian/Ubuntu: sudo apt install libfido2-1"
-      err "  macOS:         brew install libfido2"
-    else
-      err "ssh-keygen -K failed — see output above."
-    fi
-    rm -f "$yubikey_out"
-    exit 1
-  fi
-  rm -f "$yubikey_out"
-
-  after=$(find "$HOME/.ssh" -maxdepth 1 -type f -name '*_sk*' 2>/dev/null | sort)
-  local new_files
-  new_files=$(comm -13 <(echo "$before") <(echo "$after"))
-
-  if [[ -z "$new_files" ]]; then
-    warn "ssh-keygen -K reported success but no new files showed up in ~/.ssh — the YubiKey may not have any resident keys yet. Provision one first: ssh-keygen -t ed25519-sk -O resident"
-    exit 0
-  fi
-
-  local f
-  while IFS= read -r f; do
-    [[ -z "$f" ]] && continue
-    if [[ "$f" == *.pub ]]; then
-      chmod 644 "$f"
-    else
-      chmod 600 "$f"
-    fi
-    ok "Retrieved $(basename "$f")"
-  done <<<"$new_files"
-
-  echo
-  log "Add an IdentityFile line for the private stub file above to ~/.ssh/config's Host * block if you want it used by default (the checked-in default only lists id_ed25519/id_rsa)."
+  bash "$DOTFILES/scripts/yubikey-ssh-keys.sh"
 }
 
 if [[ "$CHECK_PINS" == true ]]; then
@@ -965,8 +876,8 @@ if [[ "$DO_YUBIKEY" == true ]]; then
 fi
 
 # zsh is the primary shell (see zsh/.zshenv, zsh/.zshrc) but, unlike nu/starship/
-# zellij, has no cross-platform prebuilt release binary this script can download
-# — it's a system package everywhere. Deliberately NOT auto-installed via apt
+# zellij, has no cross-platform prebuilt release binary this script can download:
+# it's a system package everywhere. Deliberately NOT auto-installed via apt
 # (see CLAUDE.md's Deliberate Omissions table): require it pre-installed instead.
 if ! command -v zsh &>/dev/null; then
   err "zsh not found. Install it first, then re-run install.sh:"
@@ -980,13 +891,13 @@ fi
 # clang}) for compiling treesitter parsers, and telescope-fzf-native.nvim wants
 # make/cmake for its native sorter. Without a compiler, treesitter's
 # ensure_installed retries the failed compile every time a matching filetype is
-# opened — silently, with no indication it's a missing system package rather
+# opened, silently, with no indication it's a missing system package rather
 # than a network problem. Like zsh, this is a system package everywhere with no
 # cross-platform prebuilt binary, so it's surfaced here rather than auto-installed
-# via apt (see CLAUDE.md's Deliberate Omissions table) — warn, don't block, since
+# via apt (see CLAUDE.md's Deliberate Omissions table). Warn, don't block, since
 # the rest of install.sh doesn't need a compiler.
 if ! command -v gcc &>/dev/null && ! command -v clang &>/dev/null; then
-  warn "No C compiler (gcc/clang) found — nvim's treesitter parsers will fail to build."
+  warn "No C compiler (gcc/clang) found; nvim's treesitter parsers will fail to build."
   warn "Every file you open in nvim will silently retry the failed parser compile."
   warn "  Debian/Ubuntu: sudo apt install build-essential"
   warn "  Arch:          sudo pacman -S base-devel"
@@ -1008,7 +919,7 @@ if [[ "$OS" == "linux" ]] && command -v apt-get &>/dev/null; then
       sudo apt-get install -y git 2>/dev/null; then
       ok "git upgraded to $(git --version)"
     else
-      warn "git upgrade failed — zdiff3 merge style may not work (non-fatal)"
+      warn "git upgrade failed; zdiff3 merge style may not work (non-fatal)"
     fi
   fi
 fi
@@ -1023,7 +934,7 @@ if [[ "$OS" == "linux" ]] && command -v locale-gen &>/dev/null; then
       sudo update-locale LANG=en_US.UTF-8 2>/dev/null; then
       ok "Locale en_US.UTF-8 generated"
     else
-      warn "locale-gen failed — LC_ALL warnings from subprocesses may appear (non-fatal)"
+      warn "locale-gen failed; LC_ALL warnings from subprocesses may appear (non-fatal)"
     fi
   fi
 fi
@@ -1134,13 +1045,13 @@ download_release() {
       return
     fi
   else
-    # Single API call — parse both tag_name and asset URLs from one response.
+    # Single API call: parse both tag_name and asset URLs from one response.
     api_response=$(curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
       "${GITHUB_AUTH[@]}" "https://api.github.com/repos/${repo}/releases/latest") || true
 
     latest=$(echo "$api_response" | grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
     if [[ -z "$latest" ]]; then
-      warn "Could not fetch latest version for ${repo} — skipping."
+      warn "Could not fetch latest version for ${repo}; skipping."
       return
     fi
 
@@ -1154,7 +1065,7 @@ download_release() {
       IFS=$'\t' read -r latest asset_url < <(newest_release_asset "$api_response" "$regex") || true
     fi
     if [[ -z "$asset_url" ]]; then
-      warn "No matching asset found for ${dest} (pattern: ${glob}) — skipping."
+      warn "No matching asset found for ${dest} (pattern: ${glob}); skipping."
       return
     fi
   fi
@@ -1172,7 +1083,7 @@ download_release() {
 
   local archive="${tmpdir}/archive"
   if ! curl -fL --connect-timeout 30 --max-time 600 --retry 2 "$asset_url" -o "$archive"; then
-    warn "Download failed for ${dest} — skipping."
+    warn "Download failed for ${dest}; skipping."
     return
   fi
 
@@ -1198,7 +1109,7 @@ download_release() {
     return
   fi
   if [[ -z "$extracted_binary" || ! -f "$extracted_binary" ]]; then
-    warn "Could not find '${bin_in_archive}' in archive for ${dest} — skipping."
+    warn "Could not find '${bin_in_archive}' in archive for ${dest}; skipping."
     return
   fi
 
@@ -1242,7 +1153,7 @@ install_node() {
     tr '}' '\n' | grep '"lts":"' |
     grep -oP '"version":\s*"\Kv[^"]+' | head -1) || true
   if [[ -z "$latest" ]]; then
-    warn "Could not determine latest Node LTS — skipping."
+    warn "Could not determine latest Node LTS; skipping."
     return
   fi
   if [[ "$installed" == "$latest" && "$FORCE_UPDATE" == false ]]; then
@@ -1255,7 +1166,7 @@ install_node() {
   linux) node_os="linux" ;;
   darwin) node_os="darwin" ;;
   *)
-    warn "Unsupported OS for Node.js (${OS}) — skipping."
+    warn "Unsupported OS for Node.js (${OS}); skipping."
     return
     ;;
   esac
@@ -1263,7 +1174,7 @@ install_node() {
   x86_64) node_arch="x64" ;;
   aarch64) node_arch="arm64" ;;
   *)
-    warn "Unsupported arch for Node.js (${ARCH}) — skipping."
+    warn "Unsupported arch for Node.js (${ARCH}); skipping."
     return
     ;;
   esac
@@ -1276,17 +1187,17 @@ install_node() {
 
   log "Downloading Node.js ${latest} (${node_os}-${node_arch})..."
   if ! curl -fL --connect-timeout 30 --max-time 600 --retry 2 "$url" -o "$tmpdir/node.tar.xz"; then
-    warn "Node.js download failed — skipping."
+    warn "Node.js download failed; skipping."
     return
   fi
   if ! tar -xJf "$tmpdir/node.tar.xz" -C "$tmpdir"; then
-    warn "Node.js extract failed — skipping."
+    warn "Node.js extract failed; skipping."
     return
   fi
 
   local root="$tmpdir/$base"
   if [[ ! -d "$root/bin" ]]; then
-    warn "Unexpected Node.js archive layout — skipping."
+    warn "Unexpected Node.js archive layout; skipping."
     return
   fi
 
@@ -1304,11 +1215,11 @@ install_node() {
 # ── Claude Code CLI (native installer) ─────────────────────────────────────────
 # Installs via the official native installer (curl | bash from claude.ai/install.sh),
 # the same mechanism that already owns ~/.local/bin/claude as a symlink into
-# ~/.local/share/claude/versions/<version> — see the cleanup_orphans() note on
+# ~/.local/share/claude/versions/<version>; see the cleanup_orphans() note on
 # that layout for how old versions there get pruned. The installer self-updates
 # in the background on its own, so this only ever bootstraps a fresh install;
 # no .versions tracking here (there's nothing meaningful for us to compare
-# against — the native updater manages its own version state independently of
+# against; the native updater manages its own version state independently of
 # this script). --update runs `claude update` to force an immediate check
 # rather than waiting on the background updater.
 install_claude() {
@@ -1319,7 +1230,7 @@ install_claude() {
       if "$LOCAL_BIN/claude" update &>/dev/null; then
         ok "claude updated ($("$LOCAL_BIN/claude" --version 2>/dev/null || echo '?'))"
       else
-        warn "claude update failed — it auto-updates in the background regardless"
+        warn "claude update failed; it auto-updates in the background regardless"
       fi
     else
       ok "claude already installed ($("$LOCAL_BIN/claude" --version 2>/dev/null || echo '?'))"
@@ -1331,12 +1242,12 @@ install_claude() {
   if curl -fsSL --connect-timeout 15 --retry 2 https://claude.ai/install.sh | bash &>/dev/null; then
     ok "claude installed ($("$LOCAL_BIN/claude" --version 2>/dev/null || echo '?'))"
   else
-    warn "Claude Code install failed — install manually: curl -fsSL https://claude.ai/install.sh | bash"
+    warn "Claude Code install failed. Install manually: curl -fsSL https://claude.ai/install.sh | bash"
   fi
 }
 
 # ── claude-swap (multi-account switcher for Claude Code CLI) ──────────────────
-# PyPI-only (no GitHub-release binaries) — installed via `uv tool install`,
+# PyPI-only (no GitHub-release binaries), installed via `uv tool install`,
 # the exact install method the tool's own self-upgrade command (`cswap
 # upgrade`) is built to detect and drive. Requires uv, downloaded into
 # $BIN_DIR by the CLI_TOOLS loop above; called via that repo-tree path
@@ -1345,12 +1256,12 @@ install_claude() {
 # bat theme-cache build above). Always-latest like the rest of CLI_TOOLS, not
 # pinned like ccstatusline above: nothing here parses claude-swap's output, so
 # a version bump can't silently break a script the way an unreviewed
-# ccstatusline bump could — `uv tool list` is a local, zero-cost check, so
+# ccstatusline bump could. `uv tool list` is a local, zero-cost check, so
 # it's fine to re-run every invocation instead of gating on the .versions
 # cache.
 install_claude_swap() {
   if [[ ! -x "$BIN_DIR/uv" ]]; then
-    warn "uv not found (uv install may have failed) — skipping claude-swap."
+    warn "uv not found (uv install may have failed); skipping claude-swap."
     return
   fi
 
@@ -1360,7 +1271,7 @@ install_claude_swap() {
       "$BIN_DIR/uv" tool install claude-swap &>/dev/null; then
       ok "claude-swap upgraded"
     else
-      warn "claude-swap upgrade/install failed — skipping."
+      warn "claude-swap upgrade/install failed; skipping."
     fi
     return
   fi
@@ -1373,13 +1284,13 @@ install_claude_swap() {
   if "$BIN_DIR/uv" tool install claude-swap &>/dev/null; then
     ok "claude-swap installed"
   else
-    warn "claude-swap install failed — skipping."
+    warn "claude-swap install failed; skipping."
   fi
 }
 
 # ── PowerShell installer (self-contained, bundles .NET; from GitHub release) ───
 # The PowerShell LSP (powershell_es) just needs `pwsh` on PATH. PowerShell ships
-# a self-contained tarball that bundles the .NET runtime — no separate .NET, no
+# a self-contained tarball that bundles the .NET runtime: no separate .NET, no
 # root. It's a flat app *tree* (~190 MB: pwsh + hundreds of .dlls), not a single
 # binary, so it can't use download_release: extract it whole into
 # ~/.local/lib/powershell and symlink pwsh into ~/.local/bin. Mason then installs
@@ -1394,7 +1305,7 @@ install_powershell() {
     "${GITHUB_AUTH[@]}" "https://api.github.com/repos/PowerShell/PowerShell/releases/latest" |
     grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
   if [[ -z "$tag" ]]; then
-    warn "Could not determine latest PowerShell release — skipping."
+    warn "Could not determine latest PowerShell release; skipping."
     return
   fi
   latest="${tag#v}"
@@ -1408,7 +1319,7 @@ install_powershell() {
   linux) ps_os="linux" ;;
   darwin) ps_os="osx" ;;
   *)
-    warn "Unsupported OS for PowerShell (${OS}) — skipping."
+    warn "Unsupported OS for PowerShell (${OS}); skipping."
     return
     ;;
   esac
@@ -1416,7 +1327,7 @@ install_powershell() {
   x86_64) ps_arch="x64" ;;
   aarch64) ps_arch="arm64" ;;
   *)
-    warn "Unsupported arch for PowerShell (${ARCH}) — skipping."
+    warn "Unsupported arch for PowerShell (${ARCH}); skipping."
     return
     ;;
   esac
@@ -1429,7 +1340,7 @@ install_powershell() {
 
   log "Downloading PowerShell ${latest} (${ps_os}-${ps_arch})..."
   if ! curl -fL --connect-timeout 30 --max-time 600 --retry 2 "$url" -o "$tmpdir/pwsh.tar.gz"; then
-    warn "PowerShell download failed — skipping."
+    warn "PowerShell download failed; skipping."
     return
   fi
 
@@ -1438,7 +1349,7 @@ install_powershell() {
   rm -rf "$dest"
   mkdir -p "$dest" "$LOCAL_BIN"
   if ! tar -xzf "$tmpdir/pwsh.tar.gz" -C "$dest"; then
-    warn "PowerShell extract failed — skipping."
+    warn "PowerShell extract failed; skipping."
     return
   fi
   chmod +x "$dest/pwsh"
@@ -1460,7 +1371,7 @@ cargo_install() {
   local cargo_bin="$HOME/.cargo/bin/cargo"
   log "Checking ${dest} (cargo)..."
   if [[ ! -x "$cargo_bin" ]]; then
-    warn "${dest}: cargo not available — skipping"
+    warn "${dest}: cargo not available; skipping"
     return
   fi
   local latest
@@ -1476,7 +1387,7 @@ cargo_install() {
       grep -oP '"newest_version"\s*:\s*"\K[^"]+' | head -1) || true
   fi
   if [[ -z "$latest" ]]; then
-    warn "Could not fetch latest version for ${crate} — skipping"
+    warn "Could not fetch latest version for ${crate}; skipping"
     return
   fi
   local installed
@@ -1507,7 +1418,7 @@ cargo_install() {
     set_installed_version "$dest" "$latest"
     ok "${dest} installed at ${latest}"
   else
-    warn "cargo install ${crate} failed — skipping"
+    warn "cargo install ${crate} failed; skipping"
   fi
 }
 
@@ -1605,7 +1516,7 @@ install_tool() {
 # ── Binary downloads ──────────────────────────────────────────────────────────
 if [[ "$LINK_ONLY" == false ]]; then
 
-  # Rust toolchain bootstrap — gated on --cargo. (Previously unconditional: a
+  # Rust toolchain bootstrap, gated on --cargo. (Previously unconditional: a
   # couple of Nushell plugins shipped no prebuilt binary at all and needed
   # cargo regardless of this flag. Now that nu is gone, cargo/rustup have no
   # other unconditional consumer, so this only runs when --cargo is passed.)
@@ -1620,7 +1531,7 @@ if [[ "$LINK_ONLY" == false ]]; then
         sh -s -- -y --no-modify-path --quiet; then
         ok "Rust installed: $("$CARGO_BIN" --version)"
       else
-        warn "rustup install failed — Rust tools will be skipped, not downloaded."
+        warn "rustup install failed; Rust tools will be skipped, not downloaded."
       fi
     fi
 
@@ -1629,23 +1540,23 @@ if [[ "$LINK_ONLY" == false ]]; then
 
       # cargo needs a C linker (cc/gcc) even for pure-Rust crates.
       if ! command -v cc &>/dev/null && ! command -v gcc &>/dev/null; then
-        log "C linker not found — installing build-essential..."
+        log "C linker not found; installing build-essential..."
         if command -v apt-get &>/dev/null; then
           sudo apt-get install -y build-essential &&
             ok "build-essential installed" ||
-            warn "Could not install build-essential — cargo builds will fail (non-fatal)."
+            warn "Could not install build-essential; cargo builds will fail (non-fatal)."
         elif command -v brew &>/dev/null; then
           brew install gcc && ok "gcc installed" ||
-            warn "Could not install gcc — cargo builds will fail (non-fatal)."
+            warn "Could not install gcc; cargo builds will fail (non-fatal)."
         else
-          warn "No C linker found and no known package manager to install one — cargo builds will fail."
+          warn "No C linker found and no known package manager to install one; cargo builds will fail."
           warn "Install gcc/build-essential manually, then re-run install.sh --cargo."
         fi
       fi
 
-      warn "Cargo mode: all Rust tools will compile from source — this may take a while."
+      warn "Cargo mode: all Rust tools will compile from source; this may take a while."
     else
-      err "--cargo was requested but no working cargo is available — Rust tools will be skipped, not downloaded."
+      err "--cargo was requested but no working cargo is available; Rust tools will be skipped, not downloaded."
     fi
   fi
 
@@ -1659,7 +1570,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "starship|starship|starship/starship|darwin|aarch64|starship-aarch64-apple-darwin.tar.gz|-"
 
     # TEMPORARY: pointed at myah-mitchell/zellij fork instead of zellij-org/zellij.
-    # Fork only publishes a linux-x86_64 asset so far — aarch64/darwin rows will
+    # Fork only publishes a linux-x86_64 asset so far; aarch64/darwin rows will
     # 404 on those platforms until it does. Revert to zellij-org/zellij when done
     # testing (repo field only; asset globs/os/arch below are unchanged).
     # Tracks the fork's nightlies through TOOL_PINS at the top of this file.
@@ -1687,7 +1598,7 @@ if [[ "$LINK_ONLY" == false ]]; then
   fi
   for t in "${CORE_TOOLS[@]}"; do install_tool "$t"; done
 
-  # Neovim — tarball release (includes runtime + bundled treesitter parsers).
+  # Neovim: tarball release (includes runtime + bundled treesitter parsers).
   # AppImage was dropped: it omits the runtime directory and requires FUSE
   # which is unavailable in most WSL2 kernels.
   log "Checking nvim..."
@@ -1695,7 +1606,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "${GITHUB_AUTH[@]}" "https://api.github.com/repos/neovim/neovim/releases/latest" |
     grep -oP '"tag_name":\s*"\K[^"]+' | head -1) || true
   if [[ -z "$latest" ]]; then
-    warn "Could not determine nvim latest version — skipping."
+    warn "Could not determine nvim latest version; skipping."
   else
     installed=$(get_installed_version "nvim")
     if [[ "$installed" != "$latest" || "$FORCE_UPDATE" == true || ! -f "$HOME/.local/share/nvim/runtime/syntax/syntax.vim" ]]; then
@@ -1777,7 +1688,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "zoxide|zoxide|ajeetdsouza/zoxide|darwin|aarch64|zoxide-*-aarch64-apple-darwin.tar.gz|-"
 
     # ruff: Python linter/formatter (+ built-in `ruff server` LSP). Standalone
-    # binary, so it works without pip — Mason's ruff is pip-based and can't
+    # binary, so it works without pip; Mason's ruff is pip-based and can't
     # install here. nvim points its ruff server at this via mason=false
     # (see nvim plugins/lsp-servers.lua).
     "ruff|ruff|astral-sh/ruff|linux|x86_64|ruff-x86_64-unknown-linux-musl.tar.gz|-"
@@ -1785,7 +1696,7 @@ if [[ "$LINK_ONLY" == false ]]; then
     "ruff|ruff|astral-sh/ruff|darwin|x86_64|ruff-x86_64-apple-darwin.tar.gz|-"
     "ruff|ruff|astral-sh/ruff|darwin|aarch64|ruff-aarch64-apple-darwin.tar.gz|-"
 
-    # uv: Python package/tool manager. Not needed for anything above — it
+    # uv: Python package/tool manager. Not needed for anything above; it
     # exists solely to `uv tool install claude-swap` (see install_claude_swap
     # below, called once this loop has downloaded uv into $BIN_DIR).
     "uv|-|astral-sh/uv|linux|x86_64|uv-x86_64-unknown-linux-musl.tar.gz|-"
@@ -1935,7 +1846,7 @@ if [[ "$LINK_ONLY" == false ]]; then
   # Always use binary releases: crates.io requires a yazi-build workaround that's unreliable
   download_release "sxyazi/yazi" "yazi-${ARCH}-unknown-linux-musl.zip" "yazi" "yazi" "ya"
 
-  # mosh — no pre-built release binaries, use system package manager
+  # mosh: no pre-built release binaries, use system package manager
   if ! command -v mosh &>/dev/null; then
     log "Installing mosh via system package manager..."
     if command -v apt-get &>/dev/null; then
@@ -1984,11 +1895,11 @@ if [[ "$LINK_ONLY" == false ]]; then
       "https://raw.githubusercontent.com/catppuccin/eza/main/themes/mocha/catppuccin-mocha-mauve.yml" \
       -o "$EZA_THEME_DIR/theme.yml" &&
       ok "eza theme downloaded" ||
-      warn "eza theme download failed — source manually from catppuccin/eza"
+      warn "eza theme download failed; source manually from catppuccin/eza"
   fi
 
   # ── zsh-syntax-highlighting Catppuccin theme ────────────────────────────────
-  # Official catppuccin/zsh-syntax-highlighting port — sets ZSH_HIGHLIGHT_STYLES,
+  # Official catppuccin/zsh-syntax-highlighting port: sets ZSH_HIGHLIGHT_STYLES,
   # sourced by .zshrc *before* the plugin itself (see zsh/.zshrc), same
   # "before you activate zsh-syntax-highlighting" requirement the upstream
   # theme file's own header documents.
@@ -2000,7 +1911,7 @@ if [[ "$LINK_ONLY" == false ]]; then
       "https://raw.githubusercontent.com/catppuccin/zsh-syntax-highlighting/main/themes/catppuccin_mocha-zsh-syntax-highlighting.zsh" \
       -o "$ZSH_THEME_DIR/catppuccin_mocha-zsh-syntax-highlighting.zsh" &&
       ok "zsh-syntax-highlighting theme downloaded" ||
-      warn "zsh-syntax-highlighting theme download failed — source manually from catppuccin/zsh-syntax-highlighting"
+      warn "zsh-syntax-highlighting theme download failed; source manually from catppuccin/zsh-syntax-highlighting"
   fi
 
   # ── Nushell Catppuccin theme (gated behind --nushell) ───────────────────────
@@ -2020,14 +1931,14 @@ if [[ "$LINK_ONLY" == false ]]; then
     fi
   fi
 
-  # ── Claude Code stack — gated behind --claude or --full ────────────────────
-  # Claude Code itself, Node.js (needed here only to npm-install ccstatusline —
+  # ── Claude Code stack, gated behind --claude or --full ────────────────────
+  # Claude Code itself, Node.js (needed here only to npm-install ccstatusline;
   # Mason's npm-based Neovim LSP servers are a separate consumer, gated on
   # FULL_INSTALL directly below via the marker file, and FULL_INSTALL implies
   # WANT_CLAUDE_STACK so Node is still there when those LSPs need it),
   # ccstatusline, and claude-swap are all useless without Claude Code, so none
   # of them install unless this run wants the stack. This is also why "is node
-  # on PATH" can't be nvim's --full signal (see FULL_INSTALL_MARKER below) —
+  # on PATH" can't be nvim's --full signal (see FULL_INSTALL_MARKER below):
   # --claude alone would make that read true without --full being passed.
   if [[ "$WANT_CLAUDE_STACK" == true ]]; then
     install_node
@@ -2039,7 +1950,7 @@ if [[ "$LINK_ONLY" == false ]]; then
   fi
 
   # ── PowerShell (self-contained pwsh + bundled .NET; unblocks powershell_es LSP)
-  # Opt-in via --full — nothing else on this machine needs pwsh, so "is pwsh on
+  # Opt-in via --full; nothing else on this machine needs pwsh, so "is pwsh on
   # PATH" stays a valid --full signal on its own; nvim's lsp-servers.lua checks
   # `vim.fn.executable("pwsh")` directly rather than needing the marker file
   # below.
@@ -2054,11 +1965,11 @@ if [[ "$LINK_ONLY" == false ]]; then
   # presence to decide whether to enable the Node-dependent-but-not-pwsh-
   # dependent servers that Mason would otherwise auto-install on first buffer
   # open: html, cssls, emmet_language_server, bashls, pyright, and the whole
-  # lang.php extra (intelephense/phpactor/php-cs-fixer/phpcs) — together
+  # lang.php extra (intelephense/phpactor/php-cs-fixer/phpcs), together
   # ~460MB of Mason packages that only make sense on a full IDE workstation.
   # Written/removed every run (not just when changed) so re-running install.sh
   # without --full after previously using it correctly downgrades nvim's LSP
-  # config on next launch — it does NOT retroactively uninstall whatever
+  # config on next launch. It does NOT retroactively uninstall whatever
   # Mason already downloaded; that's a manual `:Mason` / `:MasonUninstall`
   # cleanup step (Mason has no "uninstall what's no longer declared" mode).
   FULL_INSTALL_MARKER="$HOME/.local/state/dotfiles/full-install"
@@ -2108,13 +2019,13 @@ if [[ "$DO_REMOVE" == true ]]; then
   for pkg in "${PACKAGES[@]}"; do
     remove_package "$pkg"
   done
-  ok "Done — symlinks removed. Binaries in $BIN_DIR are untouched."
+  ok "Done. Symlinks removed. Binaries in $BIN_DIR are untouched."
   exit 0
 fi
 
 # ── Prune stale symlinks ───────────────────────────────────────────────────────
 # Config files get renamed or removed from the repo over time. Their old
-# symlinks in $HOME are left dangling — link_package only creates/updates
+# symlinks in $HOME are left dangling: link_package only creates/updates
 # symlinks for files that currently exist, it never notices ones that no
 # longer have a source. Sweep $HOME for any symlink pointing into $DOTFILES
 # whose target no longer exists and remove it before (re)linking.
@@ -2197,15 +2108,15 @@ link_package() {
 }
 
 # ── Register the "homepath" git filter ────────────────────────────────────────
-# zjstatus's command_*_command paths must be real absolute paths — it runs its
+# zjstatus's command_*_command paths must be real absolute paths: it runs its
 # WASM plugin commands directly with no shell (no ~ or $HOME expansion).
 # zellij/.config/zellij/config.kdl stores a __DOTFILES_HOME__ placeholder
 # instead of a real path; git's clean/smudge filters (defined in
 # git-filters/*.sh, wired up via .gitattributes) expand it to this machine's
 # $HOME on checkout and fold it back to the placeholder before anything is
-# staged — so switching machines/usernames never shows up as a diff to commit.
+# staged, so switching machines/usernames never shows up as a diff to commit.
 # (Neovim's equivalent, autocmds.lua's clipboard exec, used to need this same
-# treatment, but it's Lua — vim.fn.expand() computes the real path at runtime
+# treatment, but it's Lua: vim.fn.expand() computes the real path at runtime
 # there instead, so it was dropped from this filter entirely.)
 # Filter *commands* live in local git config (not versioned), so they must be
 # registered on every clone/run; the checkout below re-smudges the working
@@ -2215,20 +2126,20 @@ link_package() {
 # MUST run before the PACKAGES linking loop below, not after: some deploy
 # flows (e.g. this repo's ansible role) deliberately exclude
 # zellij/.config/zellij/config.kdl from whatever puts the tree on disk,
-# since it's meant to always be regenerated here instead — which means on a
+# since it's meant to always be regenerated here instead, which means on a
 # host's first-ever run, this checkout is the only thing that ever creates
 # that file in the working tree at all. link_package only symlinks files
 # that already exist when it walks a package directory (see its `find
 # -type f` below); running this block after link_package's PACKAGES loop
 # left a run on a brand-new host with no config.kdl in the repo checkout
 # yet when link_package("zellij") looked for it, so it silently skipped
-# that one file — no warning, just a missing symlink at
+# that one file: no warning, just a missing symlink at
 # ~/.config/zellij/config.kdl. Every other zellij package file (layouts,
 # scripts, themes) is present in the repo tree normally, so only this one
 # file was ever affected.
 log "=== Registering homepath git filter ==="
 # git execs these directly (no shell wrapper), so the mode bit must be +x or
-# every clean/smudge invocation fails — same pitfall as the zjstatus/clipboard
+# every clean/smudge invocation fails, the same pitfall as the zjstatus/clipboard
 # scripts noted above. Enforce it defensively in case a checkout ever drops it.
 chmod +x "$DOTFILES/git-filters/homepath-clean.sh" "$DOTFILES/git-filters/homepath-smudge.sh"
 git -C "$DOTFILES" config filter.homepath.clean "$DOTFILES/git-filters/homepath-clean.sh"
@@ -2254,7 +2165,7 @@ else
   rm -f "$DOTFILES/$kdl_rel"
   git -C "$DOTFILES" checkout-index -f -u -- "$kdl_rel"
 fi
-# Verify the placeholder actually got replaced — the filter has failed
+# Verify the placeholder actually got replaced; the filter has failed
 # silently before (non-executable script, stat-cache skip above), and a
 # leftover __DOTFILES_HOME__ breaks zjstatus with no visible error at runtime.
 # Fail loudly here instead of discovering it later.
@@ -2273,12 +2184,12 @@ if [[ -f "$LOCAL_BIN/nvim" ]] || command -v nvim &>/dev/null; then
   NVIM_CMD="${LOCAL_BIN}/nvim"
   [[ -f "$NVIM_CMD" ]] || NVIM_CMD="nvim"
   if [[ ! -f "$HOME/.local/share/nvim/runtime/syntax/syntax.vim" ]]; then
-    warn "nvim runtime missing — skipping headless plugin install. Run install.sh again after nvim downloads."
+    warn "nvim runtime missing; skipping headless plugin install. Run install.sh again after nvim downloads."
   else
-    log "Installing Neovim plugins (headless — this may take a minute)..."
+    log "Installing Neovim plugins (headless; this may take a minute)..."
     VIMRUNTIME="$HOME/.local/share/nvim/runtime" \
       "$NVIM_CMD" --headless '+Lazy! sync' +qa 2>&1 | tail -5 ||
-      warn "nvim plugins: some issues encountered — run :Lazy sync manually"
+      warn "nvim plugins: some issues encountered; run :Lazy sync manually"
     ok "Neovim plugins installed"
   fi
 fi
@@ -2380,13 +2291,13 @@ if command -v ya &>/dev/null || [[ -f "$LOCAL_BIN/ya" ]]; then
   if "$YA" pkg install 2>/dev/null; then
     ok "yazi packages installed"
   else
-    warn "yazi pkg install failed — run 'ya pkg install' manually"
+    warn "yazi pkg install failed; run 'ya pkg install' manually"
   fi
 fi
 
 # ── Zellij: plugins (downloaded once to a local file, no network needed after) ─
 # zellij/.config/zellij/config.kdl loads these via file:~/.local/share/zellij/
-# plugins/<name> — Zellij's own plugin dir, not ~/.local/bin (these are never
+# plugins/<name>, Zellij's own plugin dir, not ~/.local/bin (these are never
 # invoked directly, so they don't belong on PATH). Using a local file instead
 # of https:// matters because this layout runs on every new shell via
 # zellij_autostart, so a live fetch (or a dead pinned tag) would block every
@@ -2394,7 +2305,7 @@ fi
 # update both together when bumping one.
 # ZELLIJ_PLUGINS itself is declared up in "Pinned dependency registry" near
 # the top of this file (so --check-pins/--upgrade=<name> can reach it without
-# the rest of install.sh having run) — this dir var stays here since
+# the rest of install.sh having run); this dir var stays here since
 # cleanup_orphans() further below also references it.
 ZELLIJ_PLUGIN_DIR="${SHARE_DIR}/zellij/plugins"
 mkdir -p "$ZELLIJ_PLUGIN_DIR"
@@ -2408,16 +2319,16 @@ done
 # Each plugin's request_permission() call requires one-time user approval via a
 # y/n prompt rendered inside its own pane. zjstatus and autolock both live in
 # size=1 borderless panes that aren't the pane focused on startup, so that
-# prompt is easy to never see — the plugin then sits inert forever, looking
+# prompt is easy to never see, and the plugin then sits inert forever, looking
 # "broken" with no visible error. Seeding the grant here avoids that entirely.
 # Permissions below match each plugin's own request_permission() call (checked
-# against source at time of writing — re-check if bumping versions above).
+# against source at time of writing; re-check if bumping versions above).
 # Never touches grants for other plugins. A plugin already in the file gets
 # any missing scopes from its entry here added to its block; extra scopes the
 # user approved by hand stay.
 #
 # Keyed by the *deployed* ~/.local/share path, not $ZELLIJ_PLUGIN_DIR (the repo
-# source dir) — Zellij's permission cache key is exactly what config.kdl's
+# source dir): Zellij's permission cache key is exactly what config.kdl's
 # file: location shell-expands to (no symlink resolution), which is always
 # the stowed ~/.local/share/zellij/plugins/<name> path.
 ZELLIJ_PLUGIN_PERMISSIONS=(
@@ -2469,7 +2380,7 @@ for entry in "${ZELLIJ_PLUGIN_PERMISSIONS[@]}"; do
 done
 
 # ── Zsh: plugins (autosuggestions, syntax highlighting, alias reminders) ──────
-# These plugins publish no GitHub Releases (no binary asset — just tagged
+# These plugins publish no GitHub Releases (no binary asset, just tagged
 # source), so each is downloaded once as a full source tarball at a pinned
 # tag rather than a single release asset like the Zellij plugins above. Same
 # "don't hit the network on every shell start" reasoning: .zshrc sources the
@@ -2486,7 +2397,7 @@ done
 
 # link_package("bin") already ran above (before this Zellij/zsh plugins
 # section existed), so any plugin just downloaded/built here has no
-# ~/.local/share symlink yet — it fails to load silently until the next
+# ~/.local/share symlink yet, so it fails to load silently until the next
 # install.sh run. Re-link now so a fresh plugin works on the very first run.
 link_package bin
 
@@ -2507,7 +2418,7 @@ if [[ "$IS_WSL" == false ]]; then
   if [[ -n "$installed_font_ver" && "$FORCE_UPDATE" == false ]]; then
     ok "JetBrainsMono Nerd Font already at ${installed_font_ver}"
   elif [[ -z "$font_latest" ]]; then
-    warn "Could not fetch JetBrainsMono Nerd Font version — skipping."
+    warn "Could not fetch JetBrainsMono Nerd Font version; skipping."
   elif [[ "$installed_font_ver" == "$font_latest" && "$FORCE_UPDATE" == false ]]; then
     ok "JetBrainsMono Nerd Font already at ${font_latest}"
   else
@@ -2518,7 +2429,7 @@ if [[ "$IS_WSL" == false ]]; then
       cut -d'"' -f4 | head -1) || true
 
     if [[ -z "$font_zip_url" ]]; then
-      warn "Could not find JetBrainsMono.zip asset — skipping font install."
+      warn "Could not find JetBrainsMono.zip asset; skipping font install."
     else
       font_tmp=$(mktemp -d)
 
@@ -2535,7 +2446,7 @@ if [[ "$IS_WSL" == false ]]; then
         fi
         mkdir -p "$FONT_DEST"
 
-        # Install NF, NFM, NFP — exclude NL variants (JetBrainsMonoNL*)
+        # Install NF, NFM, NFP; exclude NL variants (JetBrainsMonoNL*)
         font_count=0
         while IFS= read -r -d '' ttf; do
           cp "$ttf" "$FONT_DEST/"
@@ -2569,12 +2480,12 @@ if [[ "$WANT_WINDOWS_SETUP" == true ]]; then
   fi
 
   if [[ "$WSL_INTEROP_OK" == false ]]; then
-    warn "WSL interop is disabled — skipping Windows setup (Alacritty, fonts)."
+    warn "WSL interop is disabled; skipping Windows setup (Alacritty, fonts)."
     warn "To enable: add 'enabled=true' under [interop] in /etc/wsl.conf, then run 'wsl --shutdown' and reopen."
   else
 
     # Detect WSL distro name. $WSL_DISTRO_NAME is set by WSL itself for the
-    # current session — use it first. Falling back to `wsl.exe --list --running`
+    # current session; use it first. Falling back to `wsl.exe --list --running`
     # picks the wrong distro (non-deterministic ordering) when more than one
     # distro is registered/running, e.g. a leftover install alongside the
     # current one, which silently points the Alacritty symlink at a path that
@@ -2605,25 +2516,25 @@ if [[ "$WANT_WINDOWS_SETUP" == true ]]; then
 
   fi # end WSL_INTEROP_OK
 elif [[ "$IS_WSL" == true ]]; then
-  log "Skipping Windows setup (Alacritty, font, config symlink) — use --windows or --full to include it"
+  log "Skipping Windows setup (Alacritty, font, config symlink); use --windows or --full to include it"
 fi
 
 # ── Cleanup: orphaned installs and dead toolchains (--cleanup) ────────────────
-# Reads CORE_TOOLS/CLI_TOOLS/ZELLIJ_PLUGINS/ZSH_PLUGINS — the same arrays used
-# to install everything above — as the single source of truth for "what
+# Reads CORE_TOOLS/CLI_TOOLS/ZELLIJ_PLUGINS/ZSH_PLUGINS (the same arrays used
+# to install everything above) as the single source of truth for "what
 # install.sh currently knows about." Anything else recorded in $VERSIONS_FILE
 # is orphaned: a tool renamed/removed from those arrays (or from a dedicated
 # installer like ccusage's, after it was dropped entirely) whose downloaded
 # file just never gets touched again by the overwrite-in-place download
 # functions, so it sits there forever unless something explicitly diffs
-# against the current tool list — which is what this does.
+# against the current tool list, which is what this does.
 cleanup_orphans() {
   log "=== Cleanup ==="
 
   # rustup/cargo: only bootstrapped under --cargo (see USE_CARGO above); if
   # this run didn't ask for --cargo, any toolchain on disk is left over from
   # a past --cargo run (or, before the Nushell->zsh migration, from cargo
-  # running unconditionally) — dead weight, regenerated on demand by the next
+  # running unconditionally): dead weight, regenerated on demand by the next
   # --cargo run.
   if [[ "$USE_CARGO" == false ]]; then
     local cleaned_toolchain=false size
@@ -2653,10 +2564,10 @@ cleanup_orphans() {
   fi
 
   # Build the known-dest set from the exact arrays used to install things
-  # above, plus the handful of installers that don't use those arrays (nvim
-  # has its own bespoke installer, always known; node/ccstatusline are only
-  # known when this run wants the Claude Code stack — see
-  # WANT_CLAUDE_STACK — same as pwsh only being known under --full).
+  # above, plus the handful of installers that don't use those arrays. nvim
+  # has its own bespoke installer and is always known. node and ccstatusline
+  # are known only when this run wants the Claude Code stack (see
+  # WANT_CLAUDE_STACK), the same way pwsh is known only under --full.
   local -A known_dest=()
   local t dest_field
   for t in "${CORE_TOOLS[@]}" "${CLI_TOOLS[@]}"; do
@@ -2683,7 +2594,7 @@ cleanup_orphans() {
     known_zsh["$dest_field"]=1
   done
 
-  # Single read pass over .versions (materialized into memory first — this
+  # Single read pass over .versions (materialized into memory first: this
   # loop's body does deletions, and rewriting the file mid-iteration over its
   # own file descriptor is a footgun worth just avoiding outright), one
   # optional rewrite pass at the end excluding whatever got orphan-cleaned.
@@ -2701,12 +2612,12 @@ cleanup_orphans() {
       continue
     elif [[ "$key" == "pwsh" ]]; then
       # Only reachable when FULL_INSTALL == false (known_dest has it
-      # otherwise) — orphaned from a previous --full run.
+      # otherwise), orphaned from a previous --full run.
       if [[ -d "$HOME/.local/lib/powershell" ]]; then
         size=$(du -sh "$HOME/.local/lib/powershell" 2>/dev/null | cut -f1)
         rm -rf "$HOME/.local/lib/powershell"
         rm -f "$LOCAL_BIN/pwsh"
-        ok "Removed orphaned pwsh ${ver} (${size:-?}) — use --full to reinstall"
+        ok "Removed orphaned pwsh ${ver} (${size:-?}); use --full to reinstall"
       fi
       to_remove["$key"]=1
     elif [[ -f "$BIN_DIR/$key" ]]; then
@@ -2725,21 +2636,21 @@ cleanup_orphans() {
       if npm uninstall -g "$key" --prefix "$HOME/.local" </dev/null &>/dev/null; then
         ok "Removed orphaned npm global: ${key} ${ver}"
       else
-        warn "npm uninstall failed for orphaned global ${key} — remove manually: rm -rf ${npm_dir}"
+        warn "npm uninstall failed for orphaned global ${key}; remove manually: rm -rf ${npm_dir}"
       fi
       to_remove["$key"]=1
     elif [[ "$key" == "node" ]]; then
       # Only reachable when WANT_CLAUDE_STACK == false (known_dest has it
-      # otherwise) — orphaned because nothing wants the Claude Code stack
+      # otherwise), orphaned because nothing wants the Claude Code stack
       # this run. Deliberately not auto-removed: install_node's cp -a merges
       # node's bin/lib/include/share trees straight into the same
       # ~/.local/{bin,lib,...} directories real dotfiles-deployed symlinks
       # and other npm globals live in, so there's no single owned path to
-      # rm -rf the way pwsh's isolated ~/.local/lib/powershell is above —
+      # rm -rf the way pwsh's isolated ~/.local/lib/powershell is above;
       # guessing wrong here risks deleting files this script doesn't own.
-      warn "node (${ver}) is orphaned (nothing wants --claude/--full this run) but isn't auto-removed — its files are merged into ~/.local/{bin,lib,include,share} alongside things this script doesn't own; clean up by hand if you're sure nothing else needs it"
+      warn "node (${ver}) is orphaned (nothing wants --claude/--full this run) but isn't auto-removed; its files are merged into ~/.local/{bin,lib,include,share} alongside things this script doesn't own; clean up by hand if you're sure nothing else needs it"
     else
-      warn ".versions has '${key}=${ver}' but nothing on disk matches it anywhere known — leaving it (remove by hand if actually stale)"
+      warn ".versions has '${key}=${ver}' but nothing on disk matches it anywhere known; leaving it (remove by hand if actually stale)"
     fi
   done
 
@@ -2760,7 +2671,7 @@ cleanup_orphans() {
 
   # Neovim's Mason-managed --full-only LSP packages (see the --full section
   # above, lua/config/lazy.lua, and lua/plugins/lsp-servers.lua). install.sh
-  # doesn't install these itself — Mason downloads them lazily inside nvim —
+  # doesn't install these itself (Mason downloads them lazily inside nvim),
   # so they can't be caught by the .versions scan above; this list has to be
   # kept in sync by hand with what those two nvim files gate on full_install.
   if [[ "$FULL_INSTALL" == false && -d "$HOME/.local/share/nvim/mason/packages" ]]; then
@@ -2782,7 +2693,7 @@ cleanup_orphans() {
           -c "qa" </dev/null &>/dev/null || true
         ok "Mason cleanup done"
       else
-        warn "nvim not found — can't clean up ${#mason_to_remove[@]} orphaned Mason package(s), run :MasonUninstall manually"
+        warn "nvim not found; can't clean up ${#mason_to_remove[@]} orphaned Mason package(s), run :MasonUninstall manually"
       fi
     else
       ok "No orphaned full-install-only Mason packages found"
@@ -2790,7 +2701,7 @@ cleanup_orphans() {
   fi
 
   # Claude Code's own native self-updater, not install.sh, manages
-  # ~/.local/bin/claude — it's a symlink into ~/.local/share/claude/versions/,
+  # ~/.local/bin/claude: it's a symlink into ~/.local/share/claude/versions/,
   # and every self-update drops a new ~300MB+ version binary there without
   # ever deleting the old ones. Not caught by the .versions scan above (that
   # file only tracks what install.sh itself downloaded); handled separately
@@ -2817,12 +2728,12 @@ cleanup_orphans() {
 }
 if [[ "$DO_CLEANUP" == true ]]; then
   if [[ "$LINK_ONLY" == true ]]; then
-    warn "--cleanup has no effect combined with --link — the tool arrays it diffs against are never populated without a real run."
+    warn "--cleanup has no effect combined with --link: the tool arrays it diffs against are never populated without a real run."
   else
     cleanup_orphans
     # Orphaned $BIN_DIR/ZELLIJ_PLUGIN_DIR/ZSH_PLUGIN_DIR files just got deleted
     # from the repo tree above, which leaves their deployed ~/.local symlinks
-    # dangling — prune_stale_symlinks (defined earlier, already ran once
+    # dangling; prune_stale_symlinks (defined earlier, already ran once
     # before configs were linked) sweeps exactly those.
     prune_stale_symlinks
   fi
@@ -2835,18 +2746,18 @@ echo -e "${BOLD}${GREEN}║        Dotfiles installed successfully!          ║
 echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}"
 echo ""
 echo -e "${CYAN}Next steps:${RESET}"
-echo "  1. Open a new terminal — zsh is now the default shell, and Zellij auto-starts"
+echo "  1. Open a new terminal: zsh is now the default shell, and Zellij auto-starts"
 echo "  2. Press \` to enter Zellij prefix mode"
 echo "  3. Open Neovim:    nvim  (then :Lazy sync to install plugins)"
 echo "  4. Update all:     ./install.sh --update"
 echo ""
 if [[ "$WANT_WINDOWS_SETUP" == true ]]; then
   echo -e "${CYAN}Windows:${RESET}"
-  echo "  • Open Alacritty — font and theme should load automatically"
+  echo "  • Open Alacritty: font and theme should load automatically"
   echo "  • If symlink failed, see manual steps printed above"
   echo ""
 elif [[ "$IS_WSL" == true ]]; then
   echo -e "${CYAN}Windows:${RESET}"
-  echo "  • Alacritty/font/config setup was skipped — re-run with --windows or --full to set it up"
+  echo "  • Alacritty/font/config setup was skipped; re-run with --windows or --full to set it up"
   echo ""
 fi

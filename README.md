@@ -1,205 +1,204 @@
 # dotfiles
 
-Personal dotfiles deployed via a small hand-rolled symlinker (see [Layout](#layout)). A single script installs everything, including configs and binaries, to `~/.local/` with no system-wide changes (beyond two narrow exceptions: `mosh`, and upgrading `git` itself via PPA when it's too old).
+Personal dotfiles and the tools they configure: zsh, Zellij, Neovim (LazyVim), and about 50 command-line tools, all Catppuccin Mocha themed. [dfutil](https://github.com/myah-mitchell/dfutil) installs everything into `~/.local` and links the configs into `$HOME`, with no system-wide changes.
+
+## Contents
+
+- [Stack](#stack)
+- [Prerequisites](#prerequisites)
+- [Quick start](#quick-start)
+- [Presets](#presets)
+- [Keeping a machine up to date](#keeping-a-machine-up-to-date)
+- [Layout](#layout)
+- [Key bindings](#key-bindings)
+- [Tools](#tools)
+- [Notes](#notes)
+- [install.sh](#installsh)
+- [License](#license)
 
 ## Stack
 
 | Layer | Tool |
-|---|---|
+| --- | --- |
 | Terminal | [Alacritty](https://alacritty.org/) |
 | Shell | [zsh](https://www.zsh.org/) |
 | Prompt | [Starship](https://starship.rs/) |
-| Multiplexer | [Zellij](https://zellij.dev/) (+ [zjstatus](https://github.com/dj95/zjstatus) status bar) |
+| Multiplexer | [Zellij](https://zellij.dev/), with zjstatus and zjhints status bars |
 | Editor | [Neovim](https://neovim.io/) (LazyVim) |
-| Theme | [Catppuccin Mocha](https://catppuccin.com/) everywhere |
-| Font | JetBrainsMono Nerd Font (NF/NFM/NFP — not the NL/no-ligature variant) |
+| Theme | [Catppuccin Mocha](https://catppuccin.com/) |
+| Font | JetBrainsMono Nerd Font (the NF, NFM, and NFP variants, not NL) |
+
+## Prerequisites
+
+- Linux, x86_64 or aarch64, WSL2 included. The Zellij fork this repo pins publishes x86_64 builds only, so aarch64 hosts can't install Zellij yet.
+- zsh, git 2.35 or later (for the `zdiff3` merge style), and `curl`, installed through the system package manager.
+- A GitHub token in `GITHUB_TOKEN` for a first install, or a `gh auth login`. Unauthenticated GitHub API calls are capped at 60 an hour, and a first install looks up about 50 releases.
 
 ## Quick start
 
-```sh
-git clone https://github.com/myah-mitchell/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-./install.sh
-```
+1. Download dfutil from its [latest release](https://github.com/myah-mitchell/dfutil/releases/latest) into a temporary directory. This copy only bootstraps: `dfutil apply` installs dfutil into `~/.local/bin` as one of the `base` tools, and refuses to link over a file it didn't put there.
 
-That's it. The script downloads all binaries and symlinks configs into `~`. On WSL2, opening this distro through Windows Alacritty also needs `./install.sh --windows` to install Alacritty and the font on the Windows side — see [What install.sh does](#what-installsh-does).
+   ```bash
+   version=$(curl -fsSL https://api.github.com/repos/myah-mitchell/dfutil/releases/latest | sed -n 's/.*"tag_name": "\(.*\)".*/\1/p')
+   boot=$(mktemp -d)
+   curl -fsSL "https://github.com/myah-mitchell/dfutil/releases/download/$version/dfutil-$version-$(uname -m)-unknown-linux-musl.tar.gz" \
+     | tar -xz -C "$boot" dfutil
+   ```
 
-Set `GITHUB_TOKEN` in your environment first if doing a fresh install — unauthenticated GitHub API requests are capped at 60/hr, and this script checks 25+ tools' latest releases.
+2. Clone this repo to `~/dotfiles` and record this host's presets in `~/.config/dfutil/host.toml`. Add presets after `base` with commas; see [Presets](#presets).
 
-## What install.sh does
+   ```bash
+   "$boot/dfutil" init --repo https://github.com/myah-mitchell/dotfiles.git --preset base
+   ```
 
-1. Downloads pre-built binaries for all tools into `bin/.local/bin/` (gitignored)
-2. Downloads Starship, Zellij, and Neovim binaries (zsh itself must be pre-installed — see [Notes](#notes))
-3. Symlinks (or, with `--copy`, copies) every package directory into `~`, one file at a time
-4. Prunes any dangling symlinks left behind by files that were renamed/removed from the repo
-5. Downloads the zsh plugins (autosuggestions, syntax highlighting, alias reminders) and runs a headless `:Lazy sync` for Neovim
-6. Generates init scripts for atuin, starship, zoxide, and carapace
-7. Installs Yazi's Catppuccin flavor and plugin set
-8. Downloads the Zellij plugins that back the status bar and navigation (`zjstatus`, `zellij-autolock`, `zellij-newtab-plus`), builds `zjstatus-hints` from source, and pre-approves their Zellij permissions
-9. **WSL2 + `--windows`/`--full` only:** installs Alacritty via winget, installs the Nerd Font per-user, and creates a Windows symlink for the Alacritty config — off by default even under WSL2, since not every WSL box is opened through Windows Alacritty. On native Linux/macOS it downloads the font directly instead (unconditionally, no flag needed).
+3. Install the tools and link the configs, then remove the bootstrap copy:
 
-Re-run at any time to apply config changes:
+   ```bash
+   "$boot/dfutil" apply
+   rm -r "$boot"
+   ```
 
-```sh
-./install.sh              # full run: binaries + config links
-./install.sh --update     # force re-download/rebuild all tools to latest, even if current
-./install.sh --link       # skip binary downloads, only re-link configs (fast)
-./install.sh --copy       # copy configs instead of symlinking (useful on NTFS or shared servers)
-./install.sh --remove     # remove all deployed symlinks from $HOME and exit (binaries untouched)
-./install.sh --cargo      # build Rust tools from source via cargo instead of downloading (slow); also
-                           # installs cargo-clean-all with a weekly target/ cleanup timer
-./install.sh --windows    # install Windows-side integration under WSL2: Alacritty, the font, and the
-                           # config symlink — off by default, no-op outside WSL2; implied by --full
-./install.sh --claude     # install the Claude Code stack: Claude Code itself, Node.js, ccstatusline,
-                           # and claude-swap — off by default, since none of them are useful without
-                           # Claude Code; implied by --full
-./install.sh --full       # everything --claude and --windows install, plus PowerShell and Neovim's
-                           # heavier LSPs (html/css/emmet/bash/php/pyright/powershell_es, ~460MB of
-                           # Mason packages) — off by default; skip on servers that just need the shell
-./install.sh --nushell    # install Nushell (nu) as an optional secondary shell; zsh stays the
-                           # default either way; off by default, not implied by --full
-./install.sh --cleanup    # remove rustup/cargo and the cargo-clean-all timer (unless --cargo), orphaned binaries/plugins/npm globals
-                           # left behind by removed tools, node/ccstatusline if not --claude/--full,
-                           # pwsh + full-only Mason LSPs if not --full, nu if not --nushell, and old
-                           # Claude Code version binaries left by its own self-updater
-```
+   Any real file already at a config's path is moved aside as `<path>.bak.<timestamp>`.
+
+4. Open a new terminal. zsh starts Zellij, and the prompt, history search (`Ctrl+R`), and completions load. Neovim installs its plugins the first time it opens.
+
+## Presets
+
+| Preset | Adds |
+| --- | --- |
+| `base` | dfutil itself, the core and CLI tools, Zellij and zsh plugins, themes, the Nerd Font on native Linux, and every config package except `nushell` |
+| `claude` | Claude Code, Node.js, ccstatusline, and claude-swap |
+| `windows` | Under WSL2 only: Alacritty and the Nerd Font on the Windows side, and a link from Windows Alacritty's config to this repo's |
+| `full` | `claude` and `windows`, plus PowerShell and Neovim's heavier language servers (about 460MB) |
+| `nushell` | Nushell as an optional second shell, with its config. zsh stays the login shell |
+| `cargo` | Builds Rust tools from source instead of downloading them, and adds a weekly timer that cleans stale `target/` directories |
+
+Use `full` on a Neovim workstation, `claude` on a machine that only needs Claude Code, and `base` alone on servers. Change a host's presets with `dfutil preset select <name>` or `dfutil preset deselect <name>`, then run `dfutil apply`.
+
+## Keeping a machine up to date
+
+| Command | Does |
+| --- | --- |
+| `dfutil` | Opens the terminal UI: tools with their installed and available versions, presets, palettes, and dotfiles |
+| `dfutil status` | Lists every tool with its installed version, the newest version its pin allows, and the pin |
+| `dfutil update` | Pulls this repo, then installs whatever changed |
+| `dfutil sync` | Copies local edits to rendered files back into their templates, pulls, and redeploys |
+| `dfutil schedule enable` | Runs `dfutil update` on a timer |
+| `dfutil rollback <tool>` | Switches a tool back to the version it had before its last install |
 
 ## Layout
 
-Each top-level directory is a package. `install.sh` walks it and symlinks every file into the matching path under `$HOME` — files mirror the home directory layout:
+Each top-level directory with a `[packages.<name>]` entry in `dfutil.toml` is a package. dfutil links every file in it to the same path under `$HOME`:
 
-```
-dotfiles/
-├── zsh/.zshenv, .zshrc          → ~/.zshenv, ~/.zshrc
-├── zsh/.config/zsh/             → ~/.config/zsh/
-├── nushell/.config/nushell/     → ~/.config/nushell/   (only deployed with --nushell)
-├── starship/.config/            → ~/.config/
-├── zellij/.config/zellij/       → ~/.config/zellij/
-├── nvim/.config/nvim/           → ~/.config/nvim/
-├── alacritty/.config/alacritty/ → ~/.config/alacritty/
-├── git/.gitconfig               → ~/.gitconfig
-├── bash/.bashrc, .bash_profile  → ~/.bashrc, ~/.bash_profile
-├── bin/.local/bin/              → ~/.local/bin/   (binaries)
-└── ssh/.ssh/config              → ~/.ssh/config
+```text
+zsh/.zshrc                      -> ~/.zshrc
+zsh/.config/zsh/aliases.zsh     -> ~/.config/zsh/aliases.zsh
+zellij/.config/zellij/          -> ~/.config/zellij/
+nvim/.config/nvim/              -> ~/.config/nvim/
+git/.gitconfig                  -> ~/.gitconfig
+ssh/.ssh/config                 -> ~/.ssh/config
 ```
 
-A package can drop a `.linkignore` file in its root (one glob per line) to exclude files that shouldn't be symlinked — e.g. `yazi/.linkignore` excludes the flavors/plugins directories, since those are managed at runtime by `ya pkg` instead.
+A file ending in `.tmpl` is rendered with this host's variables and palette, and the rendered copy is linked without the suffix. A package's `.linkignore` lists files that aren't linked, one glob per line.
+
+| Path | Holds |
+| --- | --- |
+| `dfutil.toml` | Tools, pins, packages, and presets |
+| `palettes/` | Catppuccin Mocha and Latte color names for templates. `dfutil palette set latte` recolors the templated files only |
+| `scripts/` | Install helpers that dfutil's script tools run, plus `yubikey-ssh-keys.sh` |
+| `.github/` | The weekly workflow that opens a PR when a pinned version falls behind upstream |
 
 ## Key bindings
 
 ### Zellij
 
+Zellij's default bindings apply, with these changes:
+
 | Keys | Action |
-|---|---|
-| `` ` `` | Enter prefix (`tmux`) mode |
-| `` ` `` + `\` | Vertical split |
-| `` ` `` + `-` | Horizontal split |
-| `` ` `` + `hjkl` | Navigate panes |
-| `` ` `` + `H`/`J`/`K`/`L` | Move pane |
-| `` ` `` + `c` | New tab (floating picker, zoxide-aware) |
-| `` ` `` + `p` / `n` | Prev / next tab |
-| `` ` `` + `[` / `]` | Prev / next tab (alternate) |
-| `` ` `` + `1`-`9` | Jump to tab N |
-| `` ` `` + `x` | Close pane |
-| `` ` `` + `z` | Fullscreen pane |
-| `` ` `` + `f` | Toggle floating panes |
-| `` ` `` + `,` | Rename tab |
-| `` ` `` + `d` | Detach session |
-| `` ` `` + `s` | Scroll mode |
-| `` ` `` + `/` | Search |
-| `` ` `` + `o` | Session mode |
-| `Ctrl+hjkl` | Move between Zellij panes (or Neovim splits) |
-| `Ctrl+g` | Emergency toggle into/out of locked (full-passthrough) mode |
+| --- | --- |
+| `Ctrl+h`, `Ctrl+j`, `Ctrl+k`, `Ctrl+l` | Move between Zellij panes, and between Neovim splits |
+| `Alt+h`, `Alt+l` | Move focus left or right, onto the next tab at the edge |
+| `Alt+j`, `Alt+k` | Move focus down or up |
+| `Ctrl+w` | Move mode |
+| `Ctrl+y` | Copy the selection |
+| `Ctrl+g` | Lock or unlock Zellij (full passthrough to the focused app) |
 
-The status bar (bottom, via zjstatus) shows the current mode, open tabs, weather/system/battery info, and the datetime; a second bar shows context-sensitive keybinding hints (via zjstatus-hints).
+Zellij's other modes keep their default keys, such as `Ctrl+p` for panes, `Ctrl+t` for tabs, `Ctrl+s` for scroll and search, and `Ctrl+o` for sessions. Its tmux mode is turned off, so `Ctrl+b` reaches the shell.
 
-### Unified pane/split navigation
+In scroll and search mode, `y` or `Ctrl+C` copies the selection and stays in the mode.
 
-`Ctrl+h/j/k/l` navigates seamlessly between **Zellij panes** and **Neovim splits**:
+The bottom bars show the mode, tabs, weather, system load, battery, and the time (zjstatus), and keybinding hints for the current mode (zjhints).
 
-- In a normal terminal pane, `Ctrl+hjkl` moves Zellij focus
-- When `nvim`, `fzf`, `zoxide`, or `atuin` is focused, [zellij-autolock](https://github.com/fresh2dev/zellij-autolock) switches Zellij to passthrough mode so the app receives the keys
-- In Neovim, [zellij-nav.nvim](https://github.com/swaits/zellij-nav.nvim) handles the keys: navigates splits internally, and moves to adjacent Zellij panes at the edge
+### Unified pane and split navigation
 
-### Clipboard
+`Ctrl+h/j/k/l` moves across Zellij panes and Neovim splits as one grid:
 
-- Mouse highlight → auto-copies to Windows clipboard
-- In Zellij scroll mode, `Ctrl+C` copies the selection
-- Neovim uses `unnamedplus` clipboard (WSL2 → `clip.exe`)
-- Alacritty `Ctrl+Shift+C/V` for explicit copy/paste
+- In a terminal pane, the keys move Zellij focus.
+- When nvim, fzf, zoxide, atuin, or tmux is focused, [zellij-autolock](https://github.com/fresh2dev/zellij-autolock) locks Zellij so the app gets the keys.
+- In Neovim, [zellij-nav.nvim](https://github.com/swaits/zellij-nav.nvim) moves between splits, and at the edge of the window moves to the next Zellij pane.
 
-## Packages included
+### zsh
 
-### Core tools (binaries downloaded by install.sh)
+| Keys | Action |
+| --- | --- |
+| `Ctrl+R` | Search history (atuin) |
+| `Ctrl+F` | Pick a file with fzf and insert its path |
 
-`starship` · `zellij` · `nvim` · `nu` (only with `--nushell`; optional secondary shell, zsh stays the default)
+## Tools
+
+### Shell and editor
+
+`starship`, `zellij`, `nvim`, `atuin`, `zoxide`, `carapace`, and `yazi`. With the `nushell` preset, also `nu`.
 
 ### CLI tools
 
 | Tool | Alias | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | [bat](https://github.com/sharkdp/bat) | `cat` | Syntax-highlighted cat |
 | [fd](https://github.com/sharkdp/fd) | `find` | Fast find |
 | [ripgrep](https://github.com/BurntSushi/ripgrep) | `grep` | Fast grep |
-| [ripgrep-all](https://github.com/phiresky/ripgrep-all) | — | Grep PDFs, archives, etc. |
-| [eza](https://github.com/eza-community/eza) | `ls` | Modern `ls` replacement, Catppuccin Mocha themed |
-| [fzf](https://github.com/junegunn/fzf) | — | Fuzzy finder (also bound to `Ctrl+F` in zsh) |
-| [zoxide](https://github.com/ajeetdsouza/zoxide) | `cd` | Smart cd |
+| [ripgrep-all](https://github.com/phiresky/ripgrep-all) | | Grep PDFs, archives, and more (x86_64 only) |
+| [eza](https://github.com/eza-community/eza) | `ls` | `ls` replacement |
+| [fzf](https://github.com/junegunn/fzf) | | Fuzzy finder |
+| [zoxide](https://github.com/ajeetdsouza/zoxide) | `cd` | Frecency-based cd |
 | [yazi](https://github.com/sxyazi/yazi) | `y` | File manager |
 | [lazygit](https://github.com/jesseduffield/lazygit) | `lg` | Git TUI |
-| [serpl](https://github.com/yassinebridi/serpl) | — | TUI search-and-replace across files |
-| [difftastic](https://github.com/Wilfred/difftastic) | `diff` | Structural diff (also `GIT_EXTERNAL_DIFF`) |
-| [delta](https://github.com/dandavison/delta) | `gdd`/`gdds` | Syntax-highlighting pager for unified diffs (`git dd`; difftastic stays the default) |
-| [diffnav](https://github.com/dlvhdr/diffnav) | `gdn`/`gdns` | File-tree diff browser built on delta (`git dn`) |
-| [procs](https://github.com/dalance/procs) | `ps` | Process viewer |
-| [tailspin](https://github.com/bensadeh/tailspin) | `tail` | Syntax-highlighted tail |
-| [viddy](https://github.com/sachaos/viddy) | `watch` | Watch TUI |
-| [bottom](https://github.com/ClementTsang/bottom) | `btm` | System monitor TUI (standalone, not a `top` alias) |
-| [gping](https://github.com/orf/gping) | `gping` | Graphical ping |
-| [trippy](https://github.com/fujiapple852/trippy) | `trip` | Network tracer |
-| [sd](https://github.com/chmln/sd) | — | Intuitive find-and-replace (standalone, not a `sed` alias) |
-| [choose](https://github.com/theryangeary/choose) | — | Human-friendly cut/awk alternative |
-| [ouch](https://github.com/ouch-org/ouch) | — | Universal archive tool |
-| [7-Zip (7zz)](https://github.com/ip7z/7zip) | — | Archive tool |
-| [jq](https://github.com/jqlang/jq) | — | JSON processor |
-| [glow](https://github.com/charmbracelet/glow) | — | Markdown renderer in the terminal |
-| [mdcat](https://github.com/BIRSAx2/mdcat) | — | Markdown renderer with inline images and clickable links (x86_64 only) |
-| [carapace](https://github.com/carapace-sh/carapace-bin) | — | Multi-shell argument completions |
-| [atuin](https://github.com/atuinsh/atuin) | — | Shell history (SQLite-backed, per-session isolated) |
-| [tealdeer](https://github.com/tealdeer-rs/tealdeer) | `tldr` | Fast tldr pages |
-| [presenterm](https://github.com/mfontanini/presenterm) | — | Terminal slideshows |
-| [asciinema](https://github.com/asciinema/asciinema) | — | Terminal recording |
+| [serpl](https://github.com/yassinebridi/serpl) | | Search and replace across files |
+| [difftastic](https://github.com/Wilfred/difftastic) | `diff` | Structural diff, and git's default diff |
+| [delta](https://github.com/dandavison/delta) | `gdd`, `gdds` | Syntax-highlighting pager for unified diffs |
+| [diffnav](https://github.com/dlvhdr/diffnav) | `gdn`, `gdns` | File-tree diff browser built on delta |
+| [procs](https://github.com/dalance/procs) | `ps` | Process viewer (x86_64 only) |
+| [tailspin](https://github.com/bensadeh/tailspin) | `tail` | Highlighted log viewer |
+| [viddy](https://github.com/sachaos/viddy) | `watch` | `watch` with history |
+| [bottom](https://github.com/ClementTsang/bottom) (`btm`) | | System monitor |
+| [gping](https://github.com/orf/gping) | | Ping with a graph |
+| [trippy](https://github.com/fujiapple852/trippy) (`trip`) | | Network tracer |
+| [sd](https://github.com/chmln/sd) | | Find and replace, not a `sed` alias (x86_64 only) |
+| [choose](https://github.com/theryangeary/choose) | | `cut` and `awk` alternative (x86_64 only) |
+| [ouch](https://github.com/ouch-org/ouch) | | Compress and decompress any format |
+| [7-Zip](https://github.com/ip7z/7zip) (`7zz`) | | Archive tool |
+| [jq](https://github.com/jqlang/jq) | | JSON processor |
+| [glow](https://github.com/charmbracelet/glow) | | Markdown renderer |
+| [mdcat](https://github.com/BIRSAx2/mdcat) | | Markdown renderer with images and links (x86_64 only) |
+| [tealdeer](https://github.com/tealdeer-rs/tealdeer) (`tldr`) | | tldr pages |
+| [presenterm](https://github.com/mfontanini/presenterm) | | Terminal slideshows (x86_64 only) |
+| [asciinema](https://github.com/asciinema/asciinema) | | Terminal recording |
+| [ruff](https://github.com/astral-sh/ruff) and [uv](https://github.com/astral-sh/uv) | | Python linting and packaging |
+| [tree-sitter](https://github.com/tree-sitter/tree-sitter) | | Parser CLI for Neovim's treesitter |
 
-### `command` — call native system binaries
-
-When you need the original system tool instead of the Rust replacement, zsh's builtin `command` bypasses an alias:
-
-```sh
-command ls -la          # /usr/bin/ls
-command du -sh .        # /usr/bin/du
-command rm -rf /tmp/x   # /usr/bin/rm
-```
+To run the system binary instead of an alias, use zsh's `command` builtin, for example `command ls -la`.
 
 ## Notes
 
-- **zsh**: must be pre-installed (`apt install zsh` / `brew install zsh`) — `install.sh` checks for it and exits with instructions rather than installing it, since (unlike `mosh` below) it's not treated as an exception to the "no system package installs" rule.
-- **Nushell**: optional, via `--nushell`. zsh is always the default shell; `nu` is just made available to launch manually. Its config package (`~/.config/nushell/`) is only deployed when the flag is passed, so a plain `install.sh` never leaves anything nu-related behind.
-- **mosh**: installed via `apt-get` if available (no GitHub release binaries). Usually pre-installed on servers.
-- **git**: on Ubuntu/Debian with git older than 2.35, `install.sh` upgrades it via the git-core PPA — the only other exception to the "no system package installs" rule, needed for `zdiff3` merge style.
-- **zjstatus-hints**: has no usable upstream release, so `install.sh` builds it from source (requires cargo + the `wasm32-wasip1` target) off a temporary community fork branch rather than upstream `main`. See `install.sh` for details if the hints bar stops building.
-- **SSH sockets**: `~/.ssh/sockets/` is created by install.sh but not tracked in git.
+- Neovim's AI integration is the Claude Code sidebar, [claudecode.nvim](https://github.com/coder/claudecode.nvim), on `<leader>ac`.
+- VS Code's integrated terminal gets a plain shell, without Zellij.
+- One ssh-agent runs per host, at `~/.ssh/agent/<host>.sock`, shared by every shell.
+- To retrieve SSH keys stored on a YubiKey, run `scripts/yubikey-ssh-keys.sh` with the key plugged in. Under WSL2 the key has to be passed through with usbipd first; see `CLAUDE.md`.
+- `mosh` has no release binaries, so install it through the system package manager if you want it.
 
-## First-time Neovim setup
+## install.sh
 
-`install.sh` already runs a headless `:Lazy sync` automatically. If plugins didn't finish installing (e.g. it timed out on a slow connection), finish manually:
-
-```sh
-nvim
-# Inside nvim:
-# :Lazy sync
-```
-
-Plugins include LazyVim base, Catppuccin theme, zellij-nav.nvim (unified navigation), and opencode.nvim (`<leader>ao` to toggle).
+`install.sh` is the older installer, kept while fleet hosts still deploy this repo through it. It installs the same tools and links the same packages without dfutil, and `./install.sh --help` lists its flags. Don't run both on one machine: they keep separate state and both write to `~/.local/bin`.
 
 ## License
 

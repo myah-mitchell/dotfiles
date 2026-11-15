@@ -1,0 +1,435 @@
+// Zellij config: Catppuccin Mocha, hjkl navigation
+// https://zellij.dev/documentation/
+//       // Scroll with mouse wheel (native) + keyboard shortcuts
+//       //bind "PageUp"   { PageScrollUp; }
+//       //bind "PageDown" { PageScrollDown; }
+
+// -- Global options ------------------------------------------------------------
+// Test Theme by running: zellij plugin -f -- https://github.com/imsnif/theme-tester/releases/latest/download/theme-tester.wasm
+theme "catppuccin_mm"
+default_layout "default"
+default_shell "zsh"
+default_mode "normal"
+
+pane_frames        true
+pane_frame_style   "full"
+stacked_pane_list  false
+mouse_mode         true
+scroll_buffer_size 100000
+copy_on_select     false  // mouse selection auto-copies on release disabled; "y"/Ctrl+C in scroll mode yank explicitly (see keybinds below)
+copy_command       "{{ home }}/.config/zellij/scripts/clip-clean.py"  // strips Nerd Font icons before writing to the system clipboard (see script docstring); overrides copy_clipboard below
+copy_clipboard     "system"  // unused while copy_command is set; kept as the fallback if copy_command is ever removed
+simplified_ui      false
+
+session_serialization true
+pane_viewport_serialization true
+scrollback_lines_to_serialize 0
+serialization_interval 60
+post_command_discovery_hook "~/.config/zellij/scripts/resurrect-hook.sh"  // saves Claude Code panes as `claude --resume <id>`; see the script
+show_startup_tips false
+show_release_notes false
+osc8_hyperlinks true
+session_name "default"
+attach_to_session true
+
+ui {
+    pane_frames {
+        rounded_corners true
+        hide_session_name true
+    }
+}
+
+// -- Plugins -------------------------------------------------------------------
+// zellij-autolock: auto-switches to built-in locked mode when nvim/hx are
+// focused, allowing Ctrl+hjkl to pass through to those editors uninterrupted.
+// zjstatus: themed tab/status bar used by layouts/default.kdl.
+plugins {
+    autolock location="file:{{ prefix }}/share/zellij/plugins/zellij-autolock.wasm" {
+        // Start enabled? (default: true)
+        is_enabled true
+        // Lock when the running command matches this regex.
+        // (default: ".*", as shown: lock for everything)
+        // Each regex is tested against both the full command line and the
+        // bare executable name (e.g. `/usr/bin/nvim foo.txt` and `nvim`).
+        lock_regex "nvim|hx|fzf|zoxide|atuin|tmux"
+        // ...but never lock when the command matches this regex.
+        // (default: common shells and prompt tooling, as shown)
+        // A pane idle at its prompt reports the shell itself (e.g. `/bin/zsh`),
+        // so shells must be listed here.
+        ignore_regex "^(zellij|sh|ash|dash|bash|zsh|fish|ksh|mksh|csh|tcsh|nu|xonsh|elvish|pwsh|powershell|cmd|ls|lsd|eza|starship|direnv|\\(atuin\\)|atuin history start.*)(\\.exe)?$"
+        // Zellij log verbosity: trace, debug, info, warn, error, or critical. (default: "info")
+        log_level "info"
+    }
+
+    zjstatus location="file:{{ prefix }}/share/zellij/plugins/zjstatus.wasm" {
+        // Catppuccin colors, rendered from the active dfutil palette
+        color_rosewater  "{{ palette.rosewater }}"
+        color_flamingo   "{{ palette.flamingo }}"
+        color_pink       "{{ palette.pink }}"
+        color_mauve      "{{ palette.mauve }}"
+        color_red        "{{ palette.red }}"
+        color_maroon     "{{ palette.maroon }}"
+        color_peach      "{{ palette.peach }}"
+        color_yellow     "{{ palette.yellow }}"
+        color_green      "{{ palette.green }}"
+        color_teal       "{{ palette.teal }}"
+        color_sky        "{{ palette.sky }}"
+        color_sapphire   "{{ palette.sapphire }}"
+        color_blue       "{{ palette.blue }}"
+        color_lavender   "{{ palette.lavender }}"
+        color_text       "{{ palette.text }}"
+        color_subtext1   "{{ palette.subtext1 }}"
+        color_subtext0   "{{ palette.subtext0 }}"
+        color_overlay2   "{{ palette.overlay2 }}"
+        color_overlay1   "{{ palette.overlay1 }}"
+        color_overlay0   "{{ palette.overlay0 }}"
+        color_surface2   "{{ palette.surface2 }}"
+        color_surface1   "{{ palette.surface1 }}"
+        color_surface0   "{{ palette.surface0 }}"
+        color_base       "{{ palette.base }}"
+        color_mantle     "{{ palette.mantle }}"
+        color_crust      "{{ palette.crust }}"
+
+        // Pill Base
+        color_pill_icon     "{{ palette.crust }}" // crust
+        color_pill_bg       "{{ palette.surface1 }}" // surface1
+
+        // Tabs
+        color_tab_normal    "{{ palette.lavender }}" // lavender
+        color_tab_active    "{{ palette.mauve }}" // mauve
+        color_tab_rename    "{{ palette.mauve }}" // mauve
+        color_tab_trunc     "{{ palette.lavender }}" // lavender
+
+        // Commands
+        color_pill_weather  "{{ palette.flamingo }}" // flamingo
+        color_pill_notify   "{{ palette.yellow }}" // yellow
+        color_pill_dim      "{{ palette.overlay2 }}" // overlay2
+        color_pill_sysinfo  "{{ palette.pink }}" // pink
+        color_pill_battery  "{{ palette.pink }}" // pink
+        color_pill_datetime "{{ palette.maroon }}" // maroon
+
+        // Modes
+        color_pill_normal   "{{ palette.sky }}" // sky 
+        color_pill_locked   "{{ palette.red }}" // red 
+        color_pill_resize   "{{ palette.sky }}" // sky 
+        color_pill_pane     "{{ palette.sky }}" // sky 
+        color_pill_tab      "{{ palette.sky }}" // sky 
+        color_pill_scroll   "{{ palette.sky }}" // sky 
+        color_pill_entser   "{{ palette.sky }}" // sky 
+        color_pill_search   "{{ palette.sky }}" // sky 
+        color_pill_rentab   "{{ palette.sky }}" // sky 
+        color_pill_renpane  "{{ palette.sky }}" // sky 
+        color_pill_session  "{{ palette.sky }}" // sky 
+        color_pill_move     "{{ palette.sky }}" // sky 
+        color_pill_prompt   "{{ palette.sky }}" // sky 
+
+        // Default Tab Settings
+        format_left   ""
+        format_right  ""
+        format_center ""
+        format_space  "" 
+        format_hide_on_overlength "true"
+        format_precedence         "lrc"
+        hide_frame_for_single_pane "false"
+
+        // Note: this is necessary or else zjstatus won't render the pipe:
+        //pipe_zjstatus_hints_format "{output}"
+
+        // Format mode pill
+        mode_normal        "#[bg=$pill_bg,fg=$pill_normal,bold] NORMAL #[bg=$pill_normal,fg=$pill_icon,bold] 󰌌 #[fg=$pill_normal]"
+        mode_locked        "#[bg=$pill_bg,fg=$pill_locked,bold] LOCKED #[bg=$pill_locked,fg=$pill_icon,bold] 󰌾 #[fg=$pill_locked]"
+        mode_resize        "#[bg=$pill_bg,fg=$pill_resize,bold] RESIZE #[bg=$pill_resize,fg=$pill_icon,bold] 󰩨 #[fg=$pill_resize]"
+        mode_pane          "#[bg=$pill_bg,fg=$pill_pane,bold]  PANE  #[bg=$pill_pane,fg=$pill_icon,bold] 󰯌 #[fg=$pill_pane]"
+        mode_tab           "#[bg=$pill_bg,fg=$pill_tab,bold]  TAB   #[bg=$pill_tab,fg=$pill_icon,bold] 󰓩 #[fg=$pill_tab]"
+        mode_scroll        "#[bg=$pill_bg,fg=$pill_scroll,bold] SCROLL #[bg=$pill_scroll,fg=$pill_icon,bold] 󰍽 #[fg=$pill_scroll]"
+        mode_enter_search  "#[bg=$pill_bg,fg=$pill_entser,bold] ENTSER #[bg=$pill_entser,fg=$pill_icon,bold] 󰛭 #[fg=$pill_entser]"
+        mode_search        "#[bg=$pill_bg,fg=$pill_search,bold] SEARCH #[bg=$pill_search,fg=$pill_icon,bold] 󰍉 #[fg=$pill_search]"
+        mode_rename_tab    "#[bg=$pill_bg,fg=$pill_rentab,bold] RENTAB #[bg=$pill_rentab,fg=$pill_icon,bold] 󰑕 #[fg=$pill_rentab]"
+        mode_rename_pane   "#[bg=$pill_bg,fg=$pill_renpan,bold] RENPAN #[bg=$pill_renpan,fg=$pill_icon,bold] 󰏫 #[fg=$pill_renpan]"
+        mode_session       "#[bg=$pill_bg,fg=$pill_session,bold] SESION #[bg=$pill_session,fg=$pill_icon,bold] 󰍺 #[fg=$pill_session]"
+        mode_move          "#[bg=$pill_bg,fg=$pill_move,bold]  MOVE  #[bg=$pill_move,fg=$pill_icon,bold] 󰆾 #[fg=$pill_move]"
+        mode_prompt        "#[bg=$pill_bg,fg=$pill_prompt,bold] PROMPT #[bg=$pill_prompt,fg=$pill_icon,bold] 󰞷 #[fg=$pill_prompt]"
+        mode_default_to_mode "normal"
+
+        // Format tabs pill
+        tab_separator " "
+        tab_normal    "#[fg=$tab_normal]#[bg=$tab_normal,fg=$pill_icon,bold]{index} #[bg=$pill_bg,fg=$tab_normal,bold] {name}{sync_indicator}{fullscreen_indicator}{floating_indicator}#[fg=$pill_bg]"
+        tab_active    "#[fg=$tab_active]#[bg=$tab_active,fg=$pill_icon,bold]{index} #[bg=$pill_bg,fg=$tab_active,bold] {name}{sync_indicator}{fullscreen_indicator}{floating_indicator}#[fg=$pill_bg]"
+        tab_rename    "#[fg=$tab_active]#[bg=$tab_active,fg=$pill_icon,bold]{index} #[bg=$pill_bg,fg=$tab_active,bold] {name}{sync_indicator}{fullscreen_indicator}{floating_indicator}#[fg=$pill_bg]"
+        tab_sync_indicator       " 󰓦"
+        tab_fullscreen_indicator " 󰊓"
+        tab_floating_indicator   " 󰉈"
+
+        // Limit tab display count
+        tab_display_count         "9"  // limit to showing tabs
+        tab_truncate_start_format "#[fg=$tab_trunk]#[bg=$tab_trunk,fg=$pill_icon,bold]< #[bg=$pill_bg,fg=$tab_trunk,bold] +{count}#[fg=$pill_bg] "
+        tab_truncate_end_format   " #[fg=$tab_trunk]#[bg=$tab_trunk,fg=$pill_icon,bold]> #[bg=$pill_bg,fg=$tab_trunk,bold] +{count}#[fg=$pill_bg]"
+
+        // Format notifications pill
+        notification_format_unread           "#[fg=$pill_notify]#[bg=$pill_notify,fg=$pill_icon,dim] #[bg=$pill_bg,fg=$pill_notify,bold] {message} #[fg=$pill_bg]"
+        notification_format_no_notifications "#[fg=$pill_dim]#[bg=$pill_dim,fg=$pill_icon] #[bg=$pill_bg,fg=$pill_dim] None #[fg=$pill_bg]"
+        notification_show_interval           "5"
+
+        // Weather script pill - Caches API results for 15 minutes
+        command_weather_command  "{{ home }}/.config/zellij/scripts/weather.py"
+        command_weather_format   "#[fg=$pill_weather]#[bg=$pill_weather,fg=$pill_icon]󱦥 #[bg=$pill_bg,fg=$pill_weather,bold] {stdout}#[fg=$pill_bg]"
+        command_weather_interval "60"
+      
+        // System Info script pill
+        command_sysinfo_command  "{{ home }}/.config/zellij/scripts/sysinfo.py"
+        command_sysinfo_format   "#[fg=$pill_sysinfo]#[bg=$pill_sysinfo,fg=$pill_icon]󰓅 #[bg=$pill_bg,fg=$pill_sysinfo,bold]  {stdout}#[fg=$pill_bg]"
+        command_sysinfo_interval "60" 
+      
+        // Battery script pill - Caches API results for 15 minutes
+        command_battery_command  "{{ home }}/.config/zellij/scripts/battery.py"
+        command_battery_format   "#[fg=$pill_battery]#[bg=$pill_battery,fg=$pill_icon] #[bg=$pill_bg,fg=$pill_battery,bold] {stdout}#[fg=$pill_bg]"
+        command_battery_interval "60"
+
+        // Format datetime pill
+        datetime                 "#[fg=$pill_datetime]#[bg=$pill_datetime,fg=$pill_icon]󰃭 #[bg=$pill_bg,fg=$pill_datetime,bold] {format} "
+        datetime_format          "%a %b %d, %I:%M%P"
+        datetime_timezone        "US/Central"
+
+        // Format username
+        command_user_command     "whoami"
+        command_user_format      "{stdout}"
+        command_user_interval    "0"
+        command_user_rendermode  "static"
+
+        // Format hostname
+        command_host_command     "uname -n"
+        command_host_format      "{stdout}"
+        command_host_interval    "0"
+        command_host_rendermode  "static"
+    }
+    zjhints location="file:{{ prefix }}/share/zellij/plugins/zjhints.wasm" {
+
+        // Hard cap on the width of the hint line, in columns
+        max_length 0 // 0 = unlimited
+        // Fit the hints to the terminal, dropping trailing hints as it
+        // narrows. Reserve columns for whatever shares the bar.
+        auto_width true // default
+        reserve_columns 0 // default
+        // Set to 2 if your terminal draws Nerd Font glyphs double-width.
+        ambiguous_width 1 // default
+        // Appended when a single hint is too wide to fit even alone
+        overflow_str "..." // default
+        // Name of the pipe for zjstatus integration
+        //pipe_name "zjstatus_hints" // default
+        // Hide hints in base mode (a.k.a. default mode)
+        // E.g. if you have set default_mode to "locked", then
+        // you can hide hints in the locked mode by setting this to true
+        hide_in_base_mode false // default
+
+        // Render nothing while this session is nested inside another, so
+        // one shared layout can serve both. See docs/nested-sessions.md.
+        hide_when_nested true // default
+        // Hand this plugin's layout row back to the panes around it while
+        // the bar has nothing to draw, rather than leaving a blank line.
+        // See docs/nested-sessions.md#giving-the-row-back.
+        collapse_when_empty true // default
+        // Dim hints while this session isn't the one receiving input.
+        dim_when_unfocused true // default
+        dim_strength       "0.5" // default, 0.0-1.0 (quoted: Zellij's plugin-config
+                                 // parser only accepts strings, ints, and bools for a
+                                 // node value, so a bare decimal like 0.5 fails to load)
+
+        // Prefix the hints line with the current mode. Useful when this
+        // plugin runs in its own pane rather than piped into zjstatus's
+        // {mode} widget. mode_format_<mode> (e.g. mode_format_normal) gives
+        // a single mode its own icon, the same as zjstatus's mode_normal.
+        // See docs/nested-sessions.md#standing-alone.
+        show_mode true // default false
+
+        mouse true
+        mouse_nested true
+
+        // Also show every other keybinding your config enables, beyond the
+        // curated list. See "Discovered hints".
+        discover_hints true
+        // Hide bindings that every mode inherits from the base mode, so each
+        // mode only advertises what is new in it. See "Discovered hints".
+        hide_shared_hints true // default
+        // When a hint is bound to both hjkl and the arrows, show only one
+        // family: "both" (default), "arrows", or "letters".
+        direction_keys "letters"
+        // How keys within a hint are ordered: a keyboard layout
+        // ("qwerty", "dvorak", "colemak"), "abcdef", or "none".
+        key_order "qwerty" // default
+        // Pin hints to the start or end of each mode; "*" is everything
+        // else. Unset leaves the order each mode builds.
+        hint_order "new, *, focus, lock, quit, exit"
+        // Override or hide any hint's label by its concept id; an empty
+        // value hides it. See "Labels" below for the full list of ids.
+        label_switch_to_mode_normal "exit"
+        label_locked_switch_to_mode_normal "unlock"
+        label_next_swap_layout "swap layout"
+        label_previous_swap_layout "swap layout"
+        label_new_pane_stacked "stacked"
+        label_new_pane_down "split"
+        label_new_pane_right "split"
+        label_select "" //Remove unused "select" action that causes issues.
+
+        // Pill Base
+        color_pill_icon     "{{ palette.crust }}" // crust
+        color_pill_bg       "{{ palette.surface1 }}" // surface1
+
+        // Hints
+        color_pill_hint    "{{ palette.mauve }}" // mauve
+
+        // Modes
+        color_pill_normal   "{{ palette.sky }}" // sky 
+        color_pill_locked   "{{ palette.red }}" // red 
+        color_pill_resize   "{{ palette.sky }}" // sky 
+        color_pill_pane     "{{ palette.sky }}" // sky 
+        color_pill_tab      "{{ palette.sky }}" // sky 
+        color_pill_scroll   "{{ palette.sky }}" // sky 
+        color_pill_entser   "{{ palette.sky }}" // sky 
+        color_pill_search   "{{ palette.sky }}" // sky 
+        color_pill_rentab   "{{ palette.sky }}" // sky 
+        color_pill_renpane  "{{ palette.sky }}" // sky 
+        color_pill_session  "{{ palette.sky }}" // sky 
+        color_pill_move     "{{ palette.sky }}" // sky 
+        color_pill_prompt   "{{ palette.sky }}" // sky 
+
+        // Optionally style the hints using zjstatus-style format strings.
+        // When unset, the current Zellij theme palette is used automatically.
+        // `{key}` and `{desc}` are replaced with the keybinding and its label.
+        // See the "Styling" section below for the full syntax.
+        key_format "#[fg=$pill_hint]#[bg=$pill_hint,fg=$pill_icon,bold]{key} "
+        desc_format "#[bg=$pill_bg,fg=$pill_hint,bold] {desc}#[fg=$pill_bg]"
+        keys_go_to_tab "1-9"      // instead of 123456789
+        // Drawn between hints (never before the first or after the last).
+        // Also a format string, so it can be a styled glyph, not just space.
+        hint_spacer " "
+        // Shown where hints were dropped because the window is too narrow.
+        drop_indicator "#[fg=$pill_hint]#[bg=$pill_hint,fg=$pill_icon,bold] #[bg=$pill_bg,fg=$pill_hint,bold]...#[fg=$pill_bg] "
+        // Which pinned group outlives the oth
+        hint_precedence "tl" //default
+
+        // Format mode pill
+        mode_format_normal        "#[bg=$pill_bg,fg=$pill_normal,bold] NORMAL #[bg=$pill_normal,fg=$pill_icon,bold] 󰌌 #[fg=$pill_normal] "
+        mode_format_locked        "#[bg=$pill_bg,fg=$pill_locked,bold] LOCKED #[bg=$pill_locked,fg=$pill_icon,bold] 󰌾 #[fg=$pill_locked] "
+        mode_format_resize        "#[bg=$pill_bg,fg=$pill_resize,bold] RESIZE #[bg=$pill_resize,fg=$pill_icon,bold] 󰩨 #[fg=$pill_resize] "
+        mode_format_pane          "#[bg=$pill_bg,fg=$pill_pane,bold]  PANE  #[bg=$pill_pane,fg=$pill_icon,bold] 󰯌 #[fg=$pill_pane] "
+        mode_format_tab           "#[bg=$pill_bg,fg=$pill_tab,bold]  TAB   #[bg=$pill_tab,fg=$pill_icon,bold] 󰓩 #[fg=$pill_tab] "
+        mode_format_scroll        "#[bg=$pill_bg,fg=$pill_scroll,bold] SCROLL #[bg=$pill_scroll,fg=$pill_icon,bold] 󰍽 #[fg=$pill_scroll] "
+        mode_format_enter_search  "#[bg=$pill_bg,fg=$pill_entser,bold] ENTSER #[bg=$pill_entser,fg=$pill_icon,bold] 󰛭 #[fg=$pill_entser] "
+        mode_format_search        "#[bg=$pill_bg,fg=$pill_search,bold] SEARCH #[bg=$pill_search,fg=$pill_icon,bold] 󰍉 #[fg=$pill_search] "
+        mode_format_rename_tab    "#[bg=$pill_bg,fg=$pill_rentab,bold] RENTAB #[bg=$pill_rentab,fg=$pill_icon,bold] 󰑕 #[fg=$pill_rentab] "
+        mode_format_rename_pane   "#[bg=$pill_bg,fg=$pill_renpan,bold] RENPAN #[bg=$pill_renpan,fg=$pill_icon,bold] 󰏫 #[fg=$pill_renpan] "
+        mode_format_session       "#[bg=$pill_bg,fg=$pill_session,bold] SESION #[bg=$pill_session,fg=$pill_icon,bold] 󰍺 #[fg=$pill_session] "
+        mode_format_move          "#[bg=$pill_bg,fg=$pill_move,bold]  MOVE  #[bg=$pill_move,fg=$pill_icon,bold] 󰆾 #[fg=$pill_move] "
+        mode_format_prompt        "#[bg=$pill_bg,fg=$pill_prompt,bold] PROMPT #[bg=$pill_prompt,fg=$pill_icon,bold] 󰞷 #[fg=$pill_prompt] "
+
+        // Optionally replace key names with symbols, e.g. show ENTER as ↵.
+        // Uses the same per-line alias pattern (see "Key aliases" below).
+        key_alias_enter     "⏎"
+        key_alias_esc       "⎋"
+        key_alias_tab       "⇥"
+        key_alias_space     "␣"
+        key_alias_backspace "⌫"
+        key_alias_delete    "⌦"
+        key_alias_insert    "⎀"
+        key_alias_left      "←"
+        key_alias_down      "↓"
+        key_alias_up        "↑"
+        key_alias_right     "→"
+        key_alias_home      "⇱"
+        key_alias_end       "⇲"
+        key_alias_pageup    "⇞"
+        key_alias_pagedown  "⇟"
+
+        // Likewise for modifiers: show Ctrl as ^ and Alt as ⌥.
+        mod_alias_ctrl   "^"
+        mod_alias_alt    "⌥"
+        mod_alias_shift  "⇧"
+        mod_alias_super  "⌘"
+    }
+}
+
+load_plugins {
+    autolock
+    zjhints
+}
+
+keybinds clear-defaults=false {
+
+    normal {
+        bind "Ctrl w" { SwitchToMode "Move"; }
+    }
+    resize {
+    }
+    pane {
+        unbind "h" "Left" //{ MoveFocus "Left"; }
+        unbind "l" "Right" //{ MoveFocus "Right"; }
+        unbind "j" "Down" //{ MoveFocus "Down"; }
+        unbind "k" "Up" //{ MoveFocus "Up"; }
+    }
+    move {
+    }
+    tab {
+    }
+    scroll {
+        bind "/"         { SwitchToMode "EnterSearch"; SearchInput 0; }
+        // tmux/vim-style yank: select with the mouse, then y/Ctrl+C copies and
+        // stays in scroll mode - overrides Zellij's default Ctrl+C (ScrollToBottom).
+        bind "y" "Ctrl c" { Copy; }
+
+        unbind "Ctrl c" //{ ScrollToBottom; SwitchToMode "Normal"; }
+    }
+    search {
+        // tmux/vim-style yank: select with the mouse, then y/Ctrl+C copies and
+        // stays in scroll mode - overrides Zellij's default Ctrl+C (ScrollToBottom).
+        bind "y" "Ctrl c" { Copy; }
+
+        unbind "Ctrl c" //{ ScrollToBottom; SwitchToMode "Normal"; }
+    }
+    entersearch {
+    }
+    renametab {
+    }
+    renamepane {
+    }
+    session {
+    }
+    locked {
+        bind "Ctrl g" { 
+            // Enable the autolock plugin.
+            MessagePlugin "autolock" {payload "toggle";};
+            // Unlock Zellij.
+            SwitchToMode "Normal"; 
+        }
+    }
+    shared {
+        bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
+        bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
+        bind "Alt j" "Alt Down" { MoveFocus "Down"; }
+        bind "Alt k" "Alt Up" { MoveFocus "Up"; }
+
+        bind "Ctrl y" { Copy; }
+    }
+    shared_except "locked" {
+        // Ctrl+hjkl: pane navigation (intercepted when NOT in nvim/hx)
+        // zellij-autolock will switch to built-in locked mode when nvim/hx runs,
+        // which bypasses these bindings and lets the editor handle them.
+        bind "Ctrl h" { MoveFocus "Left"; }
+        bind "Ctrl j" { MoveFocus "Down"; }
+        bind "Ctrl k" { MoveFocus "Up"; }
+        bind "Ctrl l" { MoveFocus "Right"; }
+        bind "Ctrl g" {
+            // Disable the autolock plugin.
+            MessagePlugin "autolock" {payload "toggle";};
+            // Lock Zellij.
+            SwitchToMode "Locked";
+        }
+        unbind "Ctrl b" //{ SwitchToMode "Tmux"; }
+        //unbind "Ctrl q" //{ Quit; }
+        unbind "Alt f" //{ ToggleFloatingPanes; }
+        unbind "Alt n" //{ NewPane; }
+        unbind "Alt i" //{ MoveTab "Left"; }
+        unbind "Alt o" //{ MoveTab "Right"; }
+        unbind "Alt =" "Alt +" //{ Resize "Increase"; }
+        unbind "Alt -" //{ Resize "Decrease"; }
+    }
+}

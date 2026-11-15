@@ -1,0 +1,205 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+[](color_surface0)\
+$os\
+$time\
+[](fg:prev_bg bg:color_maroon)\
+$sudo\
+$username\
+$hostname\
+[](fg:prev_bg bg:color_yellow)\
+$directory\
+[](fg:prev_bg bg:color_teal)\
+$git_branch\
+$git_commit\
+$git_status\
+[](fg:prev_bg bg:color_blue)\
+$rust\
+$nodejs\
+$php\
+$python\
+[](fg:prev_bg bg:color_mauve)\
+$docker_context\
+$jobs\
+[](fg:prev_bg bg:color_surface0)\
+$cmd_duration\
+[](fg:prev_bg)\
+$line_break$character"""
+
+
+# Options
+palette = 'catppuccin'
+continuation_prompt = '--> '
+add_newline = true
+
+# Modules (in used order)
+# Gray Pill
+[os]
+disabled = false
+style = "bg:prev_bg fg:color_crust"
+format = "[$symbol]($style)"
+
+[time]
+disabled = false
+time_format = "%F %R:%6f"
+style = "bg:prev_bg fg:color_text "
+format = '[$time ]($style)'
+
+# Red Pill
+
+[sudo]
+symbol = "󱎚"
+disabled = false
+style = "bg:prev_bg fg:color_crust"
+format = "[$symbolSUDO ]($style)"
+
+[username]
+show_always = true
+style_user = "bg:prev_bg fg:color_crust"
+style_root = "bg:prev_bg fg:prev_fg"
+format = '[$user]($style)'
+
+[hostname]
+ssh_symbol = ""
+ssh_only = false
+trim_at = '.l'
+style = "bg:prev_bg fg:prev_fg "
+format = "[@$hostname ($ssh_symbol )]($style)"
+
+# Yellow Pill
+
+[directory]
+read_only = "󰌾"
+truncate_to_repo = false
+truncation_length = 10
+truncation_symbol = "…/"
+style = "bg:prev_bg fg:color_crust"
+format = "[($read_only)]($style)[$path ]($style)"
+
+# Green Pill
+
+[git_branch]
+symbol = ""
+style = "bg:prev_bg fg:color_crust "
+format = "[$symbol$branch ]($style)"
+
+[git_commit]
+tag_symbol = "🏷"
+commit_hash_length = 7
+style = "bg:prev_bg fg:prev_fg"
+format = "[$hash$tag ]($style)"	
+
+[git_status]
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[($all_status$ahead_behind )]($style)'
+
+# Blue Pill
+
+[rust]
+symbol = ""
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[$symbol( $version) ]($style)'
+
+[nodejs]
+symbol = ""
+style = "fbg:prev_bg g:color_crust"
+format = '[$symbol( $version) ](fg:color_crust bg:prev_bg)' # bug, must set explicitly
+
+[php]
+symbol = ""
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[$symbol( $version) ]($style)'
+
+[python]
+symbol = ""
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[$symbol( $version)( $virtualenv) ]($style)' 
+
+# Purple Pill
+
+[docker_context]
+symbol = ""
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = '[$symbol( $context) ]($style)'
+
+[jobs]
+symbol = "󰆅"
+symbol_threshold = 2
+number_threshold = 2
+style = "bg:prev_bg fg:color_crust" # fg redefined, as prev module may not exist
+format = "[$symbol($number )]($style)"
+
+# Gray Pill
+
+[cmd_duration]
+min_time = 1_000
+show_milliseconds = true
+style = "bg:prev_bg fg:prev_fg"
+format = "[$duration ]($style)"
+
+# New Line
+
+[character]
+disabled = false
+success_symbol = '[](bold fg:color_green)'
+error_symbol = '[](bold fg:color_red)'
+
+# Theme
+
+[palettes.catppuccin]
+color_rosewater = "{{ palette.rosewater }}"
+color_flamingo = "{{ palette.flamingo }}"
+color_pink = "{{ palette.pink }}"
+color_mauve = "{{ palette.mauve }}"
+color_red = "{{ palette.red }}"
+color_maroon = "{{ palette.maroon }}"
+color_peach = "{{ palette.peach }}"
+color_yellow = "{{ palette.yellow }}"
+color_green = "{{ palette.green }}"
+color_teal = "{{ palette.teal }}"
+color_sky = "{{ palette.sky }}"
+color_sapphire = "{{ palette.sapphire }}"
+color_blue = "{{ palette.blue }}"
+color_lavender = "{{ palette.lavender }}"
+color_text = "{{ palette.text }}"
+color_subtext1 = "{{ palette.subtext1 }}"
+color_subtext0 = "{{ palette.subtext0 }}"
+color_overlay2 = "{{ palette.overlay2 }}"
+color_overlay1 = "{{ palette.overlay1 }}"
+color_overlay0 = "{{ palette.overlay0 }}"
+color_surface2 = "{{ palette.surface2 }}"
+color_surface1 = "{{ palette.surface1 }}"
+color_surface0 = "{{ palette.surface0 }}"
+color_base = "{{ palette.base }}"
+color_mantle = "{{ palette.mantle }}"
+color_crust = "{{ palette.crust }}"
+
+# OS Symbols
+
+[os.symbols]
+Alpine = "[](fg:color_teal bg:prev_fg)"
+Amazon = "[](fg:color_peach bg:prev_fg)"
+Android = "[](fg:color_green bg:prev_fg)"
+Arch = "[󰣇](fg:color_blue bg:prev_fg)"
+Artix = "[󰣇](fg:color_blue bg:prev_fg)"
+CachyOS = "[󰣇](fg:color_blue bg:prev_fg)"
+CentOS = "[](fg:color_blue bg:prev_fg)"
+Debian = "[󰣚](fg:color_red bg:prev_fg)"
+Elementary = "[](fg:color_text bg:prev_fg)"
+EndeavourOS = "[](fg:color_purple bg:prev_fg)"
+Fedora = "[󰣛](fg:color_red bg:prev_fg)"
+FreeBSD = "[](fg:color_red bg:prev_fg)"
+Gentoo = "[󰣨](fg:color_text bg:prev_fg)"
+Kali = "[](fg:color_text bg:prev_fg)"
+Linux = "[󰌽](fg:color_text bg:prev_fg)"
+Macos = "[󰀵](fg:color_text bg:prev_fg)"
+Manjaro = "[](fg:color_green bg:prev_fg)"
+Mint = "[󰣭](fg:color_green bg:prev_fg)"
+Pop = "[](fg:color_teal bg:prev_fg)"
+Raspbian = "[󰐿](fg:color_red bg:prev_fg)"
+RedHatEnterprise = "[󱄛](fg:color_red bg:prev_fg)"
+Redhat = "[󱄛](fg:color_red bg:prev_fg)"
+SUSE = "[](fg:color_green bg:prev_fg)"
+Ubuntu = "[](fg:color_peach bg:prev_fg)"
+Windows = "[](fg:color_blue bg:prev_fg)"

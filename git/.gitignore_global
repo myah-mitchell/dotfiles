@@ -1,4 +1,4 @@
-# Global gitignore — patterns ignored in all repos
+# Global gitignore: patterns ignored in all repos
 
 # ── OS files ────────────────────────────────────────────────────────────────
 .DS_Store

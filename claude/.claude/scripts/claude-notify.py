@@ -2,20 +2,20 @@
 # -*- coding: utf-8 -*-
 """Bridges Claude Code's Notification hook into the zjstatus notification pill.
 
-Registered (with no matcher — catch-all) as the `Notification` hook in
+Registered (with no matcher, so catch-all) as the `Notification` hook in
 claude/.claude/settings.json, so this runs on every notification event and
 does its own filtering here instead of relying on Claude Code's matcher.
 
 Edit NOTIFY_TYPES below to change which notification types surface in the
-zjstatus pill — see Claude Code's hooks docs for the full set of
+zjstatus pill. See Claude Code's hooks docs for the full set of
 notification_type values (e.g. auth_success, elicitation_dialog, ...).
 
 Forwards a match via `zellij pipe "zjstatus::notify::<message>"`, which is
 zjstatus's own pipe protocol for pushing into its notifications widget
-(already wired up in config.kdl/default.kdl — nothing to configure there).
+(already wired up in config.kdl/default.kdl; nothing to configure there).
 
 This is a side-effect-only hook (Notification supports no decision control),
-so every failure path is swallowed and the script always exits 0 — a broken
+so every failure path is swallowed and the script always exits 0: a broken
 zellij, a missing session, or a malformed payload must never surface as a
 Claude Code error.
 """

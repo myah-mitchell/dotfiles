@@ -1,4 +1,4 @@
-# .zshrc — interactive shell configuration, sourced after .zshenv
+# .zshrc: interactive shell configuration, sourced after .zshenv
 
 # ── History ───────────────────────────────────────────────────────────────────
 HISTFILE="$HOME/.local/share/zsh/history"
@@ -13,13 +13,13 @@ setopt HIST_IGNORE_SPACE   # don't record lines starting with a space
 # this HISTFILE is just zsh's own plain backing store.
 
 # ── Editing ───────────────────────────────────────────────────────────────────
-# Emacs keybindings (zsh's default — no modal insert/normal split). Vi mode
+# Emacs keybindings (zsh's default, no modal insert/normal split). Vi mode
 # (bindkey -v) was tried for parity with Nu's edit_mode: vi and with Neovim,
-# but its modal state kept getting entered by accident (a stray Esc-prefixed
-# escape sequence — Home/Delete/arrows all start with one — landing you in vi
-# command mode, where ordinary letters act as commands instead of inserting
-# text, and `~` specifically toggles the case of the character under the
-# cursor). bindkey -e forces emacs mode explicitly rather than relying on
+# but its modal state kept getting entered by accident. Home, Delete, and the
+# arrows all send Esc-prefixed escape sequences, and a stray one lands you in
+# vi command mode, where ordinary letters act as commands instead of inserting
+# text and `~` toggles the case of the character under the cursor.
+# bindkey -e forces emacs mode explicitly rather than relying on
 # zsh's own EDITOR/VISUAL-based default-keymap detection.
 bindkey -e
 unsetopt BEEP               # no terminal bell (and no visual-bell screen flash it
@@ -27,11 +27,11 @@ unsetopt BEEP               # no terminal bell (and no visual-bell screen flash 
 
 # KEYTIMEOUT is how long (in hundredths of a second) zsh waits after a lone
 # ESC byte to see if more bytes follow as part of a longer escape sequence
-# (arrow keys, Delete, Home/End all start with ESC — as do emacs mode's own
+# (arrow keys, Delete, Home/End all start with ESC, as do emacs mode's own
 # Alt-key combos, which terminals send as Esc+key). The 40 (400ms) default is
 # tuned for old slow serial links; on a modern terminal the whole sequence
-# arrives in one read(), but if it's ever a beat late — WSL2, Zellij
-# passthrough, just typing fast — zsh can misread a split sequence. 1 (10ms)
+# arrives in one read(), but if it's ever a beat late (WSL2, Zellij
+# passthrough, just typing fast), zsh can misread a split sequence. 1 (10ms)
 # all but eliminates that race.
 KEYTIMEOUT=1
 
@@ -43,7 +43,7 @@ KEYTIMEOUT=1
 [[ -n "${terminfo[kend]}"  ]] && bindkey -M emacs "${terminfo[kend]}"  end-of-line
 # terminfo's khome/kend report the *application cursor-key mode* sequences
 # (^[OH / ^[OF), but zsh's line editor never puts the terminal into that
-# mode — at a bare prompt Alacritty sends the *normal-mode* forms instead
+# mode. At a bare prompt Alacritty sends the *normal-mode* forms instead
 # (^[[H / ^[[F), which the terminfo lookup above misses entirely. Some
 # terminals (rxvt/putty-style) use a third, numbered form (^[[1~ / ^[[4~).
 # Bind all three directly so it works regardless of which one is actually
@@ -53,7 +53,7 @@ bindkey -M emacs '^[[1~' beginning-of-line
 bindkey -M emacs '^[[F' end-of-line
 bindkey -M emacs '^[[4~' end-of-line
 # PageUp/PageDown -> cycle history entries that start with whatever's already
-# typed (the standard readline/bash convention) — a quick prefix-based
+# typed (the standard readline/bash convention), a quick prefix-based
 # complement to atuin's fuzzy full-text Ctrl+R search above.
 [[ -n "${terminfo[kpp]}" ]] && bindkey -M emacs "${terminfo[kpp]}" history-beginning-search-backward
 [[ -n "${terminfo[knp]}" ]] && bindkey -M emacs "${terminfo[knp]}" history-beginning-search-forward
@@ -65,38 +65,87 @@ zstyle ':completion:*' menu select
 # Case-insensitive matching. Tried 'exact match first, case-insensitive
 # fallback' (matcher-list '' 'm:{a-zA-Z}={A-Za-z}') so same-name case
 # duplicates (Foo.txt/foo.txt) would resolve to the exact typed case instead
-# of listing both — but zsh's matcher-list picks the *first* spec with *any*
+# of listing both. But zsh's matcher-list picks the *first* spec with *any*
 # match and stops there, so it also hid genuinely different files: with
 # read-this.md and README.md both present, typing r<Tab> matched
 # read-this.md exactly and never even considered README.md. That's worse, so
-# back to plain folding — every case-insensitive match is shown; the rare
+# back to plain folding: every case-insensitive match is shown; the rare
 # same-name-different-case collision just shows up as an ambiguous pair too.
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 # LIST_AMBIGUOUS is on by default: when there's a common prefix to insert,
 # zsh inserts it *without* showing the menu, requiring a second Tab press to
-# actually see it — the classic "why do I have to hit Tab twice" complaint.
+# actually see it, the classic "why do I have to hit Tab twice" complaint.
 # Unset it so the grid menu appears on the very first Tab whenever the match
 # isn't already unambiguous (single match still just completes normally).
 unsetopt LIST_AMBIGUOUS
 
 # ── SSH agent ─────────────────────────────────────────────────────────────────
-_ssh_agent_socket="$HOME/.ssh/ssh-agent.sock"
-if [[ ! -S "$_ssh_agent_socket" ]]; then
-  ssh-agent -a "$_ssh_agent_socket" |
-    awk -F'[=;]' '/SSH_AGENT_PID/ {print $2}' >"$HOME/.ssh/ssh-agent.pid"
-fi
-export SSH_AUTH_SOCK="$_ssh_agent_socket"
-unset _ssh_agent_socket
+# One agent per host, shared by every shell on it. The socket has a fixed,
+# per-host path (so a home directory shared between hosts still gets one agent
+# each), which means shells and Zellij panes started at any time find the same
+# agent, and keep working after it's restarted.
+#
+# Checking only that the socket file exists isn't enough: a crashed or killed
+# agent leaves its socket behind. Each shell asks the agent to answer instead
+# (`ssh-add -l` exits 2 only when nothing is listening) and starts a fresh one
+# if it doesn't. A lock around the check stops shells that open at the same
+# moment, such as a resurrected Zellij session's panes, from starting two.
+_ssh_agent_start() {
+  emulate -L zsh
+  local dir="$HOME/.ssh/agent" name="${HOST%%.*}"
+  local sock="$dir/$name.sock" pidfile="$dir/$name.pid" lock="$dir/$name.lock"
+  local fd pid
+  export SSH_AUTH_SOCK="$sock"
+  mkdir -p -m 700 "$dir" || return
+  zmodload -F zsh/system b:zsystem || return
+  : >>"$lock" # zsystem flock won't create a missing lock file
+  zsystem flock -t 5 -f fd "$lock" || return
+  # A hung agent would hang every new shell with it, so the check gets three
+  # seconds. It's polled in-shell because coreutils `timeout` adds about
+  # 100ms to every shell start; a healthy agent answers in a few.
+  setopt no_monitor no_notify
+  zmodload -F zsh/zselect b:zselect || return
+  local rc=124 check tries
+  command ssh-add -l >/dev/null 2>&1 &
+  check=$!
+  for tries in {1..300}; do
+    if ! kill -0 $check 2>/dev/null; then
+      wait $check
+      rc=$?
+      break
+    fi
+    zselect -t 1 # hundredths of a second
+  done
+  (( rc == 124 )) && kill -KILL $check 2>/dev/null
+  if (( rc == 2 || rc == 124 )); then
+    # Kill the old agent if it's still running but not answering. The comm
+    # check keeps a recycled PID from killing some unrelated process.
+    [[ -r $pidfile ]] && pid=$(<$pidfile)
+    if [[ $pid == <-> && $(</proc/$pid/comm) == ssh-agent ]] 2>/dev/null; then
+      kill -KILL $pid 2>/dev/null
+    fi
+    rm -f "$sock"
+    command ssh-agent -a "$sock" -s |
+      sed -n 's/^SSH_AGENT_PID=\([0-9]*\);.*/\1/p' >|"$pidfile"
+  fi
+  zsystem flock -u $fd
+}
+_ssh_agent_start
+unfunction _ssh_agent_start
 
 # ── Tool integrations ─────────────────────────────────────────────────────────
-if [[ "$TERM" != "dumb" ]]; then
+if [[ "$TERM" != "dumb" && -f ~/.local/share/dfutil/init/init.zsh ]]; then
+  # dfutil writes one script that sources every tool's init.
+  source ~/.local/share/dfutil/init/init.zsh
+elif [[ "$TERM" != "dumb" ]]; then
+  # install.sh writes one script per tool.
   [[ -f ~/.local/share/zoxide/init.zsh ]] && source ~/.local/share/zoxide/init.zsh
   [[ -f ~/.local/share/atuin/init.zsh ]] && source ~/.local/share/atuin/init.zsh
   [[ -f ~/.cache/starship/init.zsh ]] && source ~/.cache/starship/init.zsh
   [[ -f ~/.cache/carapace/init.zsh ]] && source ~/.cache/carapace/init.zsh
 fi
 
-# Carapace bridges ~700 commands — including cp/ls/mv/rm/cat/mkdir/etc — to
+# Carapace bridges ~700 commands (including cp/ls/mv/rm/cat/mkdir/etc) to
 # its own external completion engine, which generates and filters candidates
 # itself (via the carapace binary) before zsh's matcher-list zstyle above
 # ever sees them. That's why the case-insensitive fold matching set up in
@@ -124,8 +173,13 @@ compdef _ln ln
 # boot-time `login -- $USER` under WSL2), not a real terminal. Zellij panes
 # inherit the environment of whichever client starts the server, so a dumb
 # client resurrecting the session would give every restored pane TERM=dumb.
+# VS Code (and its forks, which set the same TERM_PROGRAM) gets a plain shell
+# in its integrated terminal, local or over Remote-SSH. It also runs a hidden
+# interactive shell to read the environment, marked with
+# VSCODE_RESOLVING_ENVIRONMENT, which must never start or attach to Zellij.
 zellij_autostart() {
-  if [[ -z "$ZELLIJ" && -z "$NVIM" && "$TERM" != "dumb" ]]; then
+  if [[ -z "$ZELLIJ" && -z "$NVIM" && "$TERM" != "dumb" &&
+    "$TERM_PROGRAM" != "vscode" && -z "$VSCODE_RESOLVING_ENVIRONMENT" ]]; then
     if [[ "$ZELLIJ_AUTO_ATTACH" == "true" ]]; then
       zellij attach --create --remember default
     else
@@ -137,7 +191,7 @@ zellij_autostart() {
 }
 [[ -o interactive ]] && zellij_autostart
 
-# ── Yazi wrapper — changes directory on exit ──────────────────────────────────
+# ── Yazi wrapper: changes directory on exit ───────────────────────────────────
 y() {
   local tmp cwd
   tmp=$(mktemp -t "yazi-cwd.XXXXXX")
@@ -147,16 +201,16 @@ y() {
   rm -f "$tmp"
 }
 
-# ── sudo — preserve user PATH so ~/.local/bin tools are visible ───────────────
+# ── sudo: preserve user PATH so ~/.local/bin tools are visible ────────────────
 # sudo's secure_path (set in /etc/sudoers) strips PATH by default, independent
 # of shell; this wrapper re-injects PATH so `sudo bat`, `sudo rg`, etc. find
 # the tools installed in ~/.local/bin. `sudo !!` to re-run the last command
-# with sudo needs no separate helper here — zsh's built-in `!!` history
+# with sudo needs no separate helper here: zsh's built-in `!!` history
 # expansion already does that (Nu needed a dedicated `sudo!!` command because
 # it has no history-expansion syntax).
 #
 # sudo's own flags (`-s`, `-u user`, `-i`, ...) must come before the target
-# command, not after it — blindly prepending `env "PATH=$PATH"` to "$@" put
+# command, not after it. Blindly prepending `env "PATH=$PATH"` to "$@" put
 # it ahead of those flags too, so sudo saw `env` (or `PATH=...`) as the flag's
 # argument instead (e.g. `sudo -s` became `sudo env PATH=... -s`, handing "-s"
 # to env, not sudo). zparseopts splits sudo's leading flags off into `opts`
@@ -207,7 +261,7 @@ claude() {
 }
 
 # ── Keybindings ───────────────────────────────────────────────────────────────
-# Ctrl+F — fzf file picker, insert path at cursor (Ctrl+R is bound by atuin's
+# Ctrl+F: fzf file picker, insert path at cursor (Ctrl+R is bound by atuin's
 # own init above)
 fzf-file-widget-insert() {
   local file
@@ -221,11 +275,11 @@ bindkey -M emacs '^F' fzf-file-widget-insert
 # ── Aliases ───────────────────────────────────────────────────────────────────
 [[ -f ~/.config/zsh/aliases.zsh ]] && source ~/.config/zsh/aliases.zsh
 
-# ── Plugins (source last, syntax-highlighting absolutely last — it must load
+# ── Plugins (source last, syntax-highlighting absolutely last; it must load
 # after anything else that wraps zle widgets) ─────────────────────────────────
 # No official catppuccin/zsh-autosuggestions port exists (unlike the syntax
 # highlighting theme below), so this is a manual pick matching Catppuccin
-# Mocha's "overlay0" gray — set before sourcing, since the plugin only fills
+# Mocha's "overlay0" gray, set before sourcing, since the plugin only fills
 # in its own default when unset.
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6c7086'
 [[ -f ~/.local/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh ]] &&
@@ -233,7 +287,7 @@ ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6c7086'
 [[ -f ~/.local/share/zsh/plugins/zsh-you-should-use/you-should-use.plugin.zsh ]] &&
   source ~/.local/share/zsh/plugins/zsh-you-should-use/you-should-use.plugin.zsh
 
-# Catppuccin Mocha colors for zsh-syntax-highlighting — must be sourced
+# Catppuccin Mocha colors for zsh-syntax-highlighting. It must be sourced
 # *before* the plugin itself (sets ZSH_HIGHLIGHT_STYLES, which the plugin
 # only populates with its own defaults if unset).
 [[ -f ~/.config/zsh/themes/catppuccin_mocha-zsh-syntax-highlighting.zsh ]] &&

@@ -1,4 +1,4 @@
-# alacritty.toml — Alacritty terminal configuration
+# alacritty.toml: Alacritty terminal configuration
 # https://alacritty.org/config-alacritty.html
 
 [general]
@@ -34,7 +34,7 @@ y = 0
 
 # ── Terminal / Shell ──────────────────────────────────────────────────────────
 [terminal]
-# Launch WSL2 — bash starts, .bashrc execs into zsh automatically
+# Launch WSL2: bash starts, .bashrc execs into zsh automatically
 shell = { program = "C:\\Windows\\System32\\wsl.exe", args = ["--cd", "~"] }
 osc52 = "CopyPaste"  # allow OSC52 clipboard reads and writes (for nvim clipboard)
 
@@ -75,17 +75,17 @@ action  = "Paste"
 # ── Keyboard ─────────────────────────────────────────────────────────────────
 [keyboard]
 bindings = [
-  # Ctrl+Shift+C — explicit copy
+  # Ctrl+Shift+C: explicit copy
   { key = "C", mods = "Control|Shift", action = "Copy" },
-  # Ctrl+Shift+V — explicit paste
+  # Ctrl+Shift+V: explicit paste
   { key = "V", mods = "Control|Shift", action = "Paste" },
-  # Ctrl+Shift+F — search
+  # Ctrl+Shift+F: search
   { key = "F", mods = "Control|Shift", action = "SearchForward" },
-  # Ctrl+Shift++ — increase font
+  # Ctrl+Shift++: increase font
   { key = "Plus",  mods = "Control|Shift", action = "IncreaseFontSize" },
-  # Ctrl+Shift+- — decrease font
+  # Ctrl+Shift+-: decrease font
   { key = "Minus", mods = "Control|Shift", action = "DecreaseFontSize" },
-  # Ctrl+Shift+0 — reset font
+  # Ctrl+Shift+0: reset font
   { key = "Key0",  mods = "Control|Shift", action = "ResetFontSize" },
 ]
 

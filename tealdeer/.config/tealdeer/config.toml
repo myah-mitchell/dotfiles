@@ -1,4 +1,4 @@
-# tealdeer config — ~/.config/tealdeer/config.toml
+# tealdeer config: ~/.config/tealdeer/config.toml
 
 [display]
 compact           = false

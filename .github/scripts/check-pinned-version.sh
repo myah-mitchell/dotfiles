@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
-# Checks one pinned dependency (a Zellij plugin release tag, an exact
-# TOOL_PINS release tag, or an npm-pinned CLI) against upstream and, if it's behind, rewrites install.sh (and for
-# ccstatusline, the mirrored settings.json) in place. Driven entirely by env
-# vars set per matrix entry in check-pinned-versions.yml, which lists every
-# tracked name and kind.
+# Checks one pinned tool from dfutil.toml against upstream and, if it's behind,
+# rewrites the pin in dfutil.toml and the matching pin in install.sh, so the
+# two can't drift while both are in use. For ccstatusline it also syncs the
+# mirrored installedVersion in its settings.json. NAME is the dfutil tool
+# name; pinned-tools.py supplies the kind, repo, and current version.
 #
 # Values fetched from upstream (release tags, npm versions) are treated as
-# untrusted and passed to Perl via %ENV rather than interpolated into -e
-# source, so a crafted tag/version string can't inject Perl code.
+# untrusted: they're checked against a safe character set, and passed to Perl
+# via %ENV rather than interpolated into -e source, so a crafted tag/version
+# string can't inject Perl code.
 #
 # Writes VERSION_CHANGED/OLD_VERSION/NEW_VERSION/REVIEW_NOTE/CHANGELOG to $GITHUB_ENV so
 # the calling workflow can decide whether to open a PR and what to put in it.
+# Run by hand, without $GITHUB_ENV, it prints them to stdout instead.
 set -euo pipefail
 
-: "${NAME:?}" "${KIND:?}"
+: "${NAME:?}"
+CONFIG="dfutil.toml"
 INSTALL_SH="install.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 api_curl() {
   curl -sf --connect-timeout 15 --retry 3 --retry-delay 2 \
@@ -75,106 +79,124 @@ release_notes() {
   printf '%s\n' "$notes"
 }
 
+pin=$(python3 "${SCRIPT_DIR}/pinned-tools.py" "$NAME")
+field() { jq -r --arg k "$1" '.[$k] // empty' <<< "$pin"; }
+KIND=$(field kind)
+ROLE=$(field role)
+REPO=$(field repo)
+PACKAGE=$(field package)
+old_version=$(field version)
+notes_repo="$REPO"
+
+# Tags-only repos: the tags API has no "latest" the way /releases/latest
+# does, so take the highest clean vX.Y.Z-style tag, falling back to the
+# highest tag of any shape. `sort -V` alone ranks a suffixed pre-release tag
+# such as 0.8.0-alpha1-pre-redrawhook above the plain 0.8.0 it predates.
+latest_github_tag() {
+  local tags clean
+  tags=$(api_curl "https://api.github.com/repos/$1/tags?per_page=100" | jq -r '.[].name') || return 1
+  clean=$(grep -E '^v?[0-9]+(\.[0-9]+){1,2}$' <<< "$tags" | sort -V | tail -1) || true
+  if [[ -n "$clean" ]]; then
+    echo "$clean"
+  else
+    sort -V <<< "$tags" | tail -1
+  fi
+}
+
 case "$KIND" in
-  github-release | tool-release)
-    : "${REPO:?}"
-    # Both pin formats are dest|owner/repo|tag; only the dest differs.
-    if [[ "$KIND" == "tool-release" ]]; then
-      dest="$NAME"
-    else
-      dest="${NAME}.wasm"
-    fi
-
-    # Anchored on the opening quote: "zellij|<repo>|" also occurs inside the
-    # CORE_TOOLS rows ("zellij|zellij|<repo>|linux|...").
-    old_version=$(DEST_ENV="$dest" REPO_ENV="$REPO" perl -ne '
-      my ($dest, $repo) = ($ENV{DEST_ENV}, $ENV{REPO_ENV});
-      print $1 if /"\Q$dest|$repo|\E([^"]+)"/;
-    ' "$INSTALL_SH")
-
-    # A prefix pin (ending in *) already tracks the newest matching release at
-    # install time, so there's nothing to bump. Rewriting it to
-    # /releases/latest would replace the prefix with an exact tag, possibly an
-    # older non-prerelease one.
-    if [[ "$old_version" == *'*' ]]; then
-      echo "${NAME}: ${old_version} is a prefix pin that tracks the newest matching release; nothing to bump"
-      echo "VERSION_CHANGED=false" >> "$GITHUB_ENV"
-      exit 0
-    fi
-
-    new_version=$(api_curl "https://api.github.com/repos/${REPO}/releases/latest" \
-      | grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
-    if [[ -z "$new_version" ]]; then
-      echo "Could not fetch latest release for ${REPO}" >&2
-      exit 1
-    fi
-
-    if [[ "$old_version" != "$new_version" ]]; then
-      DEST_ENV="$dest" REPO_ENV="$REPO" OLD_ENV="$old_version" NEW_ENV="$new_version" \
-        perl -0777 -pi -e '
-          my ($dest, $repo, $old, $new) = ($ENV{DEST_ENV}, $ENV{REPO_ENV}, $ENV{OLD_ENV}, $ENV{NEW_ENV});
-          s/"\Q$dest|$repo|$old\E"/"$dest|$repo|$new"/;
-        ' "$INSTALL_SH"
-    fi
-
-    notes_repo="$REPO"
-    if [[ "$KIND" == "tool-release" ]]; then
-      review_note="TOOL_PINS release. Check the new release still publishes an asset matching each of the tool's CORE_TOOLS/CLI_TOOLS rows in install.sh, or those platforms will skip it."
-    else
-      review_note="Zellij plugin release. Re-check the plugin's request_permission() call against ZELLIJ_PLUGIN_PERMISSIONS in install.sh. If the new release requests new scopes, that array needs updating too."
-    fi
+  github-release)
+    new_version=$(api_curl "https://api.github.com/repos/${REPO}/releases/latest" | jq -r '.tag_name // empty')
     ;;
-
+  github-tag)
+    new_version=$(latest_github_tag "$REPO")
+    # Tags have no release notes to quote.
+    notes_repo=""
+    ;;
   npm)
-    : "${PACKAGE:?}"
-
-    # The pin is a top-level <PACKAGE>_PINNED_VERSION="..." assignment,
-    # shared with install.sh's own --check-pins/--upgrade.
-    pin_var="$(tr 'a-z-' 'A-Z_' <<< "$PACKAGE")_PINNED_VERSION"
-
-    old_version=$(VAR_ENV="$pin_var" perl -ne '
-      my $var = $ENV{VAR_ENV};
-      print $1 if /^\Q$var\E="([^"]+)"/;
-    ' "$INSTALL_SH")
-
     npm_meta=$(api_curl "https://registry.npmjs.org/${PACKAGE}/latest")
-    new_version=$(jq -r '.version' <<< "$npm_meta")
+    new_version=$(jq -r '.version // empty' <<< "$npm_meta")
     # Release notes come from the package's GitHub repo, when it has one.
     notes_repo=$(jq -r '.repository.url // .repository // empty' <<< "$npm_meta" \
       | sed -nE 's#^(git\+)?(https?|git|ssh)://(git@)?github\.com[/:]([^/]+/[^/.]+)(\.git)?/?$#\4#p')
-    if [[ -z "$new_version" || "$new_version" == "null" ]]; then
-      echo "Could not fetch latest npm version for ${PACKAGE}" >&2
-      exit 1
-    fi
-
-    if [[ "$old_version" != "$new_version" ]]; then
-      VAR_ENV="$pin_var" NEW_ENV="$new_version" perl -pi -e '
-        my ($var, $new) = ($ENV{VAR_ENV}, $ENV{NEW_ENV});
-        s/^(\Q$var\E=")[^"]+(")/$1$new$2/;
-      ' "$INSTALL_SH"
-    fi
-
-    review_note="npm-pinned CLI. See the comment above install_${PACKAGE}() in install.sh for what to manually re-verify before merging."
-
-    if [[ "$PACKAGE" == "ccstatusline" && "$old_version" != "$new_version" ]]; then
-      settings_json="ccstatusline/.config/ccstatusline/settings.json"
-      jq --arg v "$new_version" '.installation.installedVersion = $v' "$settings_json" > "${settings_json}.tmp"
-      mv "${settings_json}.tmp" "$settings_json"
-      review_note="${review_note} Also updated the mirrored installation.installedVersion in ${settings_json} to match."
-    fi
     ;;
-
   *)
-    echo "Unknown KIND: ${KIND}" >&2
+    echo "Unknown kind for ${NAME}: ${KIND}" >&2
     exit 1
     ;;
 esac
 
-# An empty old_version means the matrix entry no longer matches install.sh
-# (a renamed plugin or a changed repo). Fail instead of reporting a bogus bump.
-if [[ -z "$old_version" ]]; then
-  echo "No pin for ${NAME} found in ${INSTALL_SH}; update the workflow matrix to match" >&2
+if [[ -z "$new_version" ]]; then
+  echo "Could not fetch the latest version of ${NAME}" >&2
   exit 1
+fi
+if [[ ! "$new_version" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "Refusing ${NAME}'s upstream version '${new_version}': unexpected characters" >&2
+  exit 1
+fi
+
+install_sh_note=""
+if [[ "$old_version" != "$new_version" ]]; then
+  # dfutil.toml: only the pin, install, and version lines of [tools.<NAME>].
+  # A version is replaced only as a whole token, so 1.1 can't match in 1.11.
+  NAME_ENV="$NAME" OLD_ENV="$old_version" NEW_ENV="$new_version" perl -pi -e '
+    BEGIN { ($name, $old, $new) = @ENV{qw(NAME_ENV OLD_ENV NEW_ENV)} }
+    $in = ($1 eq "tools.$name") if /^\s*\[([^\]]+)\]/;
+    s/(?<![A-Za-z0-9._-])\Q$old\E(?![A-Za-z0-9._-])/$new/g
+      if $in && /^\s*(?:pin|install|version)\s*=/;
+  ' "$CONFIG"
+
+  # install.sh keeps its own copy of the pin until the fleet hosts move to
+  # dfutil. A github pin is a quoted "<dest>|<repo>|<tag>" row in
+  # ZELLIJ_PLUGINS, ZSH_PLUGINS, or TOOL_PINS, where a Zellij plugin's dest
+  # carries .wasm. The opening quote keeps it from matching inside a
+  # CORE_TOOLS row. A * prefix row is left alone. An npm pin is
+  # <PACKAGE>_PINNED_VERSION="...".
+  install_old=$(NAME_ENV="$NAME" REPO_ENV="$REPO" PACKAGE_ENV="$PACKAGE" perl -ne '
+    my ($name, $repo, $package) = @ENV{qw(NAME_ENV REPO_ENV PACKAGE_ENV)};
+    if ($package ne "") {
+      (my $var = uc $package) =~ tr/-/_/;
+      print $1 if /^\Q${var}\E_PINNED_VERSION="([^"]+)"/;
+    } else {
+      print $2 if /"\Q$name\E(\.wasm)?\|\Q$repo\E\|([^"*]+)"/;
+    }
+  ' "$INSTALL_SH")
+  if [[ -n "$install_old" ]]; then
+    NAME_ENV="$NAME" REPO_ENV="$REPO" PACKAGE_ENV="$PACKAGE" NEW_ENV="$new_version" perl -pi -e '
+      BEGIN { ($name, $repo, $package, $new) = @ENV{qw(NAME_ENV REPO_ENV PACKAGE_ENV NEW_ENV)} }
+      if ($package ne "") {
+        (my $var = uc $package) =~ tr/-/_/;
+        s/^(\Q${var}\E_PINNED_VERSION=")[^"]+(")/$1$new$2/;
+      } else {
+        s/("\Q$name\E(?:\.wasm)?\|\Q$repo\E\|)[^"*]+(")/$1$new$2/;
+      }
+    ' "$INSTALL_SH"
+    install_sh_note=" Also bumped the matching pin in install.sh (was ${install_old})."
+  else
+    install_sh_note=" install.sh has no matching exact pin, so only dfutil.toml changed."
+  fi
+fi
+
+case "$ROLE" in
+  zellij-plugin)
+    review_note="Zellij plugin release. Re-check the plugin's request_permission() call against the scope list in this tool's post_install in dfutil.toml, and against ZELLIJ_PLUGIN_PERMISSIONS in install.sh. If the new release requests new scopes, update both."
+    ;;
+  tool)
+    review_note="Pinned release. Check the new release still publishes an asset matching each of the tool's assets globs in dfutil.toml and its CORE_TOOLS/CLI_TOOLS rows in install.sh."
+    ;;
+  zsh-plugin)
+    review_note="zsh plugin tag, picked as the highest version-sorted tag, not a published release. Check it really is the newest release before merging: the plugin loads in every new shell."
+    ;;
+  npm)
+    review_note="npm-pinned CLI. See the comment on this tool in dfutil.toml and above install_${PACKAGE}() in install.sh for what to re-verify before merging."
+    ;;
+esac
+review_note="${review_note}${install_sh_note}"
+
+if [[ "$PACKAGE" == "ccstatusline" && "$old_version" != "$new_version" ]]; then
+  settings_json="ccstatusline/.config/ccstatusline/settings.json"
+  jq --arg v "$new_version" '.installation.installedVersion = $v' "$settings_json" > "${settings_json}.tmp"
+  mv "${settings_json}.tmp" "$settings_json"
+  review_note="${review_note} Also updated the mirrored installation.installedVersion in ${settings_json} to match."
 fi
 
 echo "${NAME}: ${old_version} -> ${new_version}"
@@ -194,4 +216,4 @@ fi
   echo "CHANGELOG<<${delim}"
   printf '%s\n' "$changelog"
   echo "$delim"
-} >> "$GITHUB_ENV"
+} >> "${GITHUB_ENV:-/dev/stdout}"

@@ -1,4 +1,4 @@
--- keymaps.lua — custom keybindings on top of LazyVim defaults
+-- keymaps.lua: custom keybindings on top of LazyVim defaults
 local map = vim.keymap.set
 
 -- ── Better escape ────────────────────────────────────────────────────────────

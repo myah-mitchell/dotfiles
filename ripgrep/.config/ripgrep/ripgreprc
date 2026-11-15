@@ -1,4 +1,4 @@
-# ripgrep config — ~/.config/ripgrep/ripgreprc
+# ripgrep config: ~/.config/ripgrep/ripgreprc
 # RIPGREP_CONFIG_PATH is set in zsh/.zshenv
 
 # Case: ignore unless pattern has uppercase
@@ -21,7 +21,7 @@
 # Sort output for reproducibility
 --sort=path
 
-# Colors — catppuccin mocha inspired
+# Colors: catppuccin mocha inspired
 --colors=line:fg:0x7f,0x84,0x9c
 --colors=line:style:bold
 --colors=match:fg:0xf3,0x8b,0xa8
