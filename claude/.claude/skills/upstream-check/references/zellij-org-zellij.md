@@ -96,11 +96,11 @@ Test at the tiers the analog uses. For server and plugin API work that usually m
 
 - Terse code. Short or no doc comments on new functions and variants; the maintainer trims long ones.
 - American spelling in comments, commit messages, and identifiers ("behavior", "recognize").
-- `CHANGELOG.md`: one line at the end of `## [Unreleased]`, in the form `* <type>: <4 to 12 words> (https://github.com/zellij-org/zellij/pull/<pr>)`. Link the PR, not the issue. No explanation clauses.
+- `CHANGELOG.md`: one line at the end of `## [Unreleased]`, in the form `* <type>: <4 to 12 words> (https://github.com/zellij-org/zellij/pull/<pr>)`. Link the PR, not the issue. No explanation clauses. Push it as soon as the PR number exists, before asking for review: he doesn't add a missing line himself, and #5778 merged without one three days after opening.
 
 ### PR readiness
 
-- Tick "Allow edits by maintainers" when opening the PR. He finishes PRs himself and can't push without it.
+- Tick "Allow edits by maintainers" when opening the PR. He finishes PRs himself and can't push without it. Confirm afterward with `gh pr view <pr> --repo zellij-org/zellij --json maintainerCanModify` (#5778 was opened with it off).
 - Write the description yourself, briefly.
 
 ## Maintainer preferences
@@ -112,6 +112,7 @@ Test at the tiers the analog uses. For server and plugin API work that usually m
 - Several small fixes to the same screen or code path can share one PR, one commit each, with a note offering to split them. #5729 bundled three and merged unchanged.
 - A `CHANGELOG.md` conflict from other PRs landing in `## [Unreleased]` is expected; he resolves it with a merge of `main` before squashing. It isn't a reason to rebase on its own.
 - He merges past CI failures he recognizes as unrelated flaky tests, and fixes those separately.
+- A design agreed on Discord before the PR, with a deadline he set, merged quickly and unchanged (#5778, three days). For unreleased plugin API he accepted `#[non_exhaustive]` on option structs with builders, offered as droppable top commits.
 
 ## Reviewed PRs
 
@@ -122,3 +123,4 @@ Test at the tiers the analog uses. For server and plugin API work that usually m
 | [#5680](https://github.com/zellij-org/zellij/pull/5680) | 2026-10-05 | None; merged unchanged, CHANGELOG line kept as written |
 | [#5729](https://github.com/zellij-org/zellij/pull/5729) | 2026-10-19 | None to the checklist; merged unchanged. Preferences: related fixes may share a PR, CHANGELOG conflicts are his to merge, unrelated flaky CI doesn't block |
 | [#5779](https://github.com/zellij-org/zellij/pull/5779) | 2026-10-30 | Plugin-owned server state cleared on every lifecycle end, shared plugins included (`shared.rs` job errors, `report_panic`, `reload_shared_instance`); shared-plugin tests and fixture; `#[ignore]` plugin tests only run under `--ignored` |
+| [#5778](https://github.com/zellij-org/zellij/pull/5778) | 2026-10-30 | None new; merged unchanged. Sharpened: push the CHANGELOG line right after opening, confirm maintainer edits are on. Preference: pre-agreed design merges fast; `#[non_exhaustive]` with builders accepted on unreleased API |
