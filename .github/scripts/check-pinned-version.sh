@@ -12,6 +12,7 @@
 #
 # Writes VERSION_CHANGED/OLD_VERSION/NEW_VERSION/REVIEW_NOTE/CHANGELOG to $GITHUB_ENV so
 # the calling workflow can decide whether to open a PR and what to put in it.
+# Run by hand, without $GITHUB_ENV, it prints them to stdout instead.
 set -euo pipefail
 
 : "${NAME:?}"
@@ -215,4 +216,4 @@ fi
   echo "CHANGELOG<<${delim}"
   printf '%s\n' "$changelog"
   echo "$delim"
-} >> "$GITHUB_ENV"
+} >> "${GITHUB_ENV:-/dev/stdout}"
