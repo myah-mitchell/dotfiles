@@ -1,12 +1,13 @@
 name: Check pinned package versions
 
-# Everything install.sh downloads via download_release()'s /releases/latest
-# lookup (nu, starship, zellij, bat, fd, rg, ...) already self-updates on
-# every install.sh run, so no bump PR is needed for those. This workflow only
-# covers the handful of *pinned* versions hardcoded in install.sh, which
-# stay frozen until someone edits the string by hand: the ZELLIJ_PLUGINS
-# release tags and the npm-pinned ccstatusline version. Before merging a bump,
-# see the "Pinned-version checks" section of CLAUDE.md for why each is pinned.
+# Tools in dfutil.toml with a floating pin (latest, a partial version, or a *
+# tag prefix) already resolve upstream at install time, so they need no bump
+# PR. This workflow covers the exact pins, which stay frozen until someone
+# edits them: `tag:` and exact-version pins on github and npm tools, and the
+# tags embedded in the zsh plugins' install commands. The plan job builds the
+# matrix from dfutil.toml, so a new exact pin is covered without editing this
+# file. Each bump also rewrites the matching pin in install.sh. Before merging,
+# see the "Pinned-version checks" section of CLAUDE.md.
 
 on:
   schedule:
@@ -14,54 +15,36 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  check:
+  plan:
     runs-on: ubuntu-26.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: List exact pins in dfutil.toml
+        id: matrix
+        run: echo "matrix=$(python3 .github/scripts/pinned-tools.py)" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: plan
+    if: needs.plan.outputs.matrix != '{"include":[]}'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+      pull-requests: write
     strategy:
       fail-fast: false
-      matrix:
-        # Every ZELLIJ_PLUGINS row gets an entry with kind: github-release and
-        # name: its dest minus .wasm. An exact-tag TOOL_PINS row gets one with
-        # kind: tool-release and name: its dest. A row whose pin is a * prefix
-        # keeps its entry: the check script skips it, and picks it back up
-        # once the row returns to an exact tag.
-        include:
-          - name: zellij-autolock
-            kind: github-release
-            repo: fresh2dev/zellij-autolock
-          # TEMPORARY: tracks the fork install.sh pins. Switch back to
-          # dj95/zjstatus when install.sh does.
-          - name: zjstatus
-            kind: github-release
-            repo: myah-mitchell/zjstatus
-          - name: zellij-newtab-plus
-            kind: github-release
-            repo: AlexZasorin/zellij-newtab-plus
-          - name: zjhints
-            kind: github-release
-            repo: myah-mitchell/zjhints
-          # zjtabs ships in zjhints' releases.
-          - name: zjtabs
-            kind: github-release
-            repo: myah-mitchell/zjhints
-          - name: zellij
-            kind: tool-release
-            repo: myah-mitchell/zellij
-          - name: ccstatusline
-            kind: npm
-            package: ccstatusline
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
 
       - name: Check ${{ matrix.name }}
         env:
           NAME: ${{ matrix.name }}
-          KIND: ${{ matrix.kind }}
-          REPO: ${{ matrix.repo }}
-          PACKAGE: ${{ matrix.package }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: .github/scripts/check-pinned-version.sh
 
@@ -69,8 +52,8 @@ jobs:
         if: env.VERSION_CHANGED == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
-          commit-message: "chore(install): bump ${{ matrix.name }} to ${{ env.NEW_VERSION }}"
-          title: "chore(install): bump ${{ matrix.name }} from ${{ env.OLD_VERSION }} to ${{ env.NEW_VERSION }}"
+          commit-message: "chore(deps): bump ${{ matrix.name }} to ${{ env.NEW_VERSION }}"
+          title: "chore(deps): bump ${{ matrix.name }} from ${{ env.OLD_VERSION }} to ${{ env.NEW_VERSION }}"
           body: |
             Automated bump of the pinned `${{ matrix.name }}` version from `${{ env.OLD_VERSION }}` to `${{ env.NEW_VERSION }}`, opened by the `check-pinned-versions` workflow.
 
