@@ -130,6 +130,10 @@ Each interactive shell checks that the agent answers, rather than that the socke
 - A `zsystem flock` on `<host>.lock` serializes the check, so shells that open together, such as a resurrected Zellij session's panes, start one agent between them. `zsystem flock` doesn't create a missing lock file, so the file is touched first.
 - The old agent is killed only if `/proc/<pid>/comm` says `ssh-agent`, so a recycled PID in `<host>.pid` can't kill an unrelated process.
 
+### VS Code terminals
+
+`zellij_autostart` skips Zellij when `TERM_PROGRAM` is `vscode`, which VS Code and its forks set in the integrated terminal, locally and over Remote-SSH. It also skips it when `VSCODE_RESOLVING_ENVIRONMENT` is set: VS Code starts a hidden interactive shell to read the environment, and Zellij would otherwise start inside it.
+
 ### Background: the move from Nushell
 
 The primary shell was Nushell until its structured-data model proved incompatible with too many bash-oriented guides and scripts. The last Nushell-based commit is tagged `pre-zsh-migration`. Two Nushell-era helpers have no zsh equivalent because zsh doesn't need them: the `nr <tool>` escape hatch (zsh's builtin `command <tool>` or `\<tool>` bypasses an alias) and a custom `sudo!!` function (zsh's `!!` history expansion makes `sudo !!` work as is). Nushell's per-session history isolation was also left behind; see [History](#history).

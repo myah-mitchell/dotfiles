@@ -169,8 +169,13 @@ compdef _ln ln
 # boot-time `login -- $USER` under WSL2), not a real terminal. Zellij panes
 # inherit the environment of whichever client starts the server, so a dumb
 # client resurrecting the session would give every restored pane TERM=dumb.
+# VS Code (and its forks, which set the same TERM_PROGRAM) gets a plain shell
+# in its integrated terminal, local or over Remote-SSH. It also runs a hidden
+# interactive shell to read the environment, marked with
+# VSCODE_RESOLVING_ENVIRONMENT, which must never start or attach to Zellij.
 zellij_autostart() {
-  if [[ -z "$ZELLIJ" && -z "$NVIM" && "$TERM" != "dumb" ]]; then
+  if [[ -z "$ZELLIJ" && -z "$NVIM" && "$TERM" != "dumb" &&
+    "$TERM_PROGRAM" != "vscode" && -z "$VSCODE_RESOLVING_ENVIRONMENT" ]]; then
     if [[ "$ZELLIJ_AUTO_ATTACH" == "true" ]]; then
       zellij attach --create --remember default
     else
