@@ -65,6 +65,16 @@ description = "ccstatusline layout"
 description = "Nushell config"
 
 # ── Core tools ───────────────────────────────────────────────────────────────
+# dfutil manages its own binary, so `dfutil update` keeps it current. It can't
+# link over a real file, so bootstrap from a copy outside ~/.local/bin (see
+# the README quick start).
+[tools.dfutil]
+description = "Installs and updates these dotfiles"
+category = "system"
+repo = "myah-mitchell/dfutil"
+assets.linux-x86_64 = "dfutil-*-x86_64-unknown-linux-musl.tar.gz"
+assets.linux-aarch64 = "dfutil-*-aarch64-unknown-linux-musl.tar.gz"
+
 [tools.starship]
 description = "Shell prompt"
 category = "shell"
@@ -598,6 +608,7 @@ uninstall = "sh scripts/cargo-clean-all-timer.sh remove"
 [presets.base]
 description = "Default tools and the always-on config packages"
 tools = [
+  "dfutil",
   "starship",
   "zellij",
   "bat",
