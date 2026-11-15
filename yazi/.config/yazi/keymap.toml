@@ -1,8 +1,8 @@
-# yazi keymap — https://yazi-rs.github.io/docs/configuration/keymap
+# yazi keymap: https://yazi-rs.github.io/docs/configuration/keymap
 
 [manager]
 prepend_keymap = [
-  # Navigation — hjkl already work as default in yazi; these add extras
+  # Navigation: hjkl already work as default in yazi; these add extras
   { on = "H",       run = "back",              desc = "Go back in history" },
   { on = "L",       run = "forward",           desc = "Go forward in history" },
 

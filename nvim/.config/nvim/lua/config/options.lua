@@ -33,13 +33,13 @@ opt.listchars      = { tab = "→ ", trail = "·", nbsp = "␣" }
 opt.splitright     = true
 opt.splitbelow     = true
 
--- System clipboard — required for WSL2 clipboard integration
+-- System clipboard: required for WSL2 clipboard integration
 opt.clipboard      = "unnamedplus"
 
 -- Mouse
 opt.mouse          = "a"
 
--- Colors — full 24-bit color
+-- Colors: full 24-bit color
 opt.termguicolors  = true
 
 -- Undo
@@ -71,7 +71,7 @@ opt.writebackup    = false
 opt.fileencoding   = "utf-8"
 
 -- Python: force pyright (npm, Mason-installable via the ~/.local Node) instead of
--- basedpyright, which installs via pip — and there is no pip on this machine.
+-- basedpyright, which installs via pip, and there is no pip on this machine.
 vim.g.lazyvim_python_lsp = "pyright"
 
 -- Set leader to space (LazyVim default; backtick is Zellij's prefix)

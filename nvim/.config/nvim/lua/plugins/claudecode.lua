@@ -1,4 +1,4 @@
--- claudecode.nvim — Claude Code sidebar for Neovim (replaces the old OpenCode setup).
+-- claudecode.nvim: Claude Code sidebar for Neovim.
 -- Runs the `claude` CLI in a snacks terminal split and connects over the same
 -- WebSocket/MCP protocol as the VSCode/JetBrains extensions, so the current buffer,
 -- visual selections, and diffs flow into the session and diffs can be applied back.

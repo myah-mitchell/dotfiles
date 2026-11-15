@@ -1,6 +1,6 @@
--- incline.nvim — floating label in the top-right of each split.
+-- incline.nvim: floating label in the top-right of each split.
 -- dropbar (see dropbar.lua) owns the top-left winbar with the folder/file/symbol
--- path, so incline does NOT repeat the filename — it shows *file info* instead:
+-- path, so incline does NOT repeat the filename; it shows *file info* instead:
 -- diagnostics + this file's git diff (per-buffer, not in zjstatus) then filetype,
 -- line count, size, and indent style. Nothing here duplicates the zjstatus bar.
 return {

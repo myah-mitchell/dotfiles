@@ -1,4 +1,4 @@
--- autocmds.lua — custom autocommands
+-- autocmds.lua: custom autocommands
 
 local function augroup(name)
   return vim.api.nvim_create_augroup("dotfiles_" .. name, { clear = true })
@@ -57,12 +57,12 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- WSL2 clipboard — OSC52 passthrough via Alacritty
+-- WSL2 clipboard: OSC52 passthrough via Alacritty
 if vim.fn.has("wsl") == 1 then
   -- Neovim's clipboard exec isn't shell-expanded, so a literal "~" or "$HOME"
-  -- in the command string wouldn't resolve — but unlike zellij/config.kdl
+  -- in the command string wouldn't resolve. But unlike zellij/config.kdl
   -- (static KDL data read by zjstatus's WASM plugin, which has no expansion
-  -- of its own either — see the homepath git filter note in CLAUDE.md), this
+  -- of its own either; see the homepath git filter note in CLAUDE.md), this
   -- is Lua, evaluated by nvim itself on whatever machine it's running on. No
   -- baked-in path or git filter needed: just compute it here.
   local clip_clean = vim.fn.expand("~/.config/zellij/scripts/clip-clean.py")

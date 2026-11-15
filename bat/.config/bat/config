@@ -1,4 +1,4 @@
-# bat config — ~/.config/bat/config
+# bat config: ~/.config/bat/config
 
 # Catppuccin Mocha (theme file installed by dfutil or install.sh)
 --theme="Catppuccin Mocha"

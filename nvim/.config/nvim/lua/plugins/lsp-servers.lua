@@ -1,7 +1,7 @@
 -- Language servers that have no dedicated LazyVim lang.* extra: HTML, CSS,
 -- Emmet, and Bash. Listing them under lspconfig's `servers` makes LazyVim
 -- auto-install them via Mason. All four are Node/npm packages, as is
--- Python's pyright (from the lang.python extra in config/lazy.lua) — Mason
+-- Python's pyright (from the lang.python extra in config/lazy.lua). Mason
 -- would otherwise auto-install pyright unconditionally, so it's explicitly
 -- disabled here outside --full instead. Together with PowerShell below and
 -- the PHP toolchain gated in config/lazy.lua, this is ~460MB of Mason
@@ -24,7 +24,7 @@ local servers = {
   -- ruff comes from dfutil or install.sh (standalone binary on PATH), NOT Mason:
   -- Mason's ruff is pip-based and there's no pip here. mason=false stops
   -- LazyVim from trying (and failing) to install it, and uses ~/.local/bin/ruff.
-  -- Always enabled — no Node/pwsh dependency, so not gated on --full.
+  -- Always enabled: no Node/pwsh dependency, so not gated on --full.
   ruff = { mason = false },
 }
 
@@ -34,7 +34,7 @@ if full_install then
   servers.emmet_language_server = {}
   servers.bashls = {}
 else
-  -- Explicitly disable pyright rather than just omitting it — lang.python
+  -- Explicitly disable pyright rather than just omitting it: lang.python
   -- (config/lazy.lua) configures it unconditionally on its own, so `false`
   -- is needed to override that and stop Mason from installing it.
   servers.pyright = false

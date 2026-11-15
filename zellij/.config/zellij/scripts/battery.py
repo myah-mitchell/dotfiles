@@ -45,7 +45,7 @@ def render_hearts(pct, max_hearts, discharging):
 
     full_hearts = floor(hearts) + round(partial)
     # A half heart only when there's a real fraction that didn't round up to
-    # full — an exact integer (e.g. 60% of 5 hearts) gets no half.
+    # full; an exact integer (e.g. 60% of 5 hearts) gets no half.
     half_hearts = 1 if 0 < partial and round(partial) == 0 else 0
     empty_hearts = max_hearts - full_hearts - half_hearts
 
@@ -164,7 +164,7 @@ def main():
         return
 
     try:
-        # No battery renders as full hearts — Link at full health on wall power.
+        # No battery renders as full hearts: Link at full health on wall power.
         pct, discharging = get_battery_state() or (1.0, False)
         line = render_hearts(pct, MAX_HEARTS, discharging)
     except Exception:

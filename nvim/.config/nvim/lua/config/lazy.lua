@@ -54,7 +54,7 @@ local spec = {
   { import = "plugins" },
 }
 
--- PHP (intelephense/phpactor/php-cs-fixer/phpcs, ~160MB of Mason packages) —
+-- PHP (intelephense/phpactor/php-cs-fixer/phpcs, ~160MB of Mason packages):
 -- only on a full IDE workstation. See full_install comment above.
 if full_install then
   table.insert(spec, { import = "lazyvim.plugins.extras.lang.php" })

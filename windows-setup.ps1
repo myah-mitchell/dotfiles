@@ -34,7 +34,7 @@ if ($alacrittyCmd) {
     ok 'Alacritty installed'
 }
 
-# --- JetBrainsMono Nerd Font (NF / NFM / NFP — no NL variants) ----------
+# --- JetBrainsMono Nerd Font (NF / NFM / NFP, no NL variants) ----------
 log 'Checking JetBrainsMono Nerd Font...'
 $fontDir = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
 # Check by file presence; NF files start with JetBrainsMonoNerdFont (not JetBrainsMonoNL)
@@ -51,7 +51,7 @@ if ($existing) {
     $regPath = 'HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
     New-Item -ItemType Directory -Force $fontDir | Out-Null
     $count = 0
-    # Install NF, NFM, NFP — JetBrainsMonoNerdFont* naturally excludes NL variants
+    # Install NF, NFM, NFP; JetBrainsMonoNerdFont* naturally excludes NL variants
     Get-ChildItem $extractPath -Filter 'JetBrainsMonoNerdFont*.ttf' | ForEach-Object {
         $dest = "$fontDir\$($_.Name)"
         Copy-Item $_.FullName $dest -Force

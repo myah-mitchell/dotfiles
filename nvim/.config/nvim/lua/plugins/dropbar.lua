@@ -1,9 +1,9 @@
--- dropbar.nvim — VSCode-style breadcrumbs in each window's winbar (top-left):
+-- dropbar.nvim: VSCode-style breadcrumbs in each window's winbar (top-left):
 -- a clickable folder › file › Symbol › Symbol trail showing where you are.
 -- Symbol sources fall back to treesitter when no LSP is attached, so it works
 -- for all languages right now (before Node-based LSP servers are installed).
 -- Because dropbar owns the winbar and incline is a floating window (top-right),
--- the two don't collide — dropbar carries the name/path/location, so incline
+-- the two don't collide: dropbar carries the name/path/location, so incline
 -- (see incline.lua) shows file *info* instead.
 return {
   "Bekaboo/dropbar.nvim",

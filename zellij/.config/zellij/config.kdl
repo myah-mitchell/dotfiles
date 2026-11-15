@@ -1,4 +1,4 @@
-// Zellij config — Catppuccin Mocha, backtick prefix, hjkl navigation
+// Zellij config: Catppuccin Mocha, hjkl navigation
 // https://zellij.dev/documentation/
 //       // Scroll with mouse wheel (native) + keyboard shortcuts
 //       //bind "PageUp"   { PageScrollUp; }

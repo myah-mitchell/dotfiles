@@ -8,7 +8,7 @@ Used as Zellij's `copy_command` (reads the selection on stdin) and can also
 be called directly, e.g. from Neovim's clipboard `copy` handler.
 
 Nerd Fonts pack their icons into the three Unicode Private Use Areas, which
-have no assigned meaning outside a font that specifically maps them — that's
+have no assigned meaning outside a font that specifically maps them, and that's
 exactly the set to drop. Everything else (real text, emoji, accented
 characters) is passed through untouched, including whitespace, since mangling
 that would corrupt copied code indentation.
@@ -20,15 +20,15 @@ starship.toml's symbol/format keys, so the label matches what the icon
 actually stands for there (os.symbols keys -> distro name, language module
 symbols -> a short [tag], etc). success_symbol/error_symbol share one glyph
 in starship.toml (only the color differs) and so do the four vimcmd_*
-variants, so at most one replacement can be picked per glyph regardless —
-color info doesn't survive a terminal copy anyway, so this matches how
+variants, so at most one replacement can be picked per glyph regardless.
+Color info doesn't survive a terminal copy anyway, so this matches how
 Starship's own default (non-Nerd-Font) symbols work: one glyph per
 success/error, one per vim-mode-ish state ('>' vs '<'). Keys are written as
 \\uXXXX/\\UXXXXXXXX escapes rather than literal glyphs since the raw
 Private-Use-Area characters don't reliably round-trip through every editor.
 
-Everything else — zjstatus mode/tab pill decorations, powerline separators,
-weather/battery/sysinfo icons — isn't in this table and just gets dropped by
+Everything else (zjstatus mode/tab pill decorations, powerline separators,
+weather/battery/sysinfo icons) isn't in this table and just gets dropped by
 PUA_RANGES below. Those live in a status bar rather than scrollback text, so
 they're rarely what someone actually selects and copies. To extend this
 table, find the glyph's codepoint (e.g. `python3 -c "print(hex(ord(ch)))"`)

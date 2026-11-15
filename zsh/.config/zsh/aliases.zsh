@@ -28,11 +28,11 @@ alias watch='viddy'
 # bottom
 alias btm='btm'
 
-# eza (ls) — Catppuccin Mocha theme via $EZA_CONFIG_DIR/theme.yml (zsh/.zshenv)
+# eza (ls): Catppuccin Mocha theme via $EZA_CONFIG_DIR/theme.yml (zsh/.zshenv)
 # Only when eza is installed, so a missing eza never leaves `ls` broken.
 (( $+commands[eza] )) && alias ls='eza --icons=auto --group-directories-first'
 
-# sd — standalone, no alias override
+# sd: standalone, no alias override
 # (use `sd` directly; does not replace sed)
 
 # ── Aliases: nvim ────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ alias glog='git log --oneline --graph --decorate --all'
 # ── Random ───────────────────────────────────────────────────────────────────
 # eza has no GNU-ls-style -t flag (its -t/--time picks *which* timestamp to
 # show, not sort order) and --sort=modified alone already sorts oldest-first
-# (newest last) — the equivalent of GNU `ls -tr`, which is what this is going
+# (newest last), the equivalent of GNU `ls -tr`, which is what this is going
 # for. Adding --reverse here would flip it to newest-first instead.
 # -g/--group adds the Group column (eza's -l shows owner but not group by
 # default, unlike GNU ls -l); --header labels every column.

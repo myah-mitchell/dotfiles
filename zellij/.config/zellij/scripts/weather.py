@@ -10,7 +10,7 @@ prints a single Nerd-Font-glyph line, e.g.:
     {icon} {temp}°({feels}°) ↑{high}° ↓{low}° 󰖎 {humidity}% 󰖝 {wind mph}
         [󰕊 {rain chance}%] [󰖌 {rain in}"] [󰜗 {snow in}"]
 
-Icons are followed by a space — JetBrainsMono Nerd Font Propo renders the wide
+Icons are followed by a space: JetBrainsMono Nerd Font Propo renders the wide
 MDI glyphs over the next character otherwise.
 
 Quiet stats are dropped so only glanceworthy numbers remain:
@@ -47,7 +47,7 @@ HILO_DELTA = 5       # °F distance from current temp before high/low are shown
 MIN_HUMIDITY = 40    # % below which humidity is hidden
 MIN_WIND = 5         # mph below which wind is hidden
 MIN_RAIN_CHANCE = 10 # % below which chance of rain is hidden
-FALLBACK = "\U000F0F2F --"  # 󰼯 weather-cloudy-alert — no data and no cache
+FALLBACK = "\U000F0F2F --"  # 󰼯 weather-cloudy-alert, for no data and no cache
 
 # Material Design Icons (Nerd Font PUA plane), matching the rest of the bar.
 ICON_HUMIDITY = "\U000F058E"     # 󰖎 water-percent
@@ -69,19 +69,19 @@ NIGHT_ICONS = {
 }
 # WMO weather codes, day/night agnostic.
 CODE_ICONS = {
-    3: "\U000F0590",                       # 󰖐 overcast — weather-cloudy
-    45: "\U000F0591", 48: "\U000F0591",    # 󰖑 fog — weather-fog
-    51: "\U000F0597", 53: "\U000F0597", 55: "\U000F0597",  # 󰖗 drizzle — weather-rainy
-    56: "\U000F067F", 57: "\U000F067F",    # 󰙿 freezing drizzle — weather-snowy-rainy
-    61: "\U000F0597", 80: "\U000F0597",    # 󰖗 light rain / showers — weather-rainy
-    63: "\U000F0596", 65: "\U000F0596",    # 󰖖 moderate/heavy rain — weather-pouring
-    81: "\U000F0596", 82: "\U000F0596",    # 󰖖 heavy showers — weather-pouring
-    66: "\U000F067F", 67: "\U000F067F",    # 󰙿 freezing rain — weather-snowy-rainy
-    71: "\U000F0598", 73: "\U000F0598",    # 󰖘 light/moderate snow — weather-snowy
+    3: "\U000F0590",                       # 󰖐 overcast (weather-cloudy)
+    45: "\U000F0591", 48: "\U000F0591",    # 󰖑 fog (weather-fog)
+    51: "\U000F0597", 53: "\U000F0597", 55: "\U000F0597",  # 󰖗 drizzle (weather-rainy)
+    56: "\U000F067F", 57: "\U000F067F",    # 󰙿 freezing drizzle (weather-snowy-rainy)
+    61: "\U000F0597", 80: "\U000F0597",    # 󰖗 light rain / showers (weather-rainy)
+    63: "\U000F0596", 65: "\U000F0596",    # 󰖖 moderate/heavy rain (weather-pouring)
+    81: "\U000F0596", 82: "\U000F0596",    # 󰖖 heavy showers (weather-pouring)
+    66: "\U000F067F", 67: "\U000F067F",    # 󰙿 freezing rain (weather-snowy-rainy)
+    71: "\U000F0598", 73: "\U000F0598",    # 󰖘 light/moderate snow (weather-snowy)
     77: "\U000F0598", 85: "\U000F0598",    # 󰖘 snow grains / light snow showers
-    75: "\U000F0F36", 86: "\U000F0F36",    # 󰼶 heavy snow — weather-snowy-heavy
-    95: "\U000F0593",                      # 󰖓 thunderstorm — weather-lightning
-    96: "\U000F067E", 99: "\U000F067E",    # 󰙾 thunderstorm + hail — weather-lightning-rainy
+    75: "\U000F0F36", 86: "\U000F0F36",    # 󰼶 heavy snow (weather-snowy-heavy)
+    95: "\U000F0593",                      # 󰖓 thunderstorm (weather-lightning)
+    96: "\U000F067E", 99: "\U000F067E",    # 󰙾 thunderstorm + hail (weather-lightning-rainy)
 }
 
 

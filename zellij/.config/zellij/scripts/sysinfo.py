@@ -8,7 +8,7 @@ Prints a single Nerd-Font-glyph line, e.g.:
 
     󰘚 {cpu}% 󰍛 {memory}% 󰋊 {disk /}% {battery icon} {battery}%
 
-Icons are followed by a space — JetBrainsMono Nerd Font Propo renders the wide
+Icons are followed by a space: JetBrainsMono Nerd Font Propo renders the wide
 MDI glyphs over the next character otherwise.
 
 - CPU is averaged over the window since the previous refresh: the raw
@@ -40,7 +40,7 @@ from battery import get_battery_state
 
 CACHE_FILE = Path.home() / ".cache" / "zellij-sysinfo.json"
 CACHE_TTL = 60
-FALLBACK = "\U000F029A --"  # 󰊚 gauge — no data and no cache
+FALLBACK = "\U000F029A --"  # 󰊚 gauge, for no data and no cache
 
 # Material Design Icons (Nerd Font PUA plane), matching the rest of the bar.
 ICON_CPU = "\U000F061A"       # 󰘚 chip
