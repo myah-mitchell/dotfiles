@@ -92,7 +92,7 @@
 #               failure, not auto-installed (this repo avoids apt installs beyond the
 #               two documented exceptions; see CLAUDE.md's Deliberate Omissions table).
 #               Retrieve-only: this does not create a new resident key on the
-#               YubiKey — provision one first (ssh-keygen -t ed25519-sk -O resident),
+#               YubiKey. Provision one first (ssh-keygen -t ed25519-sk -O resident),
 #               on this machine or another, then use --yubikey wherever that key
 #               needs to exist as local files too. Standalone like --check-pins/
 #               --upgrade/--remove: does its own thing and exits.
@@ -854,99 +854,10 @@ upgrade_pin() {
 }
 
 # ── --yubikey: retrieve resident SSH key(s) from a FIDO2 authenticator ────────
-# Retrieve-only, standalone (like --check-pins/--upgrade/--remove above) — does
-# not provision a new resident key on the YubiKey itself; run
-# `ssh-keygen -t ed25519-sk -O resident` first (on this machine or another) if
-# the YubiKey doesn't have one yet.
-#
-# `ssh-keygen -K` downloads every resident key on the authenticator into the
-# current directory using filenames it derives from what's stored on the
-# device, so this cd's into ~/.ssh first rather than trying to name the
-# output itself. It needs an OpenSSH client built with FIDO2/security-key
-# support (8.2+), which in turn needs libfido2 available at runtime — rather
-# than preflight-detecting that (fragile: package names, dlopen-vs-linked-in
-# support, and provider paths all vary by distro/OS), this just runs the real
-# operation and classifies the failure if there is one, per CLAUDE.md's
-# Deliberate Omissions table (no new silent apt install for this).
-#
-# Output streams straight to the terminal via `tee` (not captured and
-# reprinted after the fact) because retrieval is interactive: the
-# authenticator needs a physical touch, and may prompt for its PIN, both of
-# which the user needs to see and respond to in real time. `tee` also keeps a
-# copy in $yubikey_out so a failure can still be classified afterward.
+# The retrieval lives in scripts/yubikey-ssh-keys.sh so it also works on hosts
+# set up with dfutil, which has no equivalent.
 pull_yubikey_ssh_key() {
-  if ! command -v ssh-keygen &>/dev/null; then
-    err "ssh-keygen not found — install an OpenSSH client first."
-    exit 1
-  fi
-
-  mkdir -p "$HOME/.ssh"
-  chmod 700 "$HOME/.ssh"
-
-  log "=== Retrieving resident SSH key(s) from YubiKey ==="
-  log "Insert the YubiKey if it isn't already, then touch it when it blinks — it may also prompt for its PIN."
-
-  local before after yubikey_out status
-  before=$(find "$HOME/.ssh" -maxdepth 1 -type f -name '*_sk*' 2>/dev/null | sort)
-  yubikey_out=$(mktemp)
-
-  # install.sh runs under `set -eo pipefail`, so this pipeline must be an
-  # `if` condition (one of set -e's documented exemptions) rather than a bare
-  # statement — a real, expected ssh-keygen failure (no key plugged in yet,
-  # say) would otherwise abort the whole script right here, before any of
-  # the classification below ever runs.
-  if (cd "$HOME/.ssh" && ssh-keygen -K) 2>&1 | tee "$yubikey_out"; then
-    status=0
-  else
-    status=${PIPESTATUS[0]}
-  fi
-
-  if [[ "$status" -ne 0 ]]; then
-    # Order matters: a real OpenSSH build with FIDO2 support built in still
-    # prints "Provider ... returned failure" for the ordinary "no key
-    # plugged in" case (confirmed against a real OpenSSH 10.2 client), so
-    # that specific, common case is checked first — a bare "provider" match
-    # below would otherwise misclassify it as libfido2 being missing.
-    if grep -qiE "illegal option|unknown option|invalid option" "$yubikey_out"; then
-      err "This ssh-keygen doesn't support -K — needs OpenSSH 8.2+ built with FIDO2/security-key support."
-      err "  Debian/Ubuntu: sudo apt install --only-upgrade openssh-client"
-      err "  macOS:         brew install openssh"
-    elif grep -qiE "device not found|no fido|no security key|no u2f|no such device|couldn't read" "$yubikey_out"; then
-      err "No FIDO2 authenticator detected — make sure the YubiKey is inserted (and touch it if it's blinking), then re-run."
-    elif grep -qiE "cannot open shared object|failed to dlopen|error while loading shared libraries|libfido2.*not found" "$yubikey_out"; then
-      err "ssh-keygen couldn't load its FIDO2 provider (libfido2) — install it and re-run:"
-      err "  Debian/Ubuntu: sudo apt install libfido2-1"
-      err "  macOS:         brew install libfido2"
-    else
-      err "ssh-keygen -K failed — see output above."
-    fi
-    rm -f "$yubikey_out"
-    exit 1
-  fi
-  rm -f "$yubikey_out"
-
-  after=$(find "$HOME/.ssh" -maxdepth 1 -type f -name '*_sk*' 2>/dev/null | sort)
-  local new_files
-  new_files=$(comm -13 <(echo "$before") <(echo "$after"))
-
-  if [[ -z "$new_files" ]]; then
-    warn "ssh-keygen -K reported success but no new files showed up in ~/.ssh — the YubiKey may not have any resident keys yet. Provision one first: ssh-keygen -t ed25519-sk -O resident"
-    exit 0
-  fi
-
-  local f
-  while IFS= read -r f; do
-    [[ -z "$f" ]] && continue
-    if [[ "$f" == *.pub ]]; then
-      chmod 644 "$f"
-    else
-      chmod 600 "$f"
-    fi
-    ok "Retrieved $(basename "$f")"
-  done <<<"$new_files"
-
-  echo
-  log "Add an IdentityFile line for the private stub file above to ~/.ssh/config's Host * block if you want it used by default (the checked-in default only lists id_ed25519/id_rsa)."
+  bash "$DOTFILES/scripts/yubikey-ssh-keys.sh"
 }
 
 if [[ "$CHECK_PINS" == true ]]; then
