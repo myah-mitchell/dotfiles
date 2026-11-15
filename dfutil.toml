@@ -526,7 +526,7 @@ version = "claude --version | cut -d' ' -f1"
 description = "Claude Code status line"
 category = "claude"
 kind = "npm"
-pin = "2.2.32"
+pin = "2.2.34"
 requires = ["node"]
 # Keep installation.installedVersion in ccstatusline/.config/ccstatusline/settings.json
 # in step with this pin.
