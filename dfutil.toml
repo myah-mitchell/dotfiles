@@ -546,6 +546,15 @@ install = "mkdir -p \"$HOME/.local/state/dotfiles\" && touch \"$HOME/.local/stat
 version = "echo marker"
 uninstall = "rm -f \"$HOME/.local/state/dotfiles/full-install\""
 
+# ssh/.ssh/config multiplexes through ControlPath ~/.ssh/sockets, and ssh
+# fails to connect when that directory is missing.
+[tools.ssh-dirs]
+description = "~/.ssh and the ~/.ssh/sockets ControlPath directory"
+category = "system"
+kind = "script"
+install = "mkdir -p \"$HOME/.ssh/sockets\" && chmod 700 \"$HOME/.ssh\" \"$HOME/.ssh/sockets\""
+version = "echo dirs"
+
 # ── WSL2 ─────────────────────────────────────────────────────────────────────
 [tools.windows-setup]
 description = "Alacritty, font, and config link on the Windows side"
@@ -636,6 +645,7 @@ tools = [
   "zsh-you-should-use",
   "catppuccin-themes",
   "jetbrainsmono-nerd-font",
+  "ssh-dirs",
 ]
 packages = [
   "bash",
