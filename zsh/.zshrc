@@ -134,7 +134,11 @@ _ssh_agent_start
 unfunction _ssh_agent_start
 
 # ── Tool integrations ─────────────────────────────────────────────────────────
-if [[ "$TERM" != "dumb" ]]; then
+if [[ "$TERM" != "dumb" && -f ~/.local/share/dfutil/init/init.zsh ]]; then
+  # dfutil writes one script that sources every tool's init.
+  source ~/.local/share/dfutil/init/init.zsh
+elif [[ "$TERM" != "dumb" ]]; then
+  # install.sh writes one script per tool.
   [[ -f ~/.local/share/zoxide/init.zsh ]] && source ~/.local/share/zoxide/init.zsh
   [[ -f ~/.local/share/atuin/init.zsh ]] && source ~/.local/share/atuin/init.zsh
   [[ -f ~/.cache/starship/init.zsh ]] && source ~/.cache/starship/init.zsh

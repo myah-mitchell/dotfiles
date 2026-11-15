@@ -192,17 +192,21 @@ source ~/.config/nushell/themes/catppuccin_mocha.nu
 
 # ── Tool integrations ─────────────────────────────────────────────────────────
 
-# zoxide: frecency-based cd
-source ~/.local/share/zoxide/init.nu
-
-# atuin: shell history
-source ~/.local/share/atuin/init.nu
-
-# starship: prompt
-source ~/.cache/starship/init.nu
-
-# carapace: argument completions
-source ~/.cache/carapace/init.nu
+# dfutil writes one script that sources every tool's init; install.sh writes
+# one per tool. `source` resolves its path at parse time and errors on a
+# missing file, so each path is a const that's null when the file isn't there
+# (or when dfutil's script covers it), and `source null` does nothing.
+const dfutil_init = ("~/.local/share/dfutil/init/init.nu" | path expand)
+const use_dfutil = ($dfutil_init | path exists)
+const zoxide_init = ("~/.local/share/zoxide/init.nu" | path expand)
+const atuin_init = ("~/.local/share/atuin/init.nu" | path expand)
+const starship_init = ("~/.cache/starship/init.nu" | path expand)
+const carapace_init = ("~/.cache/carapace/init.nu" | path expand)
+source (if $use_dfutil { $dfutil_init })
+source (if not $use_dfutil and ($zoxide_init | path exists) { $zoxide_init })
+source (if not $use_dfutil and ($atuin_init | path exists) { $atuin_init })
+source (if not $use_dfutil and ($starship_init | path exists) { $starship_init })
+source (if not $use_dfutil and ($carapace_init | path exists) { $carapace_init })
 
 # ── Zellij auto-start ─────────────────────────────────────────────────────────
 # Only start Zellij if we're not already inside it and it's an interactive session.
