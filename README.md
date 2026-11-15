@@ -123,16 +123,7 @@ Zellij's default bindings apply, with these changes:
 | `Ctrl+y` | Copy the selection |
 | `Ctrl+g` | Lock or unlock Zellij (full passthrough to the focused app) |
 
-In tmux mode (`Ctrl+b`), these are added to Zellij's defaults:
-
-| Keys | Action |
-| --- | --- |
-| `\` | Split right |
-| `-` | Split down |
-| `s` | Scroll mode |
-| `/` | Search |
-| `d` | Detach |
-| `` ` `` or `Esc` | Back to normal mode |
+Zellij's other modes keep their default keys, such as `Ctrl+p` for panes, `Ctrl+t` for tabs, `Ctrl+s` for scroll and search, and `Ctrl+o` for sessions. Its tmux mode is turned off, so `Ctrl+b` reaches the shell.
 
 In scroll and search mode, `y` or `Ctrl+C` copies the selection and stays in the mode.
 

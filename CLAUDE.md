@@ -25,17 +25,16 @@ This file is for Claude Code sessions working in this dotfiles repo. It records 
 
 ## Zellij mode architecture
 
-Zellij's default keybindings stay (`keybinds clear-defaults=false`), with a handful of changes on top. Three modes matter. Don't conflate them.
+Zellij's default keybindings stay (`keybinds clear-defaults=false`), with a handful of changes on top. Two modes matter. Don't conflate them.
 
 | Mode | What it is | When active |
 | --- | --- | --- |
 | `normal` | Default mode | All terminal use |
-| `tmux` | Zellij's built-in prefix layer | After `Ctrl b`, Zellij's default |
 | `locked` | Zellij's built-in full passthrough | Managed by zellij-autolock, or `Ctrl g` by hand |
 
-`normal` adds `Ctrl w` for move mode. `Ctrl+hjkl` (pane focus) and `Ctrl g` (lock) are bound in `shared_except "locked"`, and `Alt+hjkl` and `Ctrl y` (copy) in `shared`. A backtick binding to enter `tmux` is present but commented out.
+`normal` adds `Ctrl w` for move mode, because move mode's default `Ctrl h` is taken by pane focus. `Ctrl+hjkl` (pane focus) and `Ctrl g` (lock) are bound in `shared_except "locked"`, and `Alt+hjkl` and `Ctrl y` (copy) in `shared`. Zellij's other modes (pane, tab, resize, scroll, session) keep their default entry keys. In `scroll` and `search`, `y` and `Ctrl c` copy the selection without leaving the mode.
 
-`tmux` mode adds `\` and `-` to split right and down, `s` for scroll, `/` for search, and `d` to detach, and backtick or `Esc` returns to `normal`. It unbinds Zellij's `Ctrl b` "send literal `Ctrl b`" action. In `scroll` and `search`, `y` and `Ctrl c` copy the selection without leaving the mode.
+Zellij's `tmux` mode is turned off: `shared_except "locked"` unbinds its default `Ctrl b` entry key, so `Ctrl b` reaches the shell, and the config has no `tmux` block and no TMUX pill in zjstatus or zjhints. To bring it back, bind a key to `SwitchToMode "tmux"` and add a `mode_tmux` format to both bars.
 
 `locked` mode sends every keystroke straight to the focused pane. Its only binding is the `Ctrl g` escape hatch, which also re-enables zellij-autolock; the `Ctrl g` that enters it disables autolock, so a hand lock isn't undone the next time focus moves. `zellij-autolock` switches to it based on the focused process and back out when that process closes. Don't add keybindings to `locked` beyond the escape hatch.
 

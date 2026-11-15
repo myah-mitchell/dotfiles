@@ -1,4 +1,4 @@
-// Zellij config: Catppuccin, backtick prefix, hjkl navigation
+// Zellij config: Catppuccin Mocha, hjkl navigation
 // https://zellij.dev/documentation/
 //       // Scroll with mouse wheel (native) + keyboard shortcuts
 //       //bind "PageUp"   { PageScrollUp; }
@@ -110,7 +110,6 @@ plugins {
 
         // Modes
         color_pill_normal   "{{ palette.sky }}" // sky 
-        color_pill_tmux     "{{ palette.sky }}" // sky 
         color_pill_locked   "{{ palette.red }}" // red 
         color_pill_resize   "{{ palette.sky }}" // sky 
         color_pill_pane     "{{ palette.sky }}" // sky 
@@ -138,7 +137,6 @@ plugins {
 
         // Format mode pill
         mode_normal        "#[bg=$pill_bg,fg=$pill_normal,bold] NORMAL #[bg=$pill_normal,fg=$pill_icon,bold] 󰌌 #[fg=$pill_normal]"
-        mode_tmux          "#[bg=$pill_bg,fg=$pill_tmux,bold]  TMUX  #[bg=$pill_tmux,fg=$pill_icon,bold] 󰘳 #[fg=$pill_tmux]"
         mode_locked        "#[bg=$pill_bg,fg=$pill_locked,bold] LOCKED #[bg=$pill_locked,fg=$pill_icon,bold] 󰌾 #[fg=$pill_locked]"
         mode_resize        "#[bg=$pill_bg,fg=$pill_resize,bold] RESIZE #[bg=$pill_resize,fg=$pill_icon,bold] 󰩨 #[fg=$pill_resize]"
         mode_pane          "#[bg=$pill_bg,fg=$pill_pane,bold]  PANE  #[bg=$pill_pane,fg=$pill_icon,bold] 󰯌 #[fg=$pill_pane]"
@@ -151,7 +149,7 @@ plugins {
         mode_session       "#[bg=$pill_bg,fg=$pill_session,bold] SESION #[bg=$pill_session,fg=$pill_icon,bold] 󰍺 #[fg=$pill_session]"
         mode_move          "#[bg=$pill_bg,fg=$pill_move,bold]  MOVE  #[bg=$pill_move,fg=$pill_icon,bold] 󰆾 #[fg=$pill_move]"
         mode_prompt        "#[bg=$pill_bg,fg=$pill_prompt,bold] PROMPT #[bg=$pill_prompt,fg=$pill_icon,bold] 󰞷 #[fg=$pill_prompt]"
-        mode_default_to_mode "tmux"
+        mode_default_to_mode "normal"
 
         // Format tabs pill
         tab_separator " "
@@ -263,7 +261,6 @@ plugins {
         hint_order "new, *, focus, lock, quit, exit"
         // Override or hide any hint's label by its concept id; an empty
         // value hides it. See "Labels" below for the full list of ids.
-        label_switch_to_mode_tmux ""
         label_switch_to_mode_normal "exit"
         label_locked_switch_to_mode_normal "unlock"
         label_next_swap_layout "swap layout"
@@ -282,7 +279,6 @@ plugins {
 
         // Modes
         color_pill_normal   "{{ palette.sky }}" // sky 
-        color_pill_tmux     "{{ palette.sky }}" // sky 
         color_pill_locked   "{{ palette.red }}" // red 
         color_pill_resize   "{{ palette.sky }}" // sky 
         color_pill_pane     "{{ palette.sky }}" // sky 
@@ -313,7 +309,6 @@ plugins {
 
         // Format mode pill
         mode_format_normal        "#[bg=$pill_bg,fg=$pill_normal,bold] NORMAL #[bg=$pill_normal,fg=$pill_icon,bold] 󰌌 #[fg=$pill_normal] "
-        mode_format_tmux          "#[bg=$pill_bg,fg=$pill_tmux,bold]  TMUX  #[bg=$pill_tmux,fg=$pill_icon,bold] 󰘳 #[fg=$pill_tmux] "
         mode_format_locked        "#[bg=$pill_bg,fg=$pill_locked,bold] LOCKED #[bg=$pill_locked,fg=$pill_icon,bold] 󰌾 #[fg=$pill_locked] "
         mode_format_resize        "#[bg=$pill_bg,fg=$pill_resize,bold] RESIZE #[bg=$pill_resize,fg=$pill_icon,bold] 󰩨 #[fg=$pill_resize] "
         mode_format_pane          "#[bg=$pill_bg,fg=$pill_pane,bold]  PANE  #[bg=$pill_pane,fg=$pill_icon,bold] 󰯌 #[fg=$pill_pane] "
@@ -361,7 +356,6 @@ load_plugins {
 keybinds clear-defaults=false {
 
     normal {
-        // bind "`" { SwitchToMode "tmux"; }
         bind "Ctrl w" { SwitchToMode "Move"; }
     }
     resize {
@@ -399,15 +393,6 @@ keybinds clear-defaults=false {
     }
     session {
     }
-    tmux {
-        unbind "Ctrl b" //{ Write 2; SwitchToMode "Normal"; }
-        bind "`" "Esc" { SwitchToMode "Normal"; }
-        bind "\\" { NewPane "Right"; SwitchToMode "Normal"; }
-        bind "-" { NewPane "Down"; SwitchToMode "Normal"; }
-        bind "s" { SwitchToMode "Scroll"; }
-        bind "/" { SwitchToMode "EnterSearch"; SearchInput 0; }
-        bind "d" { Detach; }
-    }
     locked {
         bind "Ctrl g" { 
             // Enable the autolock plugin.
@@ -438,6 +423,7 @@ keybinds clear-defaults=false {
             // Lock Zellij.
             SwitchToMode "Locked";
         }
+        unbind "Ctrl b" //{ SwitchToMode "Tmux"; }
         //unbind "Ctrl q" //{ Quit; }
         unbind "Alt f" //{ ToggleFloatingPanes; }
         unbind "Alt n" //{ NewPane; }
